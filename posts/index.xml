@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Going the distance</title>
-    <link>https://jeiwan.cc/</link>
-    <description>Recent content on Going the distance</description>
+    <title>Posts on Going the distance</title>
+    <link>https://jeiwan.cc/posts/</link>
+    <description>Recent content in Posts on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 05 Aug 2017 20:34:21 +0700</lastBuildDate>
     
-	<atom:link href="https://jeiwan.cc/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://jeiwan.cc/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
