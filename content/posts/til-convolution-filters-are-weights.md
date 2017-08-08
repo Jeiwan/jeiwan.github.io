@@ -11,7 +11,7 @@ When I started learning about convolution and convolutional networks, first thin
 ![Convolution filter example](/images/convolution-filter-example.png)
 (this example is created via http://setosa.io/ev/image-kernels/)
 
-Then I started trying running different examples of convolution networks and noticed that I never decided what filters I wanted to use in a network. I thought that people somehow find proper filter manually, but now the truth has finally revealed: **filters are weights**. And they're adjusted while network is trained.
+Then I started trying running different examples of convolution networks and noticed that I never decided what filters I wanted to use in a network. I thought that people somehow find proper filter manually, but now the truth has finally revealed: *filters are weights*. And they're adjusted while network is trained.
 
 > *Isn't this marvelous?* A convolutional neural network learns to "see" something that makes the whole network produce better results.
 
@@ -19,13 +19,12 @@ Initially, filters are often initialized randomly, so network "sees" random stuf
 
 To demonstrate this, I took this [mnist_cnn.py](https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py) example from [Keras](https://keras.io/) and visualized the filters of the first convolutional layer three times:
 
-1. After training the network for 1 iteration.
-2. After training the network for 7 iterations.
-3. And ffter training the network for 15 iterations.
-
+1.  After training the network for 1 iteration.
+2.  After training the network for 7 iterations.
+3.  And after training the network for 15 iterations.
 
 Here're the visualisations:
 
 ![Convolution filters change](/images/convolution-filter-weights.png)
 
-These images make no sense for a human, but the filters after 15 epochs allow the whole network to correctly recognise handwritten digits.
+These images make no sense for a human, but it's these filters that allow the whole network to correctly recognize hand digits.
