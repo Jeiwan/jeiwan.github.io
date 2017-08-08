@@ -1,6 +1,6 @@
-baseURL = "http://example.org/"
+baseURL = "https://jeiwan.cc"
 languageCode = "en-us"
-title = "My New Hugo Site"
+title = "Going the distance"
 theme = "hugo-cactus-theme"
 googleAnalytics = ""
 disqusShortname = ""
@@ -8,7 +8,7 @@ disqusShortname = ""
 [params]
   name = "Ivan Kuznetsov"
   description = "Thoughts about web development, machine learning, and neural networks"
-  bio = "Web Developer & Machine Learning Enthusiast"
+  bio = "Web Development - DevOps - Machine Learning"
   # Enter optionally your twitter account
   twitter = "jeiwan7"
   enableRSS = false
@@ -30,7 +30,7 @@ disqusShortname = ""
   readMore = ""
   copyright = ""
   # Sharing options and author information in posts
-  aboutAuthor = "I'm a blogger."
+  aboutAuthor = "Write things"
   tweet = ""
   share = ""
   # 404 page
@@ -38,7 +38,7 @@ disqusShortname = ""
   subtitle404 = ""
 
   # Choose a font for the social icons in the footer. Either "mono-social" or "font-awesome"
-  iconFont = "mono-social"
+  iconFont = "font-awesome"
     # The social icons can be styled differently if you use mono as font - circle, rounded, or empty
     socialIconStyle = "circle"
 
