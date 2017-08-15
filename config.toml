@@ -2,7 +2,7 @@ baseURL = "https://jeiwan.cc"
 languageCode = "en-us"
 title = "Going the distance"
 theme = "hugo-cactus-theme"
-googleAnalytics = ""
+googleAnalytics = "UA-77183580-3"
 disqusShortname = ""
 
 [params]
