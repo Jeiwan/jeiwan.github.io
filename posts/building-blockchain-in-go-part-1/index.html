@@ -46,7 +46,7 @@
 
 
 <meta itemprop="dateModified" content="2017-08-16T12:29:11&#43;07:00" />
-<meta itemprop="wordCount" content="903">
+<meta itemprop="wordCount" content="905">
 
 
 
@@ -114,7 +114,7 @@ In this article we&rsquo;re not going to implement the block as it&rsquo;s descr
 
 <p>So how do we calculate the hashes? The way hashes are calculates is very important feature of blockchain, and it&rsquo;s this feature that makes blockchain secure. The thing is that calculating a hash is a computationally difficult operation, it takes some time even on fast computers (that&rsquo;s why people buy powerful GPUs to mine Bitcoin). This is an intentional architectural design, which makes adding new blocks difficult, thus preventing their modification after they&rsquo;re added. We&rsquo;ll discuss and implement this mechanism in a future article.</p>
 
-<p>For now, we&rsquo;ll just take block fields, concatenate them, and calculate a <code>SHA256</code> on the concatenated string. Let&rsquo;s do this in <code>SetHash</code> method:</p>
+<p>For now, we&rsquo;ll just take block fields, concatenate them, and calculate a SHA-256 hash on the concatenated combination. Let&rsquo;s do this in <code>SetHash</code> method:</p>
 
 <pre><code class="language-go">func (b *Block) SetHash() {
 	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
@@ -125,7 +125,7 @@ In this article we&rsquo;re not going to implement the block as it&rsquo;s descr
 }
 </code></pre>
 
-<p>Next, following a Golang convention, we&rsquo;ll implement a function that&rsquo;ll simplify creation of a block:</p>
+<p>Next, following a Golang convention, we&rsquo;ll implement a function that&rsquo;ll simplify the creation of a block:</p>
 
 <pre><code class="language-go">func NewBlock(data string, prevBlockHash []byte) *Block {
 	block := &amp;Block{time.Now().Unix(), []byte(data), prevBlockHash, []byte{}}
@@ -212,7 +212,7 @@ Hash: 561237522bb7fcfbccbc6fe0e98bbbde7427ffe01c6fb223f7562288ca2295d1
 
 <p>We built a very simple blockchain prototype: it&rsquo;s just an array of blocks, with each block having a connection to the previous one. The actual blockchain is much more complex though. In our blockchain adding new blocks is easy and fast, but in real blockchain adding new blocks requires some work: one has to perform some heavy computations before getting a permission to add block (this mechanism is called Proof-of-Work). Also, blockchain is a distributed database that has no single decision maker. Thus, a new block must be confirmed and approved by other participants of the network (this mechanism is called consensus). And there&rsquo;re no transactions in our blockchain yet!</p>
 
-<p>In future articles we&rsquo;ll cover each of these features!</p>
+<p>In future articles we&rsquo;ll cover each of these features.</p>
 
 <hr />
 
