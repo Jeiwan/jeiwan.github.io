@@ -1,6 +1,7 @@
 ---
 title: "Building Blockchain in Go. Part 1: Basic Prototype"
 date: 2017-08-16T12:29:11+07:00
+tags: [Golang, Blockchain, Bitcoin]
 ---
 
 ## Introduction

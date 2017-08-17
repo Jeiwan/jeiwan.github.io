@@ -3,6 +3,15 @@
         <li>
             <a href='{{ .URL }}'><aside class="dates">{{ .Date.Format "Jan 2 2006" }}</aside></a>
             <a href='{{ .URL }}'>{{ .LinkTitle }}<h2>{{ .Description | markdownify }}</h2></a>
+            {{ with .Params.tags }}
+            <div class="tags">
+            {{ if ge (len .) 1 }}
+                {{ range . }}
+                    <small class="tag">{{.}}</small>
+                {{ end }}
+            {{ end }}
+            </div>
+            {{ end}}
         </li>
     {{ end }}
 </ul>

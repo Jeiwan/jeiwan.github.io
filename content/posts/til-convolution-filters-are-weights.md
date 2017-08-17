@@ -1,6 +1,7 @@
 ---
 title: "TIL: Convolutional Filters Are Weights"
 date: 2017-08-05T20:34:21+07:00
+tags: [Neural Networks, CNN]
 ---
 
 It's common knowledge that there're weights in a fully-connected neural network. And these weights are not constant and are adjusted by an optimization algorithm (like gradient descent). Moreover, training a neural network actually means finding proper weights.
