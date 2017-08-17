@@ -5,7 +5,7 @@ tags: [Golang, Blockchain, Bitcoin]
 ---
 
 ## Introduction
-Blockchain is one of the most revolutionary technology of the 21st century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a distributed database of records. But what makes it unique is that it's not a private database, but a public one, i.e. everyone who uses it has a full or partial copy of it. And a new record can be added only with a consent of other keepers of the database. Also, it's blockchain that made cryptocurrencies and smart contracts possible.
+Blockchain is one of the most revolutionary technologies of the 21st century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a distributed database of records. But what makes it unique is that it's not a private database, but a public one, i.e. everyone who uses it has a full or partial copy of it. And a new record can be added only with a consent of other keepers of the database. Also, it's blockchain that made cryptocurrencies and smart contracts possible.
 
 In this series of articles we'll build a simplified cryptocurrency that's based on a simple blockchain implementation.
 
