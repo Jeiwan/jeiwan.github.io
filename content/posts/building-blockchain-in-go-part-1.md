@@ -1,36 +1,35 @@
 ---
-title: "Building Blockchain In Go: Basic Layout"
+title: "Building Blockchain in Go. Part 1: Basic Prototype"
 date: 2017-08-16T12:29:11+07:00
-draft: true
 ---
 
 ## Introduction
-Blockchain is one of the most revolutionary technology of the 21 century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a database of records. But what makes it unique is that it's not a private database, but a public one, i.e. everyone who uses it has to have a copy of it. And a new record can be added only with a consent of other keepers of the database. Also, it's blockchain that made cryptocurrencies and smart contracts possible.
+Blockchain is one of the most revolutionary technology of the 21st century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a distributed database of records. But what makes it unique is that it's not a private database, but a public one, i.e. everyone who uses it has a full or partial copy of it. And a new record can be added only with a consent of other keepers of the database. Also, it's blockchain that made cryptocurrencies and smart contracts possible.
 
 In this series of articles we'll build a simplified cryptocurrency that's based on a simple blockchain implementation.
 
 ## Block
-Let's start with the block. In blockchain it's blocks that store valuable information. For example, in Bitcoin blocks store transactions, the essence of any cryptocurrency. Besides this, a block contains some technical information, like its version, current timestamp and the hash of the previous block.  
+Let's start with the "block" part of "blockchain". In blockchain it's blocks that store valuable information. For example, bitcoin blocks store transactions, the essence of any cryptocurrency. Besides this, a block contains some technical information, like its version, current timestamp and the hash of the previous block.  
 In this article we're not going to implement the block as it's described in blockchain or Bitcoin specifications, instead we'll use a simplified version of it, which contains only significant information. Here's what it looks like:
 
 ```go
 type Block struct {
-	Timestamp int64
-	Data      []byte
-	PrevBlock []byte
-	Hash      []byte
+	Timestamp     int64
+	Data          []byte
+	PrevBlockHash []byte
+	Hash          []byte
 }
 ```
-`Timestamp` is the current timestamp (when the block is created), `Data` is the actual valuable information containing in the block, `PrevBlock` stores the hash of the previous block, and `Hash` is the hash of the block. In Bitcoint specification `Timestamp`, `PrevBlock`, and `Hash` are block headers, which form a separate data structure, and transactions (`Data` in our case) is a separate data structure. So we're mixing them here for simplicity.
+`Timestamp` is the current timestamp (when the block is created), `Data` is the actual valuable information containing in the block, `PrevBlockHash` stores the hash of the previous block, and `Hash` is the hash of the block. In Bitcoint specification `Timestamp`, `PrevBlockHash`, and `Hash` are block headers, which form a separate data structure, and transactions (`Data` in our case) is a separate data structure. So we're mixing them here for simplicity.
 
-So how do we calculate the hashes? Bitcoin uses the following scheme to hash a block: `SHA256(SHA256(Block_Headers))` Where `Block_Headers` is concatenated values of the block headers. In our implementation we'll apply `SHA256` only once and will use concatenated `PrevBlock` + `Data` + `Timestamp` combination as the hashed string.
+So how do we calculate the hashes? The way hashes are calculates is very important feature of blockchain, and it's this feature that makes blockchain secure. The thing is that calculating a hash is a computationally difficult operation, it takes some time even on fast computers (that's why people buy powerful GPUs to mine Bitcoin). This is an intentional architectural design, which makes adding new blocks difficult, thus preventing their modification after they're added. We'll discuss and implement this mechanism in a future article.
 
-Let's implement `SetHash` method that'll calculate the hash and set it:
+For now, we'll just take block fields, concatenate them, and calculate a `SHA256` on the concatenated string. Let's do this in `SetHash` method:
 
 ```go
 func (b *Block) SetHash() {
 	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
-	headers := bytes.Join([][]byte{b.PrevBlock, b.Data, timestamp}, []byte{})
+	headers := bytes.Join([][]byte{b.PrevBlockHash, b.Data, timestamp}, []byte{})
 	hash := sha256.Sum256(headers)
 
 	b.Hash = hash[:]
@@ -40,8 +39,8 @@ func (b *Block) SetHash() {
 Next, following a Golang convention, we'll implement a function that'll simplify creation of a block:
 
 ```go
-func NewBlock(data string, prevBlock []byte) *Block {
-	block := &Block{time.Now().Unix(), []byte(data), prevBlock, []byte{}}
+func NewBlock(data string, prevBlockHash []byte) *Block {
+	block := &Block{time.Now().Unix(), []byte(data), prevBlockHash, []byte{}}
 	block.SetHash()
 	return block
 }
@@ -51,16 +50,19 @@ And that's it for the block!
 
 ## Blockchain
 
-Now let's implement the blockchain. In its essence blockchain is a database where blocks are stored. One requirement to this database is that it must be ordered: we want to effectively get the latest block hash. Another requirement is that it must allow to quickly get a block by its hash. We're not going to use an external database and will just use standard Golang data structures. The ideal one would've been ordered map, but there's no such data structure in Go. So, we'll keep blocks in an array and ignore the "quickly take latest block hash" requirement:
+Now let's implement a blockchain. In its essence blockchain is just a database with certain structure: it's an ordered, back-linked list. Which means that blocks are stored in the insertion order and that each block is linked to the previous one. This structure allows to quickly get the latest block in a chain and to (efficiently) get a block by its hash.
+
+In Golang this structure can be implemented by using an array and a map: the array would keep ordered hashes (arrays are ordered in Go), and the map would keep `hash → block` pairs (maps are unordered). But for our blockchain prototype we'll just use an array, because we don't need to get blocks by their hash for now.
 
 ```go
 type Blockchain struct {
 	blocks []*Block
 }
 ```
-We can also use two data structures: a map that keeps `hash: block` key-value pairs, and an array that keeps hashes in their insertion order. But this would've been too complex for our simple use case.
 
-Ok, we have a blockchain. Now let's make it possible to add blocks to it:
+This is our first blockchain! I've never thought it would be so easy 😉
+
+Now let's make it possible to add blocks to it:
 
 ```go
 func (bc *Blockchain) AddBlock(data string) {
@@ -70,9 +72,9 @@ func (bc *Blockchain) AddBlock(data string) {
 }
 ```
 
-That's it! Or isn't?
+That's it! Or not?..
 
-To add a new block we need an existing block (thus, the "chain" in blockchain), but there're not blocks in our blockchain! So, in any blockchain, there must be at least one block, and such block, the first in the chain, is called **genesis block**. Let's implement a method that creates such a block:
+To add a new block we need an existing block, but there're not blocks in our blockchain! So, in any blockchain, there must be at least one block, and such block, the first in the chain, is called **genesis block**. Let's implement a method that creates such a block:
 
 ```go
 func NewGenesisBlock() *Block {
@@ -88,8 +90,6 @@ func NewBlockchain() *Blockchain {
 }
 ```
 
-## Conclusion
-
 Let's check that the blockchain works correctly:
 
 ```go
@@ -100,7 +100,7 @@ func main() {
 	bc.AddBlock("Send 2 more BTC to Ivan")
 
 	for _, block := range bc.blocks {
-		fmt.Printf("Prev. hash: %x\n", block.PrevBlock)
+		fmt.Printf("Prev. hash: %x\n", block.PrevBlockHash)
 		fmt.Printf("Data: %s\n", block.Data)
 		fmt.Printf("Hash: %x\n", block.Hash)
 		fmt.Println()
@@ -126,9 +126,16 @@ Hash: 561237522bb7fcfbccbc6fe0e98bbbde7427ffe01c6fb223f7562288ca2295d1
 
 That's it!
 
+## Conclusion
+
+We built a very simple blockchain prototype: it's just an array of blocks, with each block having a connection to the previous one. The actual blockchain is much more complex though. In our blockchain adding new blocks is easy and fast, but in real blockchain adding new blocks requires some work: one has to perform some heavy computations before getting a permission to add block (this mechanism is called Proof-of-Work). Also, blockchain is a distributed database that has no single decision maker. Thus, a new block must be confirmed and approved by other participants of the network (this mechanism is called consensus). And there're no transactions in our blockchain yet!  
+
+In future articles we'll cover each of these features!
+
 
 ---
 
-Full source codes: [https://github.com/Jeiwan/blockchain_go/tree/part_1](https://github.com/Jeiwan/blockchain_go/tree/part_1)
+Links:
 
-Block hashing algorithm: [https://en.bitcoin.it/wiki/Block_hashing_algorithm](https://en.bitcoin.it/wiki/Block_hashing_algorithm)
+1. Full source codes: [https://github.com/Jeiwan/blockchain_go/tree/part_1](https://github.com/Jeiwan/blockchain_go/tree/part_1)
+2. Block hashing algorithm: [https://en.bitcoin.it/wiki/Block_hashing_algorithm](https://en.bitcoin.it/wiki/Block_hashing_algorithm)
