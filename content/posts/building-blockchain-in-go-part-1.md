@@ -24,7 +24,7 @@ type Block struct {
 
 So how do we calculate the hashes? The way hashes are calculates is very important feature of blockchain, and it's this feature that makes blockchain secure. The thing is that calculating a hash is a computationally difficult operation, it takes some time even on fast computers (that's why people buy powerful GPUs to mine Bitcoin). This is an intentional architectural design, which makes adding new blocks difficult, thus preventing their modification after they're added. We'll discuss and implement this mechanism in a future article.
 
-For now, we'll just take block fields, concatenate them, and calculate a `SHA256` on the concatenated string. Let's do this in `SetHash` method:
+For now, we'll just take block fields, concatenate them, and calculate a SHA-256 hash on the concatenated combination. Let's do this in `SetHash` method:
 
 ```go
 func (b *Block) SetHash() {
@@ -36,7 +36,7 @@ func (b *Block) SetHash() {
 }
 ```
 
-Next, following a Golang convention, we'll implement a function that'll simplify creation of a block:
+Next, following a Golang convention, we'll implement a function that'll simplify the creation of a block:
 
 ```go
 func NewBlock(data string, prevBlockHash []byte) *Block {
@@ -130,7 +130,7 @@ That's it!
 
 We built a very simple blockchain prototype: it's just an array of blocks, with each block having a connection to the previous one. The actual blockchain is much more complex though. In our blockchain adding new blocks is easy and fast, but in real blockchain adding new blocks requires some work: one has to perform some heavy computations before getting a permission to add block (this mechanism is called Proof-of-Work). Also, blockchain is a distributed database that has no single decision maker. Thus, a new block must be confirmed and approved by other participants of the network (this mechanism is called consensus). And there're no transactions in our blockchain yet!  
 
-In future articles we'll cover each of these features!
+In future articles we'll cover each of these features.
 
 
 ---
