@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Blockchain on Going the distance</title>
+    <link>https://jeiwan.cc/tags/blockchain/</link>
+    <description>Recent content in Blockchain on Going the distance</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 16 Aug 2017 12:29:11 +0700</lastBuildDate>
+    
+	<atom:link href="https://jeiwan.cc/tags/blockchain/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Building Blockchain in Go. Part 1: Basic Prototype</title>
+      <link>https://jeiwan.cc/posts/building-blockchain-in-go-part-1/</link>
+      <pubDate>Wed, 16 Aug 2017 12:29:11 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/posts/building-blockchain-in-go-part-1/</guid>
+      <description>Introduction Blockchain is one of the most revolutionary technology of the 21st century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a distributed database of records. But what makes it unique is that it&amp;rsquo;s not a private database, but a public one, i.e. everyone who uses it has a full or partial copy of it. And a new record can be added only with a consent of other keepers of the database.</description>
+    </item>
+    
+  </channel>
+</rss>
