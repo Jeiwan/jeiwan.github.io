@@ -2,7 +2,6 @@
 title: "Building Blockchain in Go. Part 2: Proof-of-Work"
 date: 2017-08-22T12:42:19+07:00
 tags: [Golang, Blockchain, Bitcoin]
-draft: true
 ---
 
 ## Introduction
