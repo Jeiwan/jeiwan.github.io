@@ -6,10 +6,19 @@
     <description>Recent content in Bitcoin on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 16 Aug 2017 12:29:11 +0700</lastBuildDate>
+    <lastBuildDate>Tue, 22 Aug 2017 12:42:19 +0700</lastBuildDate>
     
 	<atom:link href="https://jeiwan.cc/tags/bitcoin/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Building Blockchain in Go. Part 2: Proof-of-Work</title>
+      <link>https://jeiwan.cc/posts/building-blockchain-in-go-part-2/</link>
+      <pubDate>Tue, 22 Aug 2017 12:42:19 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/posts/building-blockchain-in-go-part-2/</guid>
+      <description>Introduction In the previous article we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work.</description>
+    </item>
     
     <item>
       <title>Building Blockchain in Go. Part 1: Basic Prototype</title>
