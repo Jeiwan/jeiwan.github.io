@@ -30,7 +30,7 @@ Hashing is a process of obtaining a hash for specified data. A hash is a unique 
 
 ![Hashing example](/images/hashing-example.png)
 
-Hashing functions are widely used to check the consistency of data. Some software providers publish checksums in addition to software package. After downloading a file you can feed it to a hashing function and compare produced hash with the one provided by the software developer.
+Hashing functions are widely used to check the consistency of data. Some software providers publish checksums in addition to a software package. After downloading a file you can feed it to a hashing function and compare produced hash with the one provided by the software developer.
 
 In blockchain, hashing is used to guarantee the consistency of a block. The input data for a hashing algorithm contains the hash of the previous block, thus making it impossible (or, at least, quite difficult) to modify a block in the chain: one has to recalculate its hash and hashes of all the blocks after it.
 
@@ -50,11 +50,11 @@ Thus, this is a brute force algorithm: you change the counter, calculate a new h
 
 Now let's look closer at the requirements a hash has to meet. In the original Hashcash implementation, the requirement sounds like "first 20 bits of a hash must be zeros". In Bitcoin, the requirement is adjusted from time to time, because, by design, a block must be generated every 10 minutes, despite computation power increasing with time and more and more miners joining the network.
 
-To demonstrate this algorithm, I took the data from the previous example ("Mmmmm... donuts") and found a hash that starts with 3 zero-bytes:
+To demonstrate this algorithm, I took the data from the previous example ("I like donuts") and found a hash that starts with 3 zero-bytes:
 
 ![Hashcash example](/images/hashcash-example.png)
 
-`126ab6` is the hexadecimal value of the counter, which is 1206966 in decimal system.
+`ca07ca` is the hexadecimal value of the counter, which is 13240266 in the decimal system.
 
 ## Implementation
 Ok, we're done with the theory, let's write code! First, let's define the difficulty of mining:
@@ -98,11 +98,11 @@ And it occupies 29 bytes in memory. And here's its visual comparison with the ha
 0000008b0f41ec78bab747864db66bcb9fb89920ee75f43fdaaeb5544f7f76ca
 ```
 
-The first hash (calculated on "Mmmmm... donuts") is bigger than the target, thus it's not a valid proof of work. The second hash (calculated on "Mmmmm... donuts126ab6") is smaller than the target, thus it's a valid proof.
+The first hash (calculated on "I like donuts") is bigger than the target, thus it's not a valid proof of work. The second hash (calculated on "I like donutsca07ca") is smaller than the target, thus it's a valid proof.
 
 You can think of a target as the upper boundary of a range: if a number (a hash) is lower than the boundary, it's valid, and vice versa. Lowering the boundary will result in fewer valid numbers, and thus, more difficult work required to find a valid one.
 
-Now, we need data to hash. Let's prepare it:
+Now, we need the data to hash. Let's prepare it:
 
 ```go
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
