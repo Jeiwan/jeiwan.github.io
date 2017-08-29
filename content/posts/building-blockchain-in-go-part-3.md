@@ -9,9 +9,9 @@ draft: true
 [So](https://jeiwan.cc/posts/building-blockchain-in-go-part-1/) [far](https://jeiwan.cc/posts/building-blockchain-in-go-part-2/), we've built a blockchain with a proof-of-work system, which makes mining possible. Our implementation is getting closer to a fully functional blockchain, but it still lacks some important features. Today will start storing a blockchain in a database, and after that we'll make a simple command-line interface to perform operations with the blockchain. In its essence, blockchain is a distributed database. We're going to omit the "distributed" part for now and focus on the "database" part.
 
 ## Database Choice
-Currently, there's no database in our implementation; instead we create blocks every time we run the program and store them in memory. We cannot reuse a blockchain, we cannot share it with others, thus we need to store it on the disk. 
+Currently, there's no database in our implementation; instead, we create blocks every time we run the program and store them in memory. We cannot reuse a blockchain, we cannot share it with others, thus we need to store it on the disk. 
 
-Which database do we need? Actually, any of them. In [the original Bitcoin paper](https://bitcoin.org/bitcoin.pdf) nothing is said about using certain database, so it's up to a developer what DB to use. [Bitcoin Core](https://github.com/bitcoin/bitcoin) which was initially published by Satoshi Nakamoto and which is currently a reference implementation of Bitcoin, uses [LevelDB](https://github.com/google/leveldb) (although it was introduced to the client only in 2012). And we'll use...
+Which database do we need? Actually, any of them. In [the original Bitcoin paper](https://bitcoin.org/bitcoin.pdf), nothing is said about using a certain database, so it's up to a developer what DB to use. [Bitcoin Core](https://github.com/bitcoin/bitcoin) which was initially published by Satoshi Nakamoto and which is currently a reference implementation of Bitcoin, uses [LevelDB](https://github.com/google/leveldb) (although it was introduced to the client only in 2012). And we'll use...
 
 ## BoltDB
 Because:
@@ -29,9 +29,9 @@ From the BoltDB's README on Github:
 
 Sounds perfect for our needs! Let's spend a couple of minutes reviewing it.
 
-BoltDB is a key/value storage, which means there're no tables like in SQL RDBMS (MySQL, PostgreSQL, etc.), no rows, no columns. Instead data is stored as key-value pairs (like in Golang maps). Key-value pairs are stored in buckets, which are intended to group similar pairs (this is similar to tables in RDBMS). Thus, in order to get a value you need to know a bucket and a key.
+BoltDB is a key/value storage, which means there're no tables like in SQL RDBMS (MySQL, PostgreSQL, etc.), no rows, no columns. Instead, data is stored as key-value pairs (like in Golang maps). Key-value pairs are stored in buckets, which are intended to group similar pairs (this is similar to tables in RDBMS). Thus, in order to get a value, you need to know a bucket and a key.
 
-One important thing about BoltDB is that there're no data types: keys and values are byte arrays. Since we'll store Go structs (`Block`, in particular) in it, we'll need to serialize them, i.e. implement a mechanism of converting a Go struct into a byte array and restoring it back from a byte array. We'll use [encoding/gob](https://golang.org/pkg/encoding/gob/) for this, but `JSON`, `XML`, `Protocol Buffers`, etc. can be used as well. We're using `encoding/gob` because it's simple and is a part of the standard Go library.
+One important thing about BoltDB is that there are no data types: keys and values are byte arrays. Since we'll store Go structs (`Block`, in particular) in it, we'll need to serialize them, i.e. implement a mechanism of converting a Go struct into a byte array and restoring it back from a byte array. We'll use [encoding/gob](https://golang.org/pkg/encoding/gob/) for this, but `JSON`, `XML`, `Protocol Buffers`, etc. can be used as well. We're using `encoding/gob` because it's simple and is a part of the standard Go library.
 
 ## Database Structure
 Before starting implementing persistence logic, we first need to decide how we'll store data in the DB. And for this, we'll refer to the way Bitcoin Core does that.
@@ -99,7 +99,7 @@ func DeserializeBlock(d []byte) *Block {
 And that's it for the serialization!
 
 ## Persistence
-Let's start with the `NewBlockchain` function. Currently it creates a new instance of `Blockchain` and adds the genesis block to it. What we want it to do is to:
+Let's start with the `NewBlockchain` function. Currently, it creates a new instance of `Blockchain` and adds the genesis block to it. What we want it to do is to:
 
 1. Open a DB file.
 2. Check if there's a blockchain stored in it.
@@ -170,7 +170,7 @@ if b == nil {
 ```
 This is the core of the function. Here, we obtain the bucket storing our blocks: if it exists, we read the `l` key from it; if it doesn't exist, we generate the genesis block, create the bucket, save the block into it, and update the `l` key storing the last block hash of the chain.
 
-Also notice the new way of creating a `Blockchain`:
+Also, notice the new way of creating a `Blockchain`:
 
 ```go
 bc := Blockchain{tip, db}
@@ -235,7 +235,7 @@ After mining a new block, we save its serialized representation into the DB and 
 Done! It wasn't hard, was it?
 
 ## Inspecting Blockchain
-All new blocks are now saved in a database, so we can reopen a blockchain and add a new block to it. But after implementing this, we lost a nice feature: we cannot print out blockchain blocks anymore, because we don't store blocks in an array any longer. Let's fix this flaw!
+All new blocks are now saved in a database, so we can reopen a blockchain and add a new block to it. But after implementing this, we lost a nice feature: we cannot print out blockchain blocks anymore because we don't store blocks in an array any longer. Let's fix this flaw!
 
 BoltDB allows to iterate over all the keys in a bucket, but the keys are stored in byte-sorted order, and we want blocks to be printed in the order they take in a blockchain. Also, because we don't want to load all the blocks into memory (our blockchain DB could be huge!.. or let's just pretend it could), we'll read them one by one. For this purpose, we'll need a blockchain iterator:
 
@@ -280,7 +280,7 @@ func (i *BlockchainIterator) Next() *Block {
 That's it for the DB part!
 
 ## CLI
-Until now our implementation haven't provided any interface to interact with the program: we've simply executed `NewBlockchain`, `bc.AddBlock` in the `main` function. Time to improve this! We want to have these commands:
+Until now our implementation hasn't provided any interface to interact with the program: we've simply executed `NewBlockchain`, `bc.AddBlock` in the `main` function. Time to improve this! We want to have these commands:
 
 ```
 blockchain_go addblock "Pay 0.031337 for a coffee"
