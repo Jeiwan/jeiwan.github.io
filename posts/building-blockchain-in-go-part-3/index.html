@@ -46,7 +46,7 @@
 
 
 <meta itemprop="dateModified" content="2017-08-29T12:10:04&#43;07:00" />
-<meta itemprop="wordCount" content="2353">
+<meta itemprop="wordCount" content="2351">
 
 
 
@@ -109,7 +109,7 @@
 
 <p>Currently, there&rsquo;s no database in our implementation; instead, we create blocks every time we run the program and store them in memory. We cannot reuse a blockchain, we cannot share it with others, thus we need to store it on the disk.</p>
 
-<p>Which database do we need? Actually, any of them. In <a href="https://bitcoin.org/bitcoin.pdf">the original Bitcoin paper</a>, nothing is said about using a certain database, so it&rsquo;s up to a developer what DB to use. <a href="https://github.com/bitcoin/bitcoin">Bitcoin Core</a> which was initially published by Satoshi Nakamoto and which is currently a reference implementation of Bitcoin, uses <a href="https://github.com/google/leveldb">LevelDB</a> (although it was introduced to the client only in 2012). And we&rsquo;ll use&hellip;</p>
+<p>Which database do we need? Actually, any of them. In <a href="https://bitcoin.org/bitcoin.pdf">the original Bitcoin paper</a>, nothing is said about using a certain database, so it&rsquo;s up to a developer what DB to use. <a href="https://github.com/bitcoin/bitcoin">Bitcoin Core</a>, which was initially published by Satoshi Nakamoto and which is currently a reference implementation of Bitcoin, uses <a href="https://github.com/google/leveldb">LevelDB</a> (although it was introduced to the client only in 2012). And we&rsquo;ll use&hellip;</p>
 
 <h2 id="boltdb">BoltDB</h2>
 
@@ -130,7 +130,7 @@
 <p>Since Bolt is meant to be used as such a low-level piece of functionality, simplicity is key. The API will be small and only focus on getting values and setting values. That&rsquo;s it.</p>
 </blockquote>
 
-<p>Sounds perfect for our needs! Let&rsquo;s spend a couple of minutes reviewing it.</p>
+<p>Sounds perfect for our needs! Let&rsquo;s spend a minute reviewing it.</p>
 
 <p>BoltDB is a key/value storage, which means there&rsquo;re no tables like in SQL RDBMS (MySQL, PostgreSQL, etc.), no rows, no columns. Instead, data is stored as key-value pairs (like in Golang maps). Key-value pairs are stored in buckets, which are intended to group similar pairs (this is similar to tables in RDBMS). Thus, in order to get a value, you need to know a bucket and a key.</p>
 
