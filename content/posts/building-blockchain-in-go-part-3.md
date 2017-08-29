@@ -453,6 +453,9 @@ PoW: true
 
 *(sound of a beer can opening)*
 
+## Conclusion
+Next time we'll implement addresses, wallets, and (probably) transactions. So stay tuned!
+
 ## Links
 
 1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_3)
