@@ -10,7 +10,7 @@ date: 2017-08-29T12:10:04+07:00
 ## Database Choice
 Currently, there's no database in our implementation; instead, we create blocks every time we run the program and store them in memory. We cannot reuse a blockchain, we cannot share it with others, thus we need to store it on the disk. 
 
-Which database do we need? Actually, any of them. In [the original Bitcoin paper](https://bitcoin.org/bitcoin.pdf), nothing is said about using a certain database, so it's up to a developer what DB to use. [Bitcoin Core](https://github.com/bitcoin/bitcoin) which was initially published by Satoshi Nakamoto and which is currently a reference implementation of Bitcoin, uses [LevelDB](https://github.com/google/leveldb) (although it was introduced to the client only in 2012). And we'll use...
+Which database do we need? Actually, any of them. In [the original Bitcoin paper](https://bitcoin.org/bitcoin.pdf), nothing is said about using a certain database, so it's up to a developer what DB to use. [Bitcoin Core](https://github.com/bitcoin/bitcoin), which was initially published by Satoshi Nakamoto and which is currently a reference implementation of Bitcoin, uses [LevelDB](https://github.com/google/leveldb) (although it was introduced to the client only in 2012). And we'll use...
 
 ## BoltDB
 Because:
@@ -26,7 +26,7 @@ From the BoltDB's [README on Github](https://github.com/boltdb/bolt):
 
 > Since Bolt is meant to be used as such a low-level piece of functionality, simplicity is key. The API will be small and only focus on getting values and setting values. That's it.
 
-Sounds perfect for our needs! Let's spend a couple of minutes reviewing it.
+Sounds perfect for our needs! Let's spend a minute reviewing it.
 
 BoltDB is a key/value storage, which means there're no tables like in SQL RDBMS (MySQL, PostgreSQL, etc.), no rows, no columns. Instead, data is stored as key-value pairs (like in Golang maps). Key-value pairs are stored in buckets, which are intended to group similar pairs (this is similar to tables in RDBMS). Thus, in order to get a value, you need to know a bucket and a key.
 
