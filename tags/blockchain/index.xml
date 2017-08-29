@@ -6,10 +6,19 @@
     <description>Recent content in Blockchain on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 22 Aug 2017 12:42:19 +0700</lastBuildDate>
+    <lastBuildDate>Tue, 29 Aug 2017 12:10:04 +0700</lastBuildDate>
     
 	<atom:link href="https://jeiwan.cc/tags/blockchain/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Building Blockchain in Go. Part 3: Persistence and CLI</title>
+      <link>https://jeiwan.cc/posts/building-blockchain-in-go-part-3/</link>
+      <pubDate>Tue, 29 Aug 2017 12:10:04 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/posts/building-blockchain-in-go-part-3/</guid>
+      <description>Introduction So far, we&amp;rsquo;ve built a blockchain with a proof-of-work system, which makes mining possible. Our implementation is getting closer to a fully functional blockchain, but it still lacks some important features. Today will start storing a blockchain in a database, and after that we&amp;rsquo;ll make a simple command-line interface to perform operations with the blockchain. In its essence, blockchain is a distributed database. We&amp;rsquo;re going to omit the &amp;ldquo;distributed&amp;rdquo; part for now and focus on the &amp;ldquo;database&amp;rdquo; part.</description>
+    </item>
     
     <item>
       <title>Building Blockchain in Go. Part 2: Proof-of-Work</title>
