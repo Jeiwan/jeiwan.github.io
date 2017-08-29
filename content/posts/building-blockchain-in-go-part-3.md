@@ -20,7 +20,7 @@ Because:
 3. It doesn't require to run a server.
 4. It allows to build the data structure we want.
 
-From the BoltDB's README on Github:
+From the BoltDB's [README on Github](https://github.com/boltdb/bolt):
 
 > Bolt is a pure Go key/value store inspired by Howard Chu's LMDB project. The goal of the project is to provide a simple, fast, and reliable database for projects that don't require a full database server such as Postgres or MySQL.
 
