@@ -2,7 +2,6 @@
 title: "Building Blockchain in Go. Part 3: Persistence and CLI"
 tags: [Golang, Blockchain, Bitcoin]
 date: 2017-08-29T12:10:04+07:00
-draft: true
 ---
 
 ## Introduction
