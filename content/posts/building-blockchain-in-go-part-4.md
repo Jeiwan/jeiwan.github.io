@@ -1,0 +1,507 @@
+---
+title: "Building Blockchain in Go Part 4: Transactions 1"
+tags: [Golang, Blockchain, Bitcoin]
+date: 2017-09-04T11:32:39+07:00
+draft: true
+---
+
+## Introduction
+Transactions are the heart of Bitcoin and the only purpose of blockchain is to store transactions in a secure and reliable way, so no one could modify them after they are created. Today we'll start implementing transactions. But because this is quite a big topic, I'll split them in two articles. Also, since coed changes are significant, it makes no sense describe all of them here. You can find all changes since the last article [here](https://github.com/Jeiwan/blockchain_go/compare/part_3...part_4).
+
+## There is no spoon
+If you've ever developed a web application, in order to implement payments you would likely to create these tables in a DB: `accounts` and `transactions`. An account would store information about a user, including their balance, and a transaction would store information about money transferring from one account to another. In Bitcoin, payments realization is completely different, there are:
+
+1. No accounts
+2. No balances
+3. No addresses
+4. No coins
+
+Since blockchain is a public and open database, we don't wont to store there sensitive information about wallet owners. Coins are not collected in accounts. Transactions do no transfer money from one address to another. There's no field or attribute that holds account balance. There are only transactions. But what's inside a transaction?
+
+## Bitcoin Transaction
+A transaction is a combination of inputs and outputs:
+
+```go
+type Transaction struct {
+	ID   []byte
+	Vin  []TXInput
+	Vout []TXOutput
+}
+```
+
+Inputs of a new transaction are linked to outputs of a previous transaction. But transactions do not transfer money between balances. Instead, a scripting language is used to lock values in outputs and unlock them with inputs. 
+
+A transaction can be viewed as a combination of flows running from inputs to outputs:
+
+[TRANSACTIONS CHAIN EXAMPLE]
+
+## Transaction Outputs
+Let's start with outputs first:
+
+```go
+type TXOutput struct {
+	Value        int
+	ScriptPubKey string
+}
+```
+
+Actually, it's outputs that store "coins" (notice the `Value` field above). And storing means locking them with a puzzle, which is stored in the `ScriptPubKey`. Internally, Bitcoin has a scripting language called *Script*, that is used to lock outputs and unlock them with inputs. The language is quite primitive (this is made intentionally, to avoid possible hacks and misuses) and serves the purpose of running tiny scripts that determine if an output can be unlocked and referenced in an input. You can find a detailed explanation of the scripting language [here](https://en.bitcoin.it/wiki/Script). Since we don't have addresses implemented, we'll avoid the whole scripting related logic for now. `ScriptPubKey` will store an arbitrary string (use defined wallet address) in our implementation.
+
+> By the way, having such scripting language means that Bitcoin can be used as a smart-contract platform as well.
+
+One important thing about output values is that they are **indivisible**, which means that you cannot reference only a part of the value. In other words, you have to spend the whole output, and if its bigger than the amount of a new transaction, you'll get a change.
+
+
+## Transaction Inputs
+And here's the input:
+
+```go
+type TXInput struct {
+	Txid      []byte
+	Vout      int
+	ScriptSig string
+}
+```
+As it was said above, an input must reference a previous output: `Txid` stores the ID of such transaction, and `Vout` stores an index of an output in the transaction. `ScriptSig` is also a script, which provides data to be used in an output's `ScriptPubKey`. If the data is correct, the output can be referenced in the input; if it's not, the output cannot be referenced in the input. Put it simple, users cannot reference outputs created by other users, i. e. they cannot spend other users money.
+
+Again, since we don't have addresses implemented yet, `ScriptSig` will store just an arbutrary user defined wallet address. We'll implemented public keys and signatures checking in the next article.
+
+To sum it up, outputs are where "values" are stored. Each output comes with an unlocking script, which determines if the output can be unlocked and used in another transaction. Every new transaction must have at least one input and output. An input references an output from a previous transaction and provides data (the `ScriptSig` field) that is used in the output's unlocking script to check that the output was created by the same "user".
+
+But what came first: inputs our outputs?
+
+## The egg
+In Bitcoin it's the egg that came before the chicken. The inputs-referencing-outputs logic is the classical "chicken or the egg" situation: inputs produce outputs and outputs produce inputs. And in Bitcoin, outputs come before inputs.
+
+When a miner starts mining a block, it adds a **coinbase transaction** transaction to it. A coinbase transaction is a special type of transactions which doesn't require previously existing outputs. It creates outputs (i.e., "coins") out of nowhere. The egg without a chicken. This is the reward miners get for mining new blocks.
+
+Remember that when a blockchain is newly created, a genesis block must be mined. It's this blocks that generates the very first output in the blockchain. And no previous outputs are required, since there are no such outputs.
+
+Let's create a coinbase transaction:
+
+```go
+func NewCoinbaseTX(to, data string) *Transaction {
+	if data == "" {
+		data = fmt.Sprintf("Reward to '%s'", to)
+	}
+
+	txin := TXInput{[]byte{}, -1, data}
+	txout := TXOutput{subsidy, to}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{txout}}
+	tx.SetID()
+
+	return &tx
+}
+```
+A coinbase transaction has only one input. In our implementation its `Txid` is empty and `Vout` equals to -1. Also, a coinbase transaction doesn't store a script in `ScriptSig`. Instead, arbitrary data is stored there.
+
+`subsidy` is the amount of reward. In Bitcoin, this number is not stored anywhere and calculated based only on the total number of blocks: the number of blocks is divided by `210000`. Mining the genesis block produced 50 BTC, and every `210000` blocks the reward amount is halved. In our implementation we'll store the reward as a constant.
+
+## Storing Transactions in Blockchain
+From now on, every block must store at least one transaction and it's no more possible to mine blocks without transactions. This means that we should remove the `Data` field of `Block` and store transactions instead:
+
+```go
+type Block struct {
+	Timestamp     int64
+	Transactions  []*Transaction
+	PrevBlockHash []byte
+	Hash          []byte
+	Nonce         int
+}
+```
+`NewBlock` and `NewGenesisBlock` are also changed now:
+
+```go
+func NewBlock(transactions []*Transaction, prevBlockHash []byte) *Block {
+	block := &Block{time.Now().Unix(), transactions, prevBlockHash, []byte{}, 0}
+	...
+}
+
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{})
+}
+```
+
+Next thing to change is the initialization of a new blockchain:
+
+```go
+func CreateBlockchain(address string) *Blockchain {
+	...
+	err = db.Update(func(tx *bolt.Tx) error {
+		cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
+		genesis := NewGenesisBlock(cbtx)
+
+		b, err := tx.CreateBucket([]byte(blocksBucket))
+		if err != nil {
+			log.Panic(err)
+		}
+		...
+	})
+	...
+}
+```
+
+Now, the function takes an address, which will receive the reward for mining the genesis block.
+
+## Proof-of-Work
+The Proof-of-Work algorithm must consider transactions stored in a block, to guarantee the consistency and reliability of blockchain as a storage. So now we must modify the `ProofOfWork.prepareData` method:
+
+```go
+func (pow *ProofOfWork) prepareData(nonce int) []byte {
+	data := bytes.Join(
+		[][]byte{
+			pow.block.PrevBlockHash,
+			pow.block.HashTransactions(),
+			IntToHex(pow.block.Timestamp),
+			IntToHex(int64(targetBits)),
+			IntToHex(int64(nonce)),
+		},
+		[]byte{},
+	)
+
+	return data
+}
+```
+Instead of `pow.block.Data` we now use `pow.block.HashTransactions()`:
+
+```go
+func (b *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash [32]byte
+
+	for _, tx := range b.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return txHash[:]
+}
+```
+
+Again, we're using hashing as a mechanism of providing unique representations of data. We want all transactions in a block to be uniquely identified by a single hash. To achieve this, we get a hash of each transaction, concatenate them, and get a hash of the concatenated combination.
+
+Bitcoin uses a more elaborate technique: it represents all transactions containing in a block as a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) and uses the root hash of the tree in the Proof-of-Work system. This approach allows to quickly check if a blocks contains certain transaction, having only just the root hash and without downloading all the transactions.
+
+Let's check that everything is correct so far:
+
+```shell
+$ blockchain_go createblockchain -address Ivan
+00000093450837f8b52b78c25f8163bb6137caf43ff4d9a01d1b731fa8ddcc8a
+
+Done!
+```
+
+It looks fine! But how do we check the balance?
+
+## Unspent Transaction Outputs
+We need to find all unspent transaction outputs. Unspent means that these outputs weren't referenced in any inputs. Of course, we don't need all of them, but only those that can be unlocked by the data we own (currently it's the arbitrary user defined address, and after implementing real addresses it will be a public key). First, let's define locking-unlocking methods on inputs and outputs:
+
+```go
+func (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
+	return in.ScriptSig == unlockingData
+}
+
+func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
+	return out.ScriptPubKey == unlockingData
+}
+```
+Here we just compare script containing fields with `unlockingData`. These pieces will be improved in a next article, after we implement private key based addresses.
+
+The next step - finding transactions containing unspent outputs - is quite difficult:
+
+```go
+func (bc *Blockchain) FindUnspentTransactions(address string) []*Transaction {
+	var unspentTXs []*Transaction
+	spentTXOs := make(map[string][]int)
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Vout {
+				// Was the output spent?
+				if spentTXOs[txID] != nil {
+					for _, spentOut := range spentTXOs[txID] {
+						if spentOut == outIdx {
+							continue Outputs
+						}
+					}
+				}
+
+				if out.CanBeUnlockedWith(address) {
+					unspentTXs = append(unspentTXs, tx)
+				}
+			}
+
+			if tx.IsCoinbase() == false {
+				for _, in := range tx.Vin {
+					if in.CanUnlockOutputWith(address) {
+						inTxID := hex.EncodeToString(in.Txid)
+						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
+					}
+				}
+			}
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return unspentTXs
+}
+```
+Since transactions are stored in blocks, we have to check every block in a blockchain. We start with outputs: 
+
+```go
+if out.CanBeUnlockedWith(address) {
+	unspentTXs = append(unspentTXs, tx)
+}
+```
+If an output was clocked by the same address we're searching UTXO for, then this is the output we want. But before this we need to check if an output was already referenced in an input:
+
+```go
+if spentTXOs[txID] != nil {
+	for _, spentOut := range spentTXOs[txID] {
+		if spentOut == outIdx {
+			continue Outputs
+		}
+	}
+}
+```
+We skip those that were referenced in inputs. After checking outputs we gather all inputs that could unlock outputs locked with the provided address:
+
+```go
+if tx.IsCoinbase() == false {
+    for _, in := range tx.Vin {
+        if in.CanUnlockOutputWith(address) {
+            inTxID := hex.EncodeToString(in.Txid)
+            spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
+        }
+    }
+}
+```
+
+That's it! Now we can implement `getbalance` command:
+
+```go
+func (cli *CLI) getBalance(address string) {
+	bc := NewBlockchain(address)
+	defer bc.db.Close()
+
+	balance := 0
+	UTXOs := bc.FindUTXO(address)
+
+	for _, out := range UTXOs {
+		balance += out.Value
+	}
+
+	fmt.Printf("Balance of '%s': %d\n", address, balance)
+}
+
+```
+In its essence, account balance is the sum of values of all unspent transaction outputs locked by the account address. This is what the `FindUTXO` method looks like:
+
+```go
+func (bc *Blockchain) FindUTXO(address string) []TXOutput {
+	var UTXOs []TXOutput
+	unspentTransactions := bc.FindUnspentTransactions(address)
+
+	for _, tx := range unspentTransactions {
+		for _, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address) {
+				UTXOs = append(UTXOs, out)
+			}
+		}
+	}
+
+	return UTXOs
+}
+```
+
+Let's check our balance after mining the genesis block:
+
+```shell
+$ blockchain_go getbalance -address Ivan
+Balance of 'Ivan': 10
+```
+This is our first money!
+
+
+## Sending Coins
+Now, we want to send some coins to someone else. This will require creating a new transaction and mining a new block containing this transaction. But we've implemented only coinbase transactions so far. Let's fix this flaw:
+
+```go
+func NewUTXOTransaction(from, to string, value int, bc *Blockchain) *Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	acc, validOutputs := bc.FindSpendableOutputs(from, value)
+
+	if acc < value {
+		log.Panic("ERROR: Not enough funds")
+	}
+
+	// Build a list of inputs
+	for txid, outs := range validOutputs {
+		for _, out := range outs {
+			txID, err := hex.DecodeString(txid)
+
+			input := TXInput{txID, out, from}
+			inputs = append(inputs, input)
+		}
+	}
+
+	// Build a list of outputs
+	outputs = append(outputs, TXOutput{value, to})
+	if acc > value {
+		outputs = append(outputs, TXOutput{acc - value, from}) // a change
+	}
+
+	tx := Transaction{nil, inputs, outputs}
+	tx.SetID()
+
+	return &tx
+}
+```
+Before creating new outputs, we first have to find all unspent outputs and ensure that they store enough value. This is what `FindUTXOs` method does. After that, for each found output an input referencing it is created. Next, we create two outputs:
+
+1. An output that's locked with the receiver address.
+2. An output that's locked with the sender address. This is a change. It's only created when found unspent outputs hold more value that required for the new transaction. Remember: outputs are **indivisible**.
+
+`FindUTXOs` method is based on the `FindUnspentTransactions` method we defined earlier:
+
+```go
+func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
+	unspentOutputs := make(map[string][]int)
+	unspentTXs := bc.FindUnspentTransactions(address)
+	accumulated := 0
+
+Work:
+	for _, tx := range unspentTXs {
+		txID := hex.EncodeToString(tx.ID)
+
+		for outIdx, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address) && accumulated < amount {
+				accumulated += out.Value
+				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+
+				if accumulated >= amount {
+					break Work
+				}
+			}
+		}
+	}
+
+	return accumulated, unspentOutputs
+}
+
+```
+The method iterates over all unspent transactions and accumulates their values. When the accumulated value is more or equals to the amount we want to transfer, it stops and returns output indices grouped by transaction IDs. We don't need to take more than we want to send.
+
+Now we can modify the `Blockchain.MineBlock` method:
+
+```go
+func (bc *Blockchain) MineBlock(transactions []*Transaction) {
+	...
+	newBlock := NewBlock(transactions, lastHash)
+	...
+}
+```
+
+Finally, let's implement `send` command:
+
+```go
+func (cli *CLI) send(from, to string, amount int) {
+	bc := NewBlockchain(from)
+	defer bc.db.Close()
+
+	tx := NewUTXOTransaction(from, to, amount, bc)
+	bc.MineBlock([]*Transaction{tx})
+	fmt.Println("Success!")
+}
+```
+Sending coins means creating a transaction and adding it to the blockchain via mining a block. But Bitcoin doesn't do this immediately (as we do). Instead, it puts all new transactions into memory pool (or mempool), and when a miner is ready to mine a block, it takes all transactions from the mempool and creates a candidate block. Transactions become confirmed only when a block containing them is mined and added to the blockchain.
+
+Let's check that sending coins works:
+
+```shell
+$ blockchain_go send -from Ivan -to Pedro -amount 6
+00000001b56d60f86f72ab2a59fadb197d767b97d4873732be505e0a65cc1e37
+
+Success!
+
+$ blockchain_go getbalance -address Ivan
+Balance of 'Ivan': 4
+
+$ blockchain_go getbalance -address Pedro
+Balance of 'Pedro': 6
+```
+
+Nice! Now, let's create more transactions and ensure that sending from multiple outputs works fine:
+
+```shell
+$ blockchain_go send -from Pedro -to Helen -amount 2
+00000099938725eb2c7730844b3cd40209d46bce2c2af9d87c2b7611fe9d5bdf
+
+Success!
+
+$ blockchain_go send -from Ivan -to Helen -amount 2
+000000a2edf94334b1d94f98d22d7e4c973261660397dc7340464f7959a7a9aa
+
+Success!
+```
+
+Now, Helen's coins are locked in two outputs: one from Pedro and one from Ivan. Let's send them to someone:
+
+```shell
+$ blockchain_go send -from Helen -to Rachel -amount 3
+000000c58136cffa669e767b8f881d16e2ede3974d71df43058baaf8c069f1a0
+
+Success!
+
+$ blockchain_go getbalance -address Ivan
+Balance of 'Ivan': 2
+
+$ blockchain_go getbalance -address Pedro
+Balance of 'Pedro': 4
+
+$ blockchain_go getbalance -address Helen
+Balance of 'Helen': 1
+
+$ blockchain_go getbalance -address Rachel
+Balance of 'Rachel': 3
+```
+
+Looks fine! Now let's test a failure:
+
+```shell
+$ blockchain_go send -from Pedro -to Ivan -amount 5
+panic: ERROR: Not enough funds
+
+$ blockchain_go getbalance -address Pedro
+Balance of 'Pedro': 4
+
+$ blockchain_go getbalance -address Ivan
+Balance of 'Ivan': 2
+```
+
+
+## Conclusion
+Phew! It wasn't easy, but we have transactions now! Although, some key features of a Bitcoin-like cryptocurrency are missing:
+
+1. Addresses. We don't have real, private key based addresses yet.
+2. Rewards. Mining blocks is absolutely not profitable!
+3. UTXO set. Getting balance requires scanning the whole blockchain, which can take very long time when there are many and many blocks. Also, it can take a lot of time if we want to validate later transactions. UTXO set is intended to solve these problem and make operations with transactions fast.
+4. Mempool. This is where transactions are stored before being packed in a block. In our current implementation blocks contain only one transaction, and this is quite inefficient.
+
+
+Links:
+
+1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_4)
+2. [Transaction](https://en.bitcoin.it/wiki/Transaction)
+3. [Merkle tree](https://en.bitcoin.it/wiki/Protocol_documentation#Merkle_Trees)
