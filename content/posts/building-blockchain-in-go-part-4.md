@@ -2,7 +2,6 @@
 title: "Building Blockchain in Go. Part 4: Transactions 1"
 tags: [Golang, Blockchain, Bitcoin]
 date: 2017-09-04T11:32:39+07:00
-draft: true
 ---
 
 ## Introduction
