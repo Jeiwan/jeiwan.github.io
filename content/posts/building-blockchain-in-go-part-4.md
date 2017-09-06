@@ -526,3 +526,4 @@ Links:
 1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_4)
 2. [Transaction](https://en.bitcoin.it/wiki/Transaction)
 3. [Merkle tree](https://en.bitcoin.it/wiki/Protocol_documentation#Merkle_Trees)
+4. [Coinbase](https://en.bitcoin.it/wiki/Coinbase)
