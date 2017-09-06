@@ -17,7 +17,7 @@
       <pubDate>Mon, 04 Sep 2017 11:32:39 +0700</pubDate>
       
       <guid>https://jeiwan.cc/posts/building-blockchain-in-go-part-4/</guid>
-      <description>Introduction Transactions are the heart of Bitcoin and the only purpose of blockchain is to store transactions in a secure and reliable way, so no one could modify them after they are created. Today we&amp;rsquo;re starting implementing transactions. But because this is quite a big topic, I&amp;rsquo;ll split it in two parts: in this part we&amp;rsquo;ll implement the general mechanism of transactions and in the second part we&amp;rsquo;ll work though details.</description>
+      <description>Introduction Transactions are the heart of Bitcoin and the only purpose of blockchain is to store transactions in a secure and reliable way, so no one could modify them after they are created. Today we&amp;rsquo;re starting implementing transactions. But because this is quite a big topic, I&amp;rsquo;ll split it into two parts: in this part, we&amp;rsquo;ll implement the general mechanism of transactions and in the second part we&amp;rsquo;ll work through details.</description>
     </item>
     
     <item>
