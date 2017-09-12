@@ -6,10 +6,19 @@
     <description>Recent content in Bitcoin on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 04 Sep 2017 11:32:39 +0700</lastBuildDate>
+    <lastBuildDate>Mon, 11 Sep 2017 11:20:43 +0700</lastBuildDate>
     
 	<atom:link href="https://jeiwan.cc/tags/bitcoin/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Building Blockchain in Go, Part 5: Addresses</title>
+      <link>https://jeiwan.cc/posts/building-blockchain-in-go-part-5/</link>
+      <pubDate>Mon, 11 Sep 2017 11:20:43 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/posts/building-blockchain-in-go-part-5/</guid>
+      <description>Introduction In the previous article we started implementing transactions. You were also introduced to the impersonal nature of transactions: there are no user accounts, your personal data (e.g., name, passport number or SSN) is not required and not stored anywhere in Bitcoin. But there still must be something that identifies you as the owner of transaction outputs (i.e. the owner of coins locked on these outputs). And this is what Bitcoin addresses are needed for.</description>
+    </item>
     
     <item>
       <title>Building Blockchain in Go. Part 4: Transactions 1</title>
