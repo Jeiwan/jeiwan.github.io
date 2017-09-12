@@ -563,8 +563,9 @@ It's really awesome that we've got so far and implemented so many key features o
 
 Links:
 
+1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_5)
 1. [Address](https://en.bitcoin.it/wiki/Address)
-2. [Technical background of Bitcoin addresses](https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses)
+2. [Technical Background of Bitcoin Addresses](https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses)
 3. [Base58](https://en.bitcoin.it/wiki/Base58Check_encoding)
 4. [ECDSA](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
 5. [Elliptic Curve Cryptography](https://en.wikipedia.org/wiki/Elliptic_curve_cryptography)
