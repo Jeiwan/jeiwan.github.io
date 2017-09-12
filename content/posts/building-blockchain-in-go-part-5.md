@@ -1,5 +1,5 @@
 ---
-title: "Building Blockchain in Go, Part 5: Addresses"
+title: "Building Blockchain in Go. Part 5: Addresses"
 date: 2017-09-11T11:20:43+07:00
 tags: [Golang, Blockchain, Bitcoin]
 ---
