@@ -261,7 +261,7 @@ Considering that transactions unlock previous outputs, redistribute their values
 2. Public key hashes stored in new, locked, outputs. This identifies "recipient" of a transaction.
 3. Values of new outputs.
 
-> In Bitcoin, locking/unlocking logic is stored in scripts, which are stored in `ScriptSig` and `ScriptPubKey` fields of inputs and outputs, respectively. Since Bitcoins allows different types of such scripts, it signs the whole content of ``ScriptPubKey`.
+> In Bitcoin, locking/unlocking logic is stored in scripts, which are stored in `ScriptSig` and `ScriptPubKey` fields of inputs and outputs, respectively. Since Bitcoins allows different types of such scripts, it signs the whole content of `ScriptPubKey`.
 
 As you can see, we don't need to sign the public keys stored in inputs. Because of this, in Bitcoin, it's not a transaction that's signed, but its trimmed copy with inputs storing `ScriptPubKey` from referenced outputs.
 
@@ -331,15 +331,15 @@ Next, we iterate over each input in the copy:
 
 ```go
 for inID, vin := range txCopy.Vin {
-		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
-		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+	prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+	txCopy.Vin[inID].Signature = nil
+	txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 ```
 In each input, `Signature` is set to `nil` (just a double-check) and `PubKey` is set to the `PubKeyHash` of the referenced output. At this moment, all transactions but the current one are "empty", i.e. their `Signature` and `PubKey` fields are set to nil. Thus, **inputs are signed separately**, although this is not necessary for our application, but Bitcoin allows transactions to contain inputs referencing different addresses.
 
 ```go
-		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil
+	txCopy.ID = txCopy.Hash()
+	txCopy.Vin[inID].PubKey = nil
 
 ```
 The `Hash` method serializes the transaction and hashes it with the SHA-256 algorithm. The resulted hash is the data we're going to sign. After getting the hash we should reset the `PubKey` field, so it doesn't affect further iterations.
@@ -347,10 +347,10 @@ The `Hash` method serializes the transaction and hashes it with the SHA-256 algo
 Now, the central piece:
 
 ```go
-		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
-		signature := append(r.Bytes(), s.Bytes()...)
+	r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
+	signature := append(r.Bytes(), s.Bytes()...)
 
-		tx.Vin[inID].Signature = signature
+	tx.Vin[inID].Signature = signature
 ```
 We sign `txCopy.ID` with `privKey`. An ECDSA signature is a pair of numbers, which we concatenate and store in the input's `Signature` field.
 
