@@ -82,16 +82,18 @@ Now let's get back to the above mentioned Bitcoin address: 1A1zP1eP5QGefi2DMPTfT
 
 Bitcoin uses the Base58 algorithm to convert public keys into human readable format. The algorithm is very similar to famous Base64, but it uses shorter alphabet: some letters were removed from the alphabet to avoid some attacks that use letters similarity. Thus, there are no these symbols: 0 (zero), O (capital o), I (capital i), l (lowercase L), because they look similar. Also, there are no + and / symbols.
 
-Let's schematically visualize the process of getting an address from a private key:
+Let's schematically visualize the process of getting an address from a public key:
 
 ![Address Generation](/images/address-generation-scheme.png)
 
-Actually, there's something else happening before the 'Base58Encode' step. The decoded public key consist of three parts:
+Thus, the above mentioned decoded public key consists of three parts:
 
 ```shell
 Version  Public key hash                           Checksum
 00       62E907B15CBF27D5425399EBF6F0FB50EBB88F18  C29B7D93
 ```
+
+Since hashing functions are one way (i.e., they cannot be reversed), it's not possible to extract the public key from the hash. But we can check if a public  key was used to get the hash by running it thought the save hash functions and comparing the hashes.
 
 Ok, now that we have all the pieces, let's write some code. Some of the concepts should be more clear when written in code.
 
