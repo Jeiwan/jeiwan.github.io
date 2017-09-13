@@ -566,6 +566,7 @@ Links:
 1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_5)
 1. [Public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography)
 1. [Digital signatures](https://en.wikipedia.org/wiki/Digital_signature)
+1. [Elliptic curve](https://en.wikipedia.org/wiki/Elliptic_curve)
 1. [Elliptic curve cryptography](https://en.wikipedia.org/wiki/Elliptic_curve_cryptography)
 1. [ECDSA](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
 1. [Technical background of Bitcoin addresses](https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses)
