@@ -382,7 +382,7 @@ Balance of '1Lhqun1E9zZZhodiTqxfPQBcwr1CVDV2sy': 0
 </ol>
 
 <blockquote>
-<p>In Bitcoin, locking/unlocking logic is stored in scripts, which are stored in <code>ScriptSig</code> and <code>ScriptPubKey</code> fields of inputs and outputs, respectively. Since Bitcoins allows different types of such scripts, it signs the whole content of `<code>ScriptPubKey</code>.</p>
+<p>In Bitcoin, locking/unlocking logic is stored in scripts, which are stored in <code>ScriptSig</code> and <code>ScriptPubKey</code> fields of inputs and outputs, respectively. Since Bitcoins allows different types of such scripts, it signs the whole content of <code>ScriptPubKey</code>.</p>
 </blockquote>
 
 <p>As you can see, we don&rsquo;t need to sign the public keys stored in inputs. Because of this, in Bitcoin, it&rsquo;s not a transaction that&rsquo;s signed, but its trimmed copy with inputs storing <code>ScriptPubKey</code> from referenced outputs.</p>
@@ -454,15 +454,15 @@ Balance of '1Lhqun1E9zZZhodiTqxfPQBcwr1CVDV2sy': 0
 <p>Next, we iterate over each input in the copy:</p>
 
 <pre><code class="language-go">for inID, vin := range txCopy.Vin {
-		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
-		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+	prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+	txCopy.Vin[inID].Signature = nil
+	txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 </code></pre>
 
 <p>In each input, <code>Signature</code> is set to <code>nil</code> (just a double-check) and <code>PubKey</code> is set to the <code>PubKeyHash</code> of the referenced output. At this moment, all transactions but the current one are &ldquo;empty&rdquo;, i.e. their <code>Signature</code> and <code>PubKey</code> fields are set to nil. Thus, <strong>inputs are signed separately</strong>, although this is not necessary for our application, but Bitcoin allows transactions to contain inputs referencing different addresses.</p>
 
-<pre><code class="language-go">		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil
+<pre><code class="language-go">	txCopy.ID = txCopy.Hash()
+	txCopy.Vin[inID].PubKey = nil
 
 </code></pre>
 
@@ -470,10 +470,10 @@ Balance of '1Lhqun1E9zZZhodiTqxfPQBcwr1CVDV2sy': 0
 
 <p>Now, the central piece:</p>
 
-<pre><code class="language-go">		r, s, err := ecdsa.Sign(rand.Reader, &amp;privKey, txCopy.ID)
-		signature := append(r.Bytes(), s.Bytes()...)
+<pre><code class="language-go">	r, s, err := ecdsa.Sign(rand.Reader, &amp;privKey, txCopy.ID)
+	signature := append(r.Bytes(), s.Bytes()...)
 
-		tx.Vin[inID].Signature = signature
+	tx.Vin[inID].Signature = signature
 </code></pre>
 
 <p>We sign <code>txCopy.ID</code> with <code>privKey</code>. An ECDSA signature is a pair of numbers, which we concatenate and store in the input&rsquo;s <code>Signature</code> field.</p>
