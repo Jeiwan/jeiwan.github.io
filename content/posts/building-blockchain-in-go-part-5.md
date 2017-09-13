@@ -564,10 +564,11 @@ It's really awesome that we've got so far and implemented so many key features o
 Links:
 
 1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_5)
+1. [Public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography)
+1. [Digital signatures](https://en.wikipedia.org/wiki/Digital_signature)
+1. [Elliptic curve cryptography](https://en.wikipedia.org/wiki/Elliptic_curve_cryptography)
+1. [ECDSA](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
+1. [Technical background of Bitcoin addresses](https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses)
 1. [Address](https://en.bitcoin.it/wiki/Address)
-2. [Technical Background of Bitcoin Addresses](https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses)
-3. [Base58](https://en.bitcoin.it/wiki/Base58Check_encoding)
-4. [ECDSA](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
-5. [Elliptic Curve Cryptography](https://en.wikipedia.org/wiki/Elliptic_curve_cryptography)
-6. [Public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography)
-7. [A Gentle Introduction to Elliptic Curve Cryptography](http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/)
+1. [Base58](https://en.bitcoin.it/wiki/Base58Check_encoding)
+1. [A gentle introduction to elliptic curve cryptography](http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/)
