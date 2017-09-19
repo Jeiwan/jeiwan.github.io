@@ -26,17 +26,17 @@ Implementing rewards is as easy as updating the `send` command:
 
 ```go
 func (cli *CLI) send(from, to string, amount int) {
-	...
-	bc := NewBlockchain()
-	UTXOSet := UTXOSet{bc}
-	defer bc.db.Close()
+    ...
+    bc := NewBlockchain()
+    UTXOSet := UTXOSet{bc}
+    defer bc.db.Close()
 
-	tx := NewUTXOTransaction(from, to, amount, &UTXOSet)
-	cbTx := NewCoinbaseTX(from, "")
-	txs := []*Transaction{cbTx, tx}
+    tx := NewUTXOTransaction(from, to, amount, &UTXOSet)
+    cbTx := NewCoinbaseTX(from, "")
+    txs := []*Transaction{cbTx, tx}
 
-	newBlock := bc.MineBlock(txs)
-	fmt.Println("Success!")
+    newBlock := bc.MineBlock(txs)
+    fmt.Println("Success!")
 }
 ```
 In our implementation, the one who creates a transaction, mines the new block, and thus, receives a reward.
@@ -57,21 +57,21 @@ Consider the `Blockchain.FindUnspentTransactions` method we've implemented earli
 
 ```go
 func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []Transaction {
-	...
-	bci := bc.Iterator()
+    ...
+    bci := bc.Iterator()
 
-	for {
-		block := bci.Next()
+    for {
+        block := bci.Next()
 
-		for _, tx := range block.Transactions {
-			...
-		}
+        for _, tx := range block.Transactions {
+            ...
+        }
 
-		if len(block.PrevBlockHash) == 0 {
-			break
-		}
-	}
-	...
+        if len(block.PrevBlockHash) == 0 {
+            break
+        }
+    }
+    ...
 }
 ```
 The function finds transactions with unspent outputs. Since transactions are stored in blocks, it iterates over each block in the blockchain and checks every transaction in it. As of September 18, 2017, there're 485,860 blocks in Bitcoin and the whole database takes 140+ Gb of disk space. This means that one has to run a full node to validate transactions. Moreover, validating transactions would require iterating over many blocks.
@@ -99,31 +99,31 @@ Thus, the two most frequently used functions will use the cache from now! Let's 
 
 ```go
 type UTXOSet struct {
-	Blockchain *Blockchain
+    Blockchain *Blockchain
 }
 ```
 We'll use a single database, but will store the UTXO set in a different bucket. Thus, `UTXOSet` is coupled with `Blockchain`.
 
 ```go
 func (u UTXOSet) Reindex() {
-	db := u.Blockchain.db
-	bucketName := []byte(utxoBucket)
+    db := u.Blockchain.db
+    bucketName := []byte(utxoBucket)
 
-	err := db.Update(func(tx *bolt.Tx) error {
-		err := tx.DeleteBucket(bucketName)
-		_, err = tx.CreateBucket(bucketName)
-	})
+    err := db.Update(func(tx *bolt.Tx) error {
+        err := tx.DeleteBucket(bucketName)
+        _, err = tx.CreateBucket(bucketName)
+    })
 
-	UTXO := u.Blockchain.FindUTXO()
+    UTXO := u.Blockchain.FindUTXO()
 
-	err = db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
+    err = db.Update(func(tx *bolt.Tx) error {
+        b := tx.Bucket(bucketName)
 
-		for txID, outs := range UTXO {
-			key, err := hex.DecodeString(txID)
-			err = b.Put(key, outs.Serialize())
-		}
-	})
+        for txID, outs := range UTXO {
+            key, err := hex.DecodeString(txID)
+            err = b.Put(key, outs.Serialize())
+        }
+    })
 }
 ```
 This method creates the UTXO set initially. First, it removes the bucket if it exists, then it gets all unspent outputs from blockchain, and finally it saves the outputs to the bucket.
@@ -134,28 +134,28 @@ Now, the UTXO set can be used to send coins:
 
 ```go
 func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[string][]int) {
-	unspentOutputs := make(map[string][]int)
-	accumulated := 0
-	db := u.Blockchain.db
+    unspentOutputs := make(map[string][]int)
+    accumulated := 0
+    db := u.Blockchain.db
 
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
-		c := b.Cursor()
+    err := db.View(func(tx *bolt.Tx) error {
+        b := tx.Bucket([]byte(utxoBucket))
+        c := b.Cursor()
 
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			txID := hex.EncodeToString(k)
-			outs := DeserializeOutputs(v)
+        for k, v := c.First(); k != nil; k, v = c.Next() {
+            txID := hex.EncodeToString(k)
+            outs := DeserializeOutputs(v)
 
-			for outIdx, out := range outs.Outputs {
-				if out.IsLockedWithKey(pubkeyHash) && accumulated < amount {
-					accumulated += out.Value
-					unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
-				}
-			}
-		}
-	})
+            for outIdx, out := range outs.Outputs {
+                if out.IsLockedWithKey(pubkeyHash) && accumulated < amount {
+                    accumulated += out.Value
+                    unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+                }
+            }
+        }
+    })
 
-	return accumulated, unspentOutputs
+    return accumulated, unspentOutputs
 }
 ```
 
@@ -163,27 +163,27 @@ Or check balance:
 
 ```go
 func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
-	var UTXOs []TXOutput
-	db := u.Blockchain.db
+    var UTXOs []TXOutput
+    db := u.Blockchain.db
 
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
-		c := b.Cursor()
+    err := db.View(func(tx *bolt.Tx) error {
+        b := tx.Bucket([]byte(utxoBucket))
+        c := b.Cursor()
 
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			outs := DeserializeOutputs(v)
+        for k, v := c.First(); k != nil; k, v = c.Next() {
+            outs := DeserializeOutputs(v)
 
-			for _, out := range outs.Outputs {
-				if out.IsLockedWithKey(pubKeyHash) {
-					UTXOs = append(UTXOs, out)
-				}
-			}
-		}
+            for _, out := range outs.Outputs {
+                if out.IsLockedWithKey(pubKeyHash) {
+                    UTXOs = append(UTXOs, out)
+                }
+            }
+        }
 
-		return nil
-	})
+        return nil
+    })
 
-	return UTXOs
+    return UTXOs
 }
 ```
 These are slightly modified versions of corresponding `Blockchain` methods. Those `Blockchain` methods are not needed anymore.
@@ -192,41 +192,41 @@ Having the UTXO set means that our data (transactions) are now split into to sto
 
 ```go
 func (u UTXOSet) Update(block *Block) {
-	db := u.Blockchain.db
+    db := u.Blockchain.db
 
-	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
+    err := db.Update(func(tx *bolt.Tx) error {
+        b := tx.Bucket([]byte(utxoBucket))
 
-		for _, tx := range block.Transactions {
-			if tx.IsCoinbase() == false {
-				for _, vin := range tx.Vin {
-					updatedOuts := TXOutputs{}
-					outsBytes := b.Get(vin.Txid)
-					outs := DeserializeOutputs(outsBytes)
+        for _, tx := range block.Transactions {
+            if tx.IsCoinbase() == false {
+                for _, vin := range tx.Vin {
+                    updatedOuts := TXOutputs{}
+                    outsBytes := b.Get(vin.Txid)
+                    outs := DeserializeOutputs(outsBytes)
 
-					for outIdx, out := range outs.Outputs {
-						if outIdx != vin.Vout {
-							updatedOuts.Outputs = append(updatedOuts.Outputs, out)
-						}
-					}
+                    for outIdx, out := range outs.Outputs {
+                        if outIdx != vin.Vout {
+                            updatedOuts.Outputs = append(updatedOuts.Outputs, out)
+                        }
+                    }
 
-					if len(updatedOuts.Outputs) == 0 {
-						err := b.Delete(vin.Txid)
-					} else {
-						err := b.Put(vin.Txid, updatedOuts.Serialize())
-					}
+                    if len(updatedOuts.Outputs) == 0 {
+                        err := b.Delete(vin.Txid)
+                    } else {
+                        err := b.Put(vin.Txid, updatedOuts.Serialize())
+                    }
 
-				}
-			}
+                }
+            }
 
-			newOutputs := TXOutputs{}
-			for _, out := range tx.Vout {
-				newOutputs.Outputs = append(newOutputs.Outputs, out)
-			}
+            newOutputs := TXOutputs{}
+            for _, out := range tx.Vout {
+                newOutputs.Outputs = append(newOutputs.Outputs, out)
+            }
 
-			err := b.Put(tx.ID, newOutputs.Serialize())
-		}
-	})
+            err := b.Put(tx.ID, newOutputs.Serialize())
+        }
+    })
 }
 ```
 
@@ -236,22 +236,22 @@ Let's now use the UTXO set where it's necessary:
 
 ```go
 func (cli *CLI) createBlockchain(address string) {
-	...
-	bc := CreateBlockchain(address)
-	defer bc.db.Close()
+    ...
+    bc := CreateBlockchain(address)
+    defer bc.db.Close()
 
-	UTXOSet := UTXOSet{bc}
-	UTXOSet.Reindex()
-	...
+    UTXOSet := UTXOSet{bc}
+    UTXOSet.Reindex()
+    ...
 }
 ```
 Reindexing happens right after a new blockchain is created. For now, this is the only place where `Reindex` is used, even though it looks excessive here, because in the beginning of a blockchain there's only one block with one transactions, and `Update` could've been used instead. But we might need the reindexing mechanism in the future.
 
 ```go
 func (cli *CLI) send(from, to string, amount int) {
-	...
-	newBlock := bc.MineBlock(txs)
-	UTXOSet.Update(newBlock)
+    ...
+    newBlock := bc.MineBlock(txs)
+    UTXOSet.Update(newBlock)
 }
 ```
 And the UTXO set is updated after a new block is mined.
@@ -315,13 +315,13 @@ Finally, let's write code:
 
 ```go
 type MerkleTree struct {
-	RootNode *MerkleNode
+    RootNode *MerkleNode
 }
 
 type MerkleNode struct {
-	Left  *MerkleNode
-	Right *MerkleNode
-	Data  []byte
+    Left  *MerkleNode
+    Right *MerkleNode
+    Data  []byte
 }
 ```
 We start with structs. Every `MerkleNode` keeps data and links to its branches. `MerkleTree` is actually the root node linked to the next nodes, which are in their turn linked to further nodes, etc.
@@ -329,52 +329,52 @@ We start with structs. Every `MerkleNode` keeps data and links to its branches. 
 Let's create a new node first:
 ```go
 func NewMerkleNode(left, right *MerkleNode, data []byte) *MerkleNode {
-	mNode := MerkleNode{}
+    mNode := MerkleNode{}
 
-	if left == nil && right == nil {
-		hash := sha256.Sum256(data)
-		mNode.Data = hash[:]
-	} else {
-		prevHashes := append(left.Data, right.Data...)
-		hash := sha256.Sum256(prevHashes)
-		mNode.Data = hash[:]
-	}
+    if left == nil && right == nil {
+        hash := sha256.Sum256(data)
+        mNode.Data = hash[:]
+    } else {
+        prevHashes := append(left.Data, right.Data...)
+        hash := sha256.Sum256(prevHashes)
+        mNode.Data = hash[:]
+    }
 
-	mNode.Left = left
-	mNode.Right = right
+    mNode.Left = left
+    mNode.Right = right
 
-	return &mNode
+    return &mNode
 }
 ```
 Every node contains some data. When a node is a leaf, the data is passed from the outside (a serialized transaction in our case). When a node is linked to other nodes, it takes their data and concatenates and hashes it.
 
 ```go
 func NewMerkleTree(data [][]byte) *MerkleTree {
-	var nodes []MerkleNode
+    var nodes []MerkleNode
 
-	if len(data)%2 != 0 {
-		data = append(data, data[len(data)-1])
-	}
+    if len(data)%2 != 0 {
+        data = append(data, data[len(data)-1])
+    }
 
-	for _, datum := range data {
-		node := NewMerkleNode(nil, nil, datum)
-		nodes = append(nodes, *node)
-	}
+    for _, datum := range data {
+        node := NewMerkleNode(nil, nil, datum)
+        nodes = append(nodes, *node)
+    }
 
-	for i := 0; i < len(data)/2; i++ {
-		var newLevel []MerkleNode
+    for i := 0; i < len(data)/2; i++ {
+        var newLevel []MerkleNode
 
-		for j := 0; j < len(nodes); j += 2 {
-			node := NewMerkleNode(&nodes[j], &nodes[j+1], nil)
-			newLevel = append(newLevel, *node)
-		}
+        for j := 0; j < len(nodes); j += 2 {
+            node := NewMerkleNode(&nodes[j], &nodes[j+1], nil)
+            newLevel = append(newLevel, *node)
+        }
 
-		nodes = newLevel
-	}
+        nodes = newLevel
+    }
 
-	mTree := MerkleTree{&nodes[0]}
+    mTree := MerkleTree{&nodes[0]}
 
-	return &mTree
+    return &mTree
 }
 ```
 When a new tree is created, the first thing to ensure is that there are even number of leaves. After that, `data` (which is an array of serialized transactions) is converted into tree leaves, and a tree is grown from these leaves.
@@ -383,14 +383,14 @@ Now, let's modify `Block.HashTransactions`, which is used in the proof-of-work s
 
 ```go
 func (b *Block) HashTransactions() []byte {
-	var transactions [][]byte
+    var transactions [][]byte
 
-	for _, tx := range b.Transactions {
-		transactions = append(transactions, tx.Serialize())
-	}
-	mTree := NewMerkleTree(transactions)
+    for _, tx := range b.Transactions {
+        transactions = append(transactions, tx.Serialize())
+    }
+    mTree := NewMerkleTree(transactions)
 
-	return mTree.RootNode.Data
+    return mTree.RootNode.Data
 }
 ```
 First, transactions are serialized (using `encoding/gob`), and then they are used to build a Merkle tree. The root of the tree will serve as the unique identifier of block's transactions.
