@@ -273,7 +273,7 @@ func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
 	secondSHA := sha256.Sum256(firstSHA[:])
 
-	return secondSHA[len(secondSHA)-addressChecksumLen:]
+	return secondSHA[:addressChecksumLen]
 }
 </code></pre>
 
@@ -282,7 +282,7 @@ func checksum(payload []byte) []byte {
 <ol>
 <li>Take the public key and hash it twice with <code>RIPEMD160(SHA256(PubKey))</code> hashing algorithms.</li>
 <li>Prepend the version of the address generation algorithm to the hash.</li>
-<li>Calculate the checksum by hashing the result of step 2 with <code>SHA256(SHA256(payload))</code>. The checksum is the last four bytes of the resulted hash.</li>
+<li>Calculate the checksum by hashing the result of step 2 with <code>SHA256(SHA256(payload))</code>. The checksum is the first four bytes of the resulted hash.</li>
 <li>Append the checksum to the <code>version+PubKeyHash</code> combination.</li>
 <li>Encode the <code>version+PubKeyHash+checksum</code> combination with Base58.</li>
 </ol>
@@ -730,6 +730,10 @@ $ blockchain_go send -from 1AmVdDvvQ977oVCpUqz7zAPUEiXKrX5avR -to 1NE86r4Esjf53E
 
     
     
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-6/">Building Blockchain in Go. Part 6: Transactions 2<aside class="dates">Sep 18 2017</aside></a>
+        </li>
     
         <li>
             <a href="/posts/building-blockchain-in-go-part-4/">Building Blockchain in Go. Part 4: Transactions 1<aside class="dates">Sep 4 2017</aside></a>

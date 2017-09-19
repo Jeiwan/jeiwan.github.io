@@ -6,10 +6,19 @@
     <description>Recent content in Bitcoin on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 11 Sep 2017 11:20:43 +0700</lastBuildDate>
+    <lastBuildDate>Mon, 18 Sep 2017 13:02:26 +0700</lastBuildDate>
     
 	<atom:link href="https://jeiwan.cc/tags/bitcoin/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Building Blockchain in Go. Part 6: Transactions 2</title>
+      <link>https://jeiwan.cc/posts/building-blockchain-in-go-part-6/</link>
+      <pubDate>Mon, 18 Sep 2017 13:02:26 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/posts/building-blockchain-in-go-part-6/</guid>
+      <description>Introduction In the very first part of this series I said that blockchain is a distributed database. Back then, we decided to skip the &amp;ldquo;distributed&amp;rdquo; part and focus on the &amp;ldquo;database&amp;rdquo; part. So far, we&amp;rsquo;ve implemented almost all the things that make a blockchain database. In this post, we&amp;rsquo;ll cover some mechanisms that were skipped in the previous parts, and in the next part we&amp;rsquo;ll start working on the distributed nature of blockchain.</description>
+    </item>
     
     <item>
       <title>Building Blockchain in Go. Part 5: Addresses</title>
