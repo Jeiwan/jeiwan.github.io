@@ -463,6 +463,5 @@ Links:
 3. [Script](https://en.bitcoin.it/wiki/Script)
 4. ["Ultraprune" Bitcoin Core commit](https://github.com/sipa/bitcoin/commit/450cbb0944cd20a06ce806e6679a1f4c83c50db2)
 5. [UTXO set statistics](https://statoshi.info/dashboard/db/unspent-transaction-output-set)
-6. [Script](https://en.bitcoin.it/wiki/Script)
 7. [Smart contracts and Bitcoin](https://medium.com/@maraoz/smart-contracts-and-bitcoin-a5d61011d9b1)
 8. [Why every Bitcoin user should understand “SPV security”](https://medium.com/@jonaldfyookball/why-every-bitcoin-user-should-understand-spv-security-520d1d45e0b9)
