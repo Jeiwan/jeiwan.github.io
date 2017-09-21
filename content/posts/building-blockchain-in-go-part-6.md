@@ -20,7 +20,7 @@ Previous parts:
 ## Reward
 One tiny thing we skipped in a previous article is rewards for mining. And we already have everything to implement it.
 
-Reward is just a coinbase transaction. When a mining node starts mining a new block, it takes transactions from the queue and prepends a coinbase transaction to them. The coinbase transaction's only output contains miner's public key hash.
+The reward is just a coinbase transaction. When a mining node starts mining a new block, it takes transactions from the queue and prepends a coinbase transaction to them. The coinbase transaction's only output contains miner's public key hash.
 
 Implementing rewards is as easy as updating the `send` command:
 
@@ -39,7 +39,7 @@ func (cli *CLI) send(from, to string, amount int) {
     fmt.Println("Success!")
 }
 ```
-In our implementation, the one who creates a transaction, mines the new block, and thus, receives a reward.
+In our implementation, the one who creates a transaction mines the new block, and thus, receives a reward.
 
 ## The UTXO Set
 In [Part 3: Persistence and CLI](https://jeiwan.cc/posts/building-blockchain-in-go-part-3/) we studied the way Bitcoin Core stores blocks in a database. It was said that blocks are stored in `blocks` database and transaction outputs are stored in `chainstate` database. Let me remind you what the structure of `chainstate` is:
@@ -47,9 +47,9 @@ In [Part 3: Persistence and CLI](https://jeiwan.cc/posts/building-blockchain-in-
 1. `'c' + 32-byte transaction hash -> unspent transaction output record for that transaction`
 2. `'B' -> 32-byte block hash: the block hash up to which the database represents the unspent transaction outputs`
 
-Since that article we've already implemented transactions, but we haven't used the `chainstate` to store their outputs. So, this is what we're going to do now.
+Since that article, we've already implemented transactions, but we haven't used the `chainstate` to store their outputs. So, this is what we're going to do now.
 
-`chainstate` doesn't store transactions. Instead, it stores what is called the UTXO set, or the set of unspent transaction outputs. Besides this, it stores "the block hash up to which the database represents the unspent transaction outputs", which we'll omit for now, because we're not using block heights (but we'll implement them in next articles).
+`chainstate` doesn't store transactions. Instead, it stores what is called the UTXO set, or the set of unspent transaction outputs. Besides this, it stores "the block hash up to which the database represents the unspent transaction outputs", which we'll omit for now because we're not using block heights (but we'll implement them in next articles).
 
 So, why do we want to have the UTXO set?
 
@@ -80,10 +80,10 @@ The solution to the problem is to have an index that stores only unspent outputs
 
 Alright, let's think what we need to change to implement the UTXO set. Currently, the following methods are used to find transactions:
 
-1. `Blockchain.FindUnspentTransactions` – the main function that finds transactions with unspent outputs. It's this function where iteration of all blocks happens.
+1. `Blockchain.FindUnspentTransactions` – the main function that finds transactions with unspent outputs. It's this function where the iteration of all blocks happens.
 2. `Blockchain.FindSpendableOutputs` – this function is used when a new transaction is created. If finds the enough number of outputs holding required amount. Uses `Blockchain.FindUnspentTransactions`.
 3. `Blockchain.FindUTXO` – finds unspent outputs for a public key hash, used to get balance. Uses `Blockchain.FindUnspentTransactions`.
-4. `Blockchain.FindTransaction` – finds a transaction in the blockchain by its ID. Iterates over all blocks until finds it.
+4. `Blockchain.FindTransaction` – finds a transaction in the blockchain by its ID. It iterates over all blocks until finds it.
 
 As you can see, all the methods iterate over blocks in the database. But we cannot improve all of them for now, because the UTXO set doesn't store all transactions, but only those that have unspent outputs. Thus, it cannot be used in `Blockchain.FindTransaction`.
 
@@ -91,8 +91,8 @@ So, we want the following methods:
 
 1. `Blockchain.FindUTXO` – finds all unspent outputs by iterating over blocks.
 2. `UTXOSet.Reindex` —  uses `FindUTXO` to find unspent outputs, and stores them in a database. This is where caching happens.
-3. `UTXOSet.FindSpendableOutputs` – analogue of `Blockchain.FindSpendableOutputs`, but uses the UTXO set.
-4. `UTXOSet.FindUTXO` – analogue of `Blockchain.FindUTXO`, but uses the UTXO set.
+3. `UTXOSet.FindSpendableOutputs` – analog of `Blockchain.FindSpendableOutputs`, but uses the UTXO set.
+4. `UTXOSet.FindUTXO` – analog of `Blockchain.FindUTXO`, but uses the UTXO set.
 5. `Blockchain.FindTransaction` remains the same.
 
 Thus, the two most frequently used functions will use the cache from now! Let's start coding.
@@ -102,7 +102,7 @@ type UTXOSet struct {
     Blockchain *Blockchain
 }
 ```
-We'll use a single database, but will store the UTXO set in a different bucket. Thus, `UTXOSet` is coupled with `Blockchain`.
+We'll use a single database, but we'll store the UTXO set in a different bucket. Thus, `UTXOSet` is coupled with `Blockchain`.
 
 ```go
 func (u UTXOSet) Reindex() {
@@ -188,7 +188,7 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 ```
 These are slightly modified versions of corresponding `Blockchain` methods. Those `Blockchain` methods are not needed anymore.
 
-Having the UTXO set means that our data (transactions) are now split into to storages: actual transactions are stored in the blockchain, and unspent outputs are stored in the UTXO set. Such separation requires solid synchronization mechanism, because we want the UTXO set to always be updated and store outputs of most recent transactions. But we don't want to reindex every time a new block is mined, because it's these frequent blockchain scans that we want to avoid. Thus, we need a mechanism of updating the UTXO set:
+Having the UTXO set means that our data (transactions) are now split into to storages: actual transactions are stored in the blockchain, and unspent outputs are stored in the UTXO set. Such separation requires solid synchronization mechanism because we want the UTXO set to always be updated and store outputs of most recent transactions. But we don't want to reindex every time a new block is mined because it's these frequent blockchain scans that we want to avoid. Thus, we need a mechanism of updating the UTXO set:
 
 ```go
 func (u UTXOSet) Update(block *Block) {
@@ -245,7 +245,7 @@ func (cli *CLI) createBlockchain(address string) {
     ...
 }
 ```
-Reindexing happens right after a new blockchain is created. For now, this is the only place where `Reindex` is used, even though it looks excessive here, because in the beginning of a blockchain there's only one block with one transactions, and `Update` could've been used instead. But we might need the reindexing mechanism in the future.
+Reindexing happens right after a new blockchain is created. For now, this is the only place where `Reindex` is used, even though it looks excessive here because in the beginning of a blockchain there's only one block with one transaction, and `Update` could've been used instead. But we might need the reindexing mechanism in the future.
 
 ```go
 func (cli *CLI) send(from, to string, amount int) {
@@ -293,21 +293,21 @@ Nice! The `1JnMDSqVoHi4TEFXNw5wJ8skPsPf4LHkQ1` address received reward 3 times:
 ## Merkle Tree
 There's one more optimization mechanism I'd like to discuss in this post.
 
-As it was said above, the full Bitcoin database (i.e., blockchain) takes more than 140 Gb of disk space. Because of the decentralized nature of Bitcoin, every node in the network must be independent and self-sufficient, i.e. every node must store a full copy of the blockchain. With many people starting using Bitcoin, this rule become more difficult to obey: it's not likely that everyone will run a full node. Also, since nodes are full-fledged participants of the network, they have responsibilities: they must verify transactions and blocks. Also, there's certain internet traffic required to interact with other nodes and download new blocks.
+As it was said above, the full Bitcoin database (i.e., blockchain) takes more than 140 Gb of disk space. Because of the decentralized nature of Bitcoin, every node in the network must be independent and self-sufficient, i.e. every node must store a full copy of the blockchain. With many people starting using Bitcoin, this rule becomes more difficult to follow: it's not likely that everyone will run a full node. Also, since nodes are full-fledged participants of the network, they have responsibilities: they must verify transactions and blocks. Also, there's certain internet traffic required to interact with other nodes and download new blocks.
 
-In [the original Bitcoin paper](https://bitcoin.org/bitcoin.pdf) published by Satoshi Nakamoto, there was a solution for this problem: Simplified Payment Verification (SPV). SPV is a light Bitcoin node that doesn't download all the blockchain, and **doesn't verify blocks and transactions**. Instead, it finds transactions in blocks (to verify payments) and is linked to a full node to retrieve just necessary data. This mechanism allows to have multiple light wallet nodes with running just one full node.
+In [the original Bitcoin paper](https://bitcoin.org/bitcoin.pdf) published by Satoshi Nakamoto, there was a solution for this problem: Simplified Payment Verification (SPV). SPV is a light Bitcoin node that doesn't download the whole blockchain and **doesn't verify blocks and transactions**. Instead, it finds transactions in blocks (to verify payments) and is linked to a full node to retrieve just necessary data. This mechanism allows having multiple light wallet nodes with running just one full node.
 
 For SPV to be possible, there should be a way to check if a block contains certain transaction without downloading the whole block. And this is where Merkle tree comes into play.
 
-Merkles trees are used by Bitcoin to obtain transactions hash, which is then saved in block headers and is considered by the proof-of-work system. Until now, we just concatenated hashes of each transaction in a block and applied `SHA-256` to them. This is also a good way of getting a unique representation of block transactions, but it doesn't have benefits of Merkle trees.
+Merkle trees are used by Bitcoin to obtain transactions hash, which is then saved in block headers and is considered by the proof-of-work system. Until now, we just concatenated hashes of each transaction in a block and applied `SHA-256` to them. This is also a good way of getting a unique representation of block transactions, but it doesn't have benefits of Merkle trees.
 
 Let's look at a Merkle tree:
 
 ![Merkle tree diagram](/images/merkle-tree-diagram.png)
 
-A Merkle tree is built for each block, and it starts with leaves (the bottom of the tree), where a leaf is a transaction hash (Bitcoins uses double `SHA256` hashing). The number of leaves must be even, but not every block contains even number of transactions. In case there is odd number of transactions, the last transaction is duplicated (in the Merkle tree, not in the block!).
+A Merkle tree is built for each block, and it starts with leaves (the bottom of the tree), where a leaf is a transaction hash (Bitcoins uses double `SHA256` hashing). The number of leaves must be even, but not every block contains an even number of transactions. In case there is an odd number of transactions, the last transaction is duplicated (in the Merkle tree, not in the block!).
 
-Moving from bottom up, leaves are grouped in pairs, their hashes are concatenated, and a new hash is obtained from the concatenated hashes. The new hashes form new tree nodes. This process is repeated until there's just one node, which is called the root of the tree. The root hash is then used as the unique representation of the transactions, is saved in block headers, and is used in the proof-of-work system.
+Moving from the bottom up, leaves are grouped in pairs, their hashes are concatenated, and a new hash is obtained from the concatenated hashes. The new hashes form new tree nodes. This process is repeated until there's just one node, which is called the root of the tree. The root hash is then used as the unique representation of the transactions, is saved in block headers, and is used in the proof-of-work system.
 
 The benefit of Merkle trees is that a node can verify membership of certain transaction without downloading the whole block. Just a transaction hash, a Merkle tree root hash, and a Merkle path are required for this.
 
@@ -377,7 +377,7 @@ func NewMerkleTree(data [][]byte) *MerkleTree {
     return &mTree
 }
 ```
-When a new tree is created, the first thing to ensure is that there are even number of leaves. After that, `data` (which is an array of serialized transactions) is converted into tree leaves, and a tree is grown from these leaves.
+When a new tree is created, the first thing to ensure is that there is an even number of leaves. After that, `data` (which is an array of serialized transactions) is converted into tree leaves, and a tree is grown from these leaves.
 
 Now, let's modify `Block.HashTransactions`, which is used in the proof-of-work system to obtain transactions hash:
 
@@ -404,7 +404,7 @@ As you remember, in Bitcoin there is the *Script* programming language, which is
 ```shell
 5 2 OP_ADD 7 OP_EQUAL
 ```
-`5`, `2`, and `7` are data. `OP_ADD` and `OP_EQUAL` are operators. *Script* code is executed from left to right: every piece of data is put into stack and the next operator is applied to the top stack elements. *Script*'s stack is just a simple FILO (First Input Last Output) memory storage: first element in the stack is the last to be taken, with every further element being put on the previous one.
+`5`, `2`, and `7` are data. `OP_ADD` and `OP_EQUAL` are operators. *Script* code is executed from left to right: every piece of data is put into the stack and the next operator is applied to the top stack elements. *Script*'s stack is just a simple FILO (First Input Last Output) memory storage: the first element in the stack is the last to be taken, with every further element being put on the previous one.
 
 Let's break the execution of the above script into steps:
 
@@ -415,7 +415,7 @@ Let's break the execution of the above script into steps:
 5. Stack: `7 7`. Script: `OP_EQUAL`.
 6. Stack: `true`. Script: empty.
 
-`OP_ADD` takes two elements from the stack, summarizes them, and push the sum into the stack. `OP_EQUAL` takes two elements from the stack and compares then: if they're equal it pushes `true` to the stack; otherwise it pushes `false`. A result of a script execution is the value of the top stack element: in our case it's `true`, which means that the script finished successfully.
+`OP_ADD` takes two elements from the stack, summarizes them, and push the sum into the stack. `OP_EQUAL` takes two elements from the stack and compares them: if they're equal it pushes `true` to the stack; otherwise it pushes `false`. A result of a script execution is the value of the top stack element: in our case, it's `true`, which means that the script finished successfully.
 
 Now let's look at the script that is used in Bitcoin to perform payments:
 
@@ -453,7 +453,7 @@ Script: `OP_CHECKSIG`
 Having such scripting language allows Bitcoin to be also a smart-contract platform: the language makes possible other payment schemes besides transferring to a single key. For example, 
 
 ## Conclusion
-And that's it! We've implemented almost all key feature of a blockchain-based cryptocurrency. We have: blockchain, addresses, mining, and transactions. But there's one more thing that gives life to all these mechanisms and makes Bitcoin a global system: consensus. In the next article, we'll start implementing the "decentralized" part of blockchain. Stay tuned!
+And that's it! We've implemented almost all key feature of a blockchain-based cryptocurrency. We have blockchain, addresses, mining, and transactions. But there's one more thing that gives life to all these mechanisms and makes Bitcoin a global system: consensus. In the next article, we'll start implementing the "decentralized" part of the blockchain. Stay tuned!
 
 Links:
 
