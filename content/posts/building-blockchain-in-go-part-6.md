@@ -457,6 +457,7 @@ And that's it! We've implemented almost all key feature of a blockchain-based cr
 
 Links:
 
+1. [Full source codes](https://github.com/Jeiwan/blockchain_go/tree/part_6)
 1. [The UTXO Set](https://en.bitcoin.it/wiki/Bitcoin_Core_0.11_(ch_2):_Data_Storage#The_UTXO_set_.28chainstate_leveldb.29)
 2. [Merkle Tree](https://en.bitcoin.it/wiki/Protocol_documentation#Merkle_Trees)
 3. [Script](https://en.bitcoin.it/wiki/Script)
