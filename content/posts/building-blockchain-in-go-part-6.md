@@ -4,6 +4,8 @@ tags: [Golang, Blockchain, Bitcoin]
 date: 2017-09-18T13:02:26+07:00
 ---
 
+> Chinese translation: https://zhangli1.gitbooks.io/dummies-for-blockchain/content/
+
 ## Introduction
 In the very first part of this series I said that blockchain is a distributed database. Back then, we decided to skip the "distributed" part and focus on the "database" part. So far, we've implemented almost all the things that make a blockchain database. In this post, we'll cover some mechanisms that were skipped in the previous parts, and in the next part we'll start working on the distributed nature of blockchain.
 

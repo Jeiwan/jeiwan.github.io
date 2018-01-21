@@ -4,6 +4,8 @@ date: 2017-10-06T12:31:19+07:00
 tags: [Golang, Blockchain, Bitcoin]
 ---
 
+> Chinese translation: https://zhangli1.gitbooks.io/dummies-for-blockchain/content/
+
 ## Introduction
 
 So far, we've build a blockchain that has all key features: anonymous, secure, and randomly generated addresses; blockchain data storage; Proof-of-Work system; reliable way to store transactions. While these features are crucial, it's not enough. What makes these features really shine, and what make cryptocurrencies possible, is network. What's the use of having such blockchain implementation running just on a single computer? What's the use of those cryptography based features, when there's just one user? It's network that make all these mechanism work and be useful.
