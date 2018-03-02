@@ -6,7 +6,7 @@
     <description>Recent content in Tags on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 06 Oct 2017 12:31:19 +0700</lastBuildDate>
+    <lastBuildDate>Fri, 02 Mar 2018 16:58:56 +0700</lastBuildDate>
     
 	<atom:link href="https://jeiwan.cc/tags/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>Bitcoin</title>
       <link>https://jeiwan.cc/tags/bitcoin/</link>
-      <pubDate>Fri, 06 Oct 2017 12:31:19 +0700</pubDate>
+      <pubDate>Fri, 02 Mar 2018 16:58:56 +0700</pubDate>
       
       <guid>https://jeiwan.cc/tags/bitcoin/</guid>
       <description></description>
@@ -23,7 +23,7 @@
     <item>
       <title>Blockchain</title>
       <link>https://jeiwan.cc/tags/blockchain/</link>
-      <pubDate>Fri, 06 Oct 2017 12:31:19 +0700</pubDate>
+      <pubDate>Fri, 02 Mar 2018 16:58:56 +0700</pubDate>
       
       <guid>https://jeiwan.cc/tags/blockchain/</guid>
       <description></description>
@@ -48,11 +48,29 @@
     </item>
     
     <item>
+      <title>Lightningnetwork</title>
+      <link>https://jeiwan.cc/tags/lightningnetwork/</link>
+      <pubDate>Fri, 02 Mar 2018 16:58:56 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/tags/lightningnetwork/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Neural Networks</title>
       <link>https://jeiwan.cc/tags/neural-networks/</link>
       <pubDate>Sat, 05 Aug 2017 20:34:21 +0700</pubDate>
       
       <guid>https://jeiwan.cc/tags/neural-networks/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Segwit</title>
+      <link>https://jeiwan.cc/tags/segwit/</link>
+      <pubDate>Fri, 02 Mar 2018 16:58:56 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/tags/segwit/</guid>
       <description></description>
     </item>
     

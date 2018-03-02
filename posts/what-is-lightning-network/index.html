@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en-us">
+	<head>
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Ivan Kuznetsov">
+<meta name="description" content="Thoughts about web development, devops, and blockchain">
+<meta name="generator" content="Hugo 0.25.1" />
+<title>What is Lightning Network and How to Try It Today &middot; Going the distance</title>
+<link rel="shortcut icon" href="https://jeiwan.cc/images/favicon.ico">
+<link rel="stylesheet" href="https://jeiwan.cc/css/style.css">
+<link rel="stylesheet" href="https://jeiwan.cc/css/highlight.css">
+
+
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css">
+
+
+
+
+<meta property="og:title" content="What is Lightning Network and How to Try It Today" />
+<meta property="og:description" content="Introduction As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://jeiwan.cc/posts/what-is-lightning-network/" />
+
+
+
+<meta property="article:published_time" content="2018-03-02T16:58:56&#43;07:00"/>
+<meta property="article:modified_time" content="2018-03-02T16:58:56&#43;07:00"/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<meta itemprop="name" content="What is Lightning Network and How to Try It Today">
+<meta itemprop="description" content="Introduction As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain.">
+
+
+<meta itemprop="dateModified" content="2018-03-02T16:58:56&#43;07:00" />
+<meta itemprop="wordCount" content="2049">
+
+
+
+<meta itemprop="keywords" content="Blockchain,Bitcoin,LightningNetwork,Segwit," />
+
+
+
+  <meta name="twitter:card" content="summary"/>
+
+
+
+<meta name="twitter:text:title" content="What is Lightning Network and How to Try It Today"/>
+<meta name="twitter:title" content="What is Lightning Network and How to Try It Today"/>
+<meta name="twitter:description" content="Introduction As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain."/>
+<meta name="twitter:site" content="@https://twitter.com/jeiwan7"/>
+
+
+    </head>
+<body>
+    <nav class="main-nav">
+	
+		<a href='https://jeiwan.cc'> <span class="arrow">←</span>Home</a>
+	
+
+	
+
+	
+</nav>
+
+    <section id="wrapper">
+        
+        
+
+<article class="post">
+    <header>
+        <h1>What is Lightning Network and How to Try It Today</h1>
+        <h2 class="headline">
+        March 2, 2018
+        <br>
+        
+        
+            
+                <a href="https://jeiwan.cc/tags/blockchain">Blockchain</a>
+            
+                <a href="https://jeiwan.cc/tags/bitcoin">Bitcoin</a>
+            
+                <a href="https://jeiwan.cc/tags/lightningnetwork">LightningNetwork</a>
+            
+                <a href="https://jeiwan.cc/tags/segwit">Segwit</a>
+            
+        
+        
+        </h2>
+    </header>
+
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-1399481731021488"
+        data-ad-slot="9323059516"
+        data-ad-format="auto"></ins>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+
+    <section id="post-body">
+        
+
+<p><img src="/images/ln-topology.png" alt="Lightning Network topology" /></p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain. One of such clones was Bitcoin Cash, that addressed the scalability issue by increasing the size of blocks to 8 Mb (and there are plans to increase it further).</p>
+
+<p>The Bitcoin Core developers were aware of this problem and also kept looking for a solution. Increasing the block size is not an option because it&rsquo;ll make very difficult for individuals to run a node – only big companies will be able to afford that. Also, bigger blocks is a temporarily solution: in the future, when Bitcoin gets much broader adoption, the block size must be increased one more time. Thus, it&rsquo;ll lead to a more and more centralized network.</p>
+
+<p>On August 24, 2017, Segregated Witness (Segwit) was activated in the main network of Bitcoin. Although its main purpose wasn&rsquo;t scalability improvement but fixing of <a href="https://en.bitcoin.it/wiki/Transaction_malleability">transaction malleability</a>, Segwit still improved the scalability. Segwit restructures transactions by moving sender and receiver information into a separate field in transaction (called &ldquo;witness&rdquo;) which is now not required to validate the transaction (you can find a nice detailed explanation <a href="https://techtake.info/2017/08/22/segwit-bitcoincash-technical-details-explained/">here</a>). Also, Segwit modifies the way block size is calculated: the &ldquo;witness&rdquo; field is now not considered. As a results transactions weigh less and now there can be more transactions in a block.</p>
+
+<blockquote>
+<p>As a side effects, all transactions sent from Segwit-addresses will require less fees because fees size depends on transaction size. Nice!</p>
+</blockquote>
+
+<p>Both of these approaches, Segwit and bigger blocks, are of the same nature: they both require modification of the blockchain – such approach is called &ldquo;on-chain&rdquo;. The opposite approach is called &ldquo;off-chain&rdquo; and it doesn&rsquo;t require blockchain modification. Instead, it requires to create a system that is attached to the blockchain and improves its performance without modifying it. The main topic of this article, Lightning Network, is an off-chain Bitcoin scaling solution.</p>
+
+<h2 id="how-does-lightning-network-work">How does Lightning Network work?</h2>
+
+<p>The purpose of Lightning Network (LN) is to increase the throughput of the Bitcoin network without modifying its blockchain and forking it. The idea is to create the so called &ldquo;second layer&rdquo; where all the transactions are transferred. Sending transactions on this second layer doesn&rsquo;t require paying Bitcoin fees for each transaction and doesn&rsquo;t require waiting for new blocks to be mined – this is the key part. On LN one can:</p>
+
+<ol>
+<li>Open payment channels and connect to other people, companies or services.</li>
+<li>Send transactions to other parties via these channels, which is <strong>free and instant</strong> – this is where the scalability issue is solved.</li>
+</ol>
+
+<p>Let&rsquo;s review these points in details.</p>
+
+<p>As a piece of software, LN is a node, like the Bitcoin node. In order to run it, one needs a fully synchronized Bitcoin node because LN is tied to the Bitcoin network and blockchain. Channel opening is integrated with the Bitcoin network: when a channel is opened, a special kind of transactions is created and sent to the Bitcoin network. Such transaction <strong>locks a certain amount of Bitcoins</strong> of the party that opened the channel – this is a key moment: when you open a channel, you need to lock the maximum amount of BTC you&rsquo;re going to spend. You don&rsquo;t have to spend all of that BTC, but it&rsquo;s better for you if you know how much you&rsquo;re going to spend in advance because opening channels is not free. Having funds locked in a channel guarantees that the sender indeed has some funds to spend.</p>
+
+<blockquote>
+<p>As the name implies, Lightning Network is a network: nodes can connect to each other and form a network. Connecting to another node means opening a channel to it.</p>
+</blockquote>
+
+<p>When a channel is opened, there&rsquo;s no more need to send transactions via the Bitcoin network, they now can be sent via the second layer – the Lightning Network. Sending transactions via LN is instant and free (although some minor fees are possible).</p>
+
+<p>When you have a channel opened to some other node, you can send BTC:</p>
+
+<ol>
+<li>Directly to that node.</li>
+<li>Indirectly to any other node that node is connected to.</li>
+</ol>
+
+<p>The second scenario will probably be the most common and the fundamental one. Imagine a payments hub: one big node that has channels opened to many services and product providers. You don&rsquo;t need to open channel to each of these services and product providers, instead you can open just one channel to that hub node and pay indirectly.</p>
+
+<p><img src="/images/ln-topology-hubs2.png" alt="Lightning Network hubs" /></p>
+
+<p>This use case is also the most controversial: having such big central nodes means there&rsquo;s centralization in the network; many and many user-nodes will depend on few hub-nodes. This aspect of LN is the most critisized.</p>
+
+<p>Let&rsquo;s finally try LN!</p>
+
+<h2 id="running-lightning-network-node">Running Lightning Network node</h2>
+
+<p>As of February 2018, LN was deployed and successfully tested on the Bitcoin testnet. It has also been deployed to the mainnet, but it&rsquo;s <strong>strictly not recommended to use</strong> it today (unless you&rsquo;re reckless, yes) because it&rsquo;s still not stable enough. You&rsquo;re risking loosing your BTC! Since we don&rsquo;t want that, we&rsquo;re going to try it on the testnet.</p>
+
+<ol>
+<li>First thing&rsquo;s first, we need a Bitcoin node connected to the testnet and fully synchronized. We&rsquo;ll use Bitcoin Core node, which you can download from <a href="https://bitcoin.org/en/wallets/desktop/windows/bitcoincore/">https://bitcoin.org/en/wallets/desktop/windows/bitcoincore/</a></li>
+<li>On the first run, Bitcoin Core will connect to the mainnet and start synchronizing. That&rsquo;s not what we want.</li>
+<li>Don&rsquo;t wait for the synchronization to finish and open Settings, then click Open Configuration File button.</li>
+
+<li><p>A text editor will be opened with the default Bitcoin Core configuration. Replace it with the following:</p>
+
+<pre><code> testnet=1
+ server=1
+ rpcuser=foo
+ rpcpassword=bar
+ txindex=1
+ zmqpubrawblock=tcp://127.0.0.1:29000
+ zmqpubrawtx=tcp://127.0.0.1:29000
+</code></pre></li>
+
+<li><p>These settings switche Bitcoin Core to the testnet and setup some basic and required configurations. Save the file and restart the node. After the restart, the window of Bitcoin Core should contain <code>[testnet]</code>, which means that it&rsquo;s now connected to the testnet. And this time you have to wait for full synchronization.</p></li>
+
+<li><p>Meanwhile, go to <a href="https://github.com/ACINQ/eclair/releases">https://github.com/ACINQ/eclair/releases</a> and download Eclair, a LN client developed by ACINQ, which we&rsquo;re going to use in our experiments. If you try to run Eclair now, it won&rsquo;t start, because the Bitcoin node is not fully synchronized. So, continue reading after the synchronization is done.</p>
+
+<blockquote>
+<p>While the node is being synchronized, you can visit <a href="https://explorer.acinq.co/">https://explorer.acinq.co/</a> – this a LN topology visualization service. It also maps node locations to the world map, which is quite interesting.</p>
+</blockquote></li>
+
+<li><p>After the node is synchronized, run Eclair. It&rsquo;ll look like this (but in your case it won&rsquo;t have opened channels):</p>
+
+<p><img src="/images/ln-eclair.png" alt="Eclair" /></p></li>
+
+<li><p>In the left-bottom corner is your node identifier (also, pay attention to the right-bottom corner: it should say TEST, meaning the LN node is attached to the Bitcoin testnet). The tabs (All Nodes, All Channels) should have counters. If it&rsquo;s not the case, wait a couple of minute for the node to get nodes and channels information.</p></li>
+
+<li><p>That&rsquo;s it! Now you have a fully synchronized Bitcoin node connected to the testnet and a ready-to-go LN node!</p></li>
+</ol>
+
+<h2 id="depositing-some-btc">Depositing some BTC</h2>
+
+<p>In order to transfer some BTC, we need those BTC first, that&rsquo;s obvious, but getting them via mining won&rsquo;t be efficient. To solve this problem, there are services called <em>faucet</em>, which allow you to get free coins (such services also exist for other blockchains, not just Bitcoin).
+To get some BTC, visit <a href="https://testnet.coinfaucet.eu/en/">https://testnet.coinfaucet.eu/en/</a> and enter your address (which you can get from the Bitcoin Core client). The coins will be delivered with the next mined block (yes, there&rsquo;s mining in the testnet) which you can track via blockchain explorers, e.g. <a href="https://live.blockcypher.com/btc-testnet/">https://live.blockcypher.com/btc-testnet/</a></p>
+
+<p>Now, we&rsquo;re ready to use the Lightning Network!</p>
+
+<h2 id="opening-ln-channel">Opening LN channel</h2>
+
+<p>Let&rsquo;s start with opening a single LN channel.</p>
+
+<ol>
+<li>Go to the LN explorer I mentioned above (<a href="https://explorer.acinq.co/">https://explorer.acinq.co/</a>). Type <code>endurance</code> in the search field on the site to find the node we&rsquo;re going to connect to (this part will be clear a bit later). In the Node Informations window, find Copy URI link and click it – we&rsquo;ll use the URI to connect to this node.</li>
+<li>Go to Eclair, click Channels menu and choose Open channel. Paste the Node URI to Target Node URI. In Capacity field, enter the amount you&rsquo;re willing to lock in the channel (i.e. the maximum amount you&rsquo;re planning to spend). For our purposes, 100 milliBTC will be enough. Click Connect to open a channel.</li>
+
+<li><p>In Local Channels tab, a new channel should appear:</p>
+
+<p><img src="/images/ln-eclair-channel.png" alt="Lightning Network channel in Eclair" /></p></li>
+
+<li><p>The new channel&rsquo;s state will rapidly change to <code>WAIT_FOR_FUNDING_CONFIRMED</code>, which means that a channel opening transaction is created and is sent to the Bitcoin network. Now you need to wait for two new blocks: one containing the transaction and one confirming it. You can track new blocks on the blockchain explorer mentioned above: <a href="https://live.blockcypher.com/btc-testnet/">https://live.blockcypher.com/btc-testnet/</a></p></li>
+
+<li><p>When the transaction is mined and confirmed, the status of the channel will move to <code>NORMAL</code>, meaning the channel is created and ready to receive LN transactions.</p></li>
+</ol>
+
+<h2 id="buying-coffee-for-bitcoin">Buying coffee for Bitcoin</h2>
+
+<p>The same company that created Eclair, also created a demo online shop selling coffee for Bitcoin: <a href="https://starblocks.acinq.co/">https://starblocks.acinq.co/</a> And we&rsquo;re going to buy coffee from it and will pay with Bitcoin via LN!</p>
+
+<p>LN doesn&rsquo;t allow to arbitrary send coins to any address without a permission of the address&rsquo; owner, unlike in the main Bitcoin network. The party willing to receive a payment has to create a <strong>payment request</strong>, an analogue of invoice. The party then hands (via a QU-code, link, or in raw) the payment request to the paying party, and the paying party uses an application that reads the request and performs a payment.</p>
+
+<p>So, in order to buy a coffee:</p>
+
+<ol>
+<li>Visit the demo shop: <a href="https://starblocks.acinq.co/">https://starblocks.acinq.co/</a></li>
+
+<li><p>Add any coffee to the cart and check out. The page will show a QR-code to scan, but since we&rsquo;re using a desktop LN client, we won&rsquo;t use it. Instead, we need the raw payment request, the string on the same page starting with <code>lnt</code>–just copy it to the buffer. Mine looked like so:</p>
+
+<p><img src="/images/ln-payment-request.png" alt="Example payment request" /></p></li>
+
+<li><p>Switch to Eclair, go to Channel menu, choose Send Payment, and paste the payment request. Eclair will parse the request and extract some information from it (like node ID, payment hash, the name of the product, and its price).</p></li>
+
+<li><p>Don&rsquo;t click Send right away! Let&rsquo;s check something. In Eclair, find the ID of the node we&rsquo;re connected to and compare it with the ID of the node you&rsquo;re going to send the payment to. They don&rsquo;t match! So, we&rsquo;re sending a payment to a node we have no opened channels to.</p></li>
+
+<li><p>Alright, click Send&hellip; and the payment is successful! The coffee price was withdrawn from the amount locked in the channel, and the demo shop showed a successful payment message. How come? You had no channels opened to the shop&rsquo;s node.
+It turns out, the node you connected to is connected to the node you sent payment to. That <code>endurance</code> node was an intermediator!</p></li>
+
+<li><p>Go to the LN explorer and find the both nodes. Thanks to the visualization of channels, you can see that the two nodes indeed have a channel between them.</p></li>
+</ol>
+
+<p>That&rsquo;s it for today! I encourage you to try other use cases and other LN clients and applications – in testnet, it&rsquo;s painless and you&rsquo;re not risking anything.</p>
+
+<h2 id="what-about-the-mainnet">What about the mainnet</h2>
+
+<p>As of February 2018, Lightning Network is not ready for real payments. Yes, it&rsquo;s deployed to the mainnet and, yes, there are LN nodes in the mainnet. But the things is still in development, and it&rsquo;s quite risky to send real Bitcoins.</p>
+
+<p>But you still can look at it, thanks to this service: <a href="https://lnmainnet.gaben.win/">https://lnmainnet.gaben.win/</a></p>
+
+<h2 id="links-and-resources">Links and resources</h2>
+
+<ol>
+<li><a href="https://coincenter.org/entry/what-is-the-lightning-network">What is the Lightning Network and how can it help Bitcoin scale?</a></li>
+<li><a href="https://www.youtube.com/watch?v=wIhAmTqXhZQ">Lightning Network Tech Talk at Coinbase</a></li>
+<li><a href="https://rusty.ozlabs.org/?p=450">Lightning Networks Part I: Revocable Transactions</a> – technical explanation of LN</li>
+<li><a href="http://dev.lightning.community/overview/">LND Overview and Developer Guide</a> – just enough information about Lightning Network Daemon to build applications</li>
+<li><a href="https://play.google.com/store/apps/details?id=fr.acinq.eclair.wallet&amp;hl=en">Mobile (Android) Ecalir wallet for the testnet</a></li>
+<li><a href="https://github.com/LN-Zap/zap-desktop">Zap</a> – another desktop application</li>
+<li><a href="https://github.com/ElementsProject/lightning-charge">Lightning Charge</a> – a simple drop-in solution for accepting lightning payments</li>
+<li><a href="https://techtake.info/2017/08/22/segwit-bitcoincash-technical-details-explained/">SegWit, BitcoinCash: Technical details explained</a></li>
+<li><a href="https://www.reddit.com/r/Bitcoin/comments/5dt8tz/confused_is_segwit_needed_for_lightning_network/">Is Segwit needed for Lightning Network?</a></li>
+</ol>
+
+    </section>
+</article>
+
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<ins class="adsbygoogle"
+    style="display:block"
+    data-ad-client="ca-pub-1399481731021488"
+    data-ad-slot="9323059516"
+    data-ad-format="auto"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+<footer id="post-meta" class="clearfix">
+    <a href="https://twitter.com/jeiwan7">
+    <img class="avatar" src="https://jeiwan.cc/images/avatar.png">
+    <div>
+        <span class="dark">Ivan Kuznetsov</span>
+        <span>Write things</span>
+    </div>
+    </a>
+    <section id="sharing">
+        <a class="twitter" href="https://twitter.com/intent/tweet?text=What%20is%20Lightning%20Network%20and%20How%20to%20Try%20It%20Today - https%3a%2f%2fjeiwan.cc%2fposts%2fwhat-is-lightning-network%2f"><span class="icon-twitter"> tweet</span></a>
+
+<a class="facebook" href="#" onclick="
+    window.open(
+      'https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(location.href),
+      'facebook-share-dialog',
+      'width=626,height=436');
+    return false;"><span class="icon-facebook-rect"> Share</span>
+</a>
+
+    </section>
+</footer>
+
+
+
+<ul id="post-list" class="archive readmore">
+    <h3>Read more</h3>
+
+    
+    
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-7/">Building Blockchain in Go. Part 7: Network<aside class="dates">Oct 6 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-6/">Building Blockchain in Go. Part 6: Transactions 2<aside class="dates">Sep 18 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-5/">Building Blockchain in Go. Part 5: Addresses<aside class="dates">Sep 11 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-4/">Building Blockchain in Go. Part 4: Transactions 1<aside class="dates">Sep 4 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-3/">Building Blockchain in Go. Part 3: Persistence and CLI<aside class="dates">Aug 29 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-2/">Building Blockchain in Go. Part 2: Proof-of-Work<aside class="dates">Aug 22 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/building-blockchain-in-go-part-1/">Building Blockchain in Go. Part 1: Basic Prototype<aside class="dates">Aug 16 2017</aside></a>
+        </li>
+    
+        <li>
+            <a href="/posts/til-convolution-filters-are-weights/">TIL: Convolutional Filters Are Weights<aside class="dates">Aug 5 2017</aside></a>
+        </li>
+    
+</ul>
+
+
+
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-1399481731021488"
+            data-ad-slot="9323059516"
+            data-ad-format="auto"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+
+        <footer id="footer">
+    
+        <div id="social">
+
+	
+	
+    <a class="symbol" href="https://github.com/Jeiwan">
+        <i class="fa fa-github"></i>
+    </a>
+    
+    <a class="symbol" href="https://twitter.com/jeiwan7">
+        <i class="fa fa-twitter"></i>
+    </a>
+    
+
+
+</div>
+
+    
+    <p class="small">
+    
+        <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+    
+    </p>
+</footer>
+
+    </section>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://jeiwan.cc/js/main.js"></script>
+<script src="https://jeiwan.cc/js/highlight.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-77183580-3', 'auto');
+ga('send', 'pageview');
+</script>
+
+
+</body>
+</html>
