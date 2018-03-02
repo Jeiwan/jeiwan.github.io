@@ -4,7 +4,7 @@ date: 2017-09-11T11:20:43+07:00
 tags: [Golang, Blockchain, Bitcoin]
 ---
 
-> Chinese translation: https://zhangli1.gitbooks.io/dummies-for-blockchain/content/
+> Chinese translations: [by liuchengxu](https://github.com/liuchengxu/blockchain-tutorial/blob/master/content/part-5/address.md), [by zhangli1](https://zhangli1.gitbooks.io/dummies-for-blockchain/content/)
 
 ## Introduction
 In [the previous article](https://jeiwan.cc/posts/building-blockchain-in-go-part-4/), we started implementing transactions. You were also introduced to the impersonal nature of transactions: there are no user accounts, your personal data (e.g., name, passport number or SSN) is not required and not stored anywhere in Bitcoin. But there still must be something that identifies you as the owner of transaction outputs (i.e. the owner of coins locked on these outputs). And this is what Bitcoin addresses are needed for. So far we've used arbitrary user defined strings as addresses, and the time has come to implement real addresses, as they're implemented in Bitcoin.

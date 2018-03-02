@@ -4,7 +4,7 @@ tags: [Golang, Blockchain, Bitcoin]
 date: 2017-09-04T11:32:39+07:00
 ---
 
-> Chinese translation: https://zhangli1.gitbooks.io/dummies-for-blockchain/content/
+> Chinese translations: [by liuchengxu](https://github.com/liuchengxu/blockchain-tutorial/blob/master/content/part-4/transactions-1.md), [by zhangli1](https://zhangli1.gitbooks.io/dummies-for-blockchain/content/)
 
 ## Introduction
 Transactions are the heart of Bitcoin and the only purpose of blockchain is to store transactions in a secure and reliable way, so no one could modify them after they are created. Today we're starting implementing transactions. But because this is quite a big topic, I'll split it into two parts: in this part, we'll implement the general mechanism of transactions and in the second part we'll work through details.

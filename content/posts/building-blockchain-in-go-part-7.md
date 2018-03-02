@@ -4,7 +4,7 @@ date: 2017-10-06T12:31:19+07:00
 tags: [Golang, Blockchain, Bitcoin]
 ---
 
-> Chinese translation: https://zhangli1.gitbooks.io/dummies-for-blockchain/content/
+> Chinese translations: [by liuchengxu](https://github.com/liuchengxu/blockchain-tutorial/blob/master/content/part-7/network.md), [by zhangli1](https://zhangli1.gitbooks.io/dummies-for-blockchain/content/)
 
 ## Introduction
 
