@@ -7,8 +7,8 @@ disqusShortname = ""
 
 [params]
   name = "Ivan Kuznetsov"
-  description = "Thoughts about web development, machine learning, and neural networks"
-  bio = "Web Development - DevOps - Machine Learning"
+  description = "Thoughts about web development, devops, and blockchain"
+  bio = "Web Development - DevOps - Blockchain"
   # Enter optionally your twitter account
   twitter = "jeiwan7"
   enableRSS = false
