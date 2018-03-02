@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Lightningnetwork on Going the distance</title>
+    <link>https://jeiwan.cc/tags/lightningnetwork/</link>
+    <description>Recent content in Lightningnetwork on Going the distance</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 02 Mar 2018 16:58:56 +0700</lastBuildDate>
+    
+	<atom:link href="https://jeiwan.cc/tags/lightningnetwork/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>What is Lightning Network and How to Try It Today</title>
+      <link>https://jeiwan.cc/posts/what-is-lightning-network/</link>
+      <pubDate>Fri, 02 Mar 2018 16:58:56 +0700</pubDate>
+      
+      <guid>https://jeiwan.cc/posts/what-is-lightning-network/</guid>
+      <description>Introduction As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain.</description>
+    </item>
+    
+  </channel>
+</rss>

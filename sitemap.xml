@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://jeiwan.cc/posts/what-is-lightning-network/</loc>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://jeiwan.cc/posts/building-blockchain-in-go-part-7/</loc>
     <lastmod>2017-10-06T12:31:19+07:00</lastmod>
   </url>
@@ -44,13 +49,13 @@
   
   <url>
     <loc>https://jeiwan.cc/tags/bitcoin/</loc>
-    <lastmod>2017-10-06T12:31:19+07:00</lastmod>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://jeiwan.cc/tags/blockchain/</loc>
-    <lastmod>2017-10-06T12:31:19+07:00</lastmod>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -67,13 +72,19 @@
   
   <url>
     <loc>https://jeiwan.cc/</loc>
-    <lastmod>2017-10-06T12:31:19+07:00</lastmod>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://jeiwan.cc/tags/golang/</loc>
     <lastmod>2017-10-06T12:31:19+07:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://jeiwan.cc/tags/lightningnetwork/</loc>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -85,13 +96,19 @@
   
   <url>
     <loc>https://jeiwan.cc/posts/</loc>
-    <lastmod>2017-10-06T12:31:19+07:00</lastmod>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://jeiwan.cc/tags/segwit/</loc>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://jeiwan.cc/tags/</loc>
-    <lastmod>2017-10-06T12:31:19+07:00</lastmod>
+    <lastmod>2018-03-02T16:58:56+07:00</lastmod>
     <priority>0</priority>
   </url>
   
