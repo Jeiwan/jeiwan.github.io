@@ -7,7 +7,7 @@ date: 2017-08-29T12:10:04+07:00
 > Chinese translations: [by liuchengxu](https://github.com/liuchengxu/blockchain-tutorial/blob/master/content/part-3/persistence-and-cli.md), [by zhangli1](https://zhangli1.gitbooks.io/dummies-for-blockchain/content/).
 
 ## Introduction
-[So](https://jeiwan.cc/posts/building-blockchain-in-go-part-1/) [far](https://jeiwan.cc/posts/building-blockchain-in-go-part-2/), we've built a blockchain with a proof-of-work system, which makes mining possible. Our implementation is getting closer to a fully functional blockchain, but it still lacks some important features. Today will start storing a blockchain in a database, and after that we'll make a simple command-line interface to perform operations with the blockchain. In its essence, blockchain is a distributed database. We're going to omit the "distributed" part for now and focus on the "database" part.
+[So](https://jeiwan.net/posts/building-blockchain-in-go-part-1/) [far](https://jeiwan.net/posts/building-blockchain-in-go-part-2/), we've built a blockchain with a proof-of-work system, which makes mining possible. Our implementation is getting closer to a fully functional blockchain, but it still lacks some important features. Today will start storing a blockchain in a database, and after that we'll make a simple command-line interface to perform operations with the blockchain. In its essence, blockchain is a distributed database. We're going to omit the "distributed" part for now and focus on the "database" part.
 
 ## Database Choice
 Currently, there's no database in our implementation; instead, we create blocks every time we run the program and store them in memory. We cannot reuse a blockchain, we cannot share it with others, thus we need to store it on the disk. 

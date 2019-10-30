@@ -7,7 +7,7 @@ tags: [Golang, Blockchain, Bitcoin]
 > Chinese translations: [by liuchengxu](https://github.com/liuchengxu/blockchain-tutorial/blob/master/content/part-2/proof-of-work.md), [by zhangli1](https://zhangli1.gitbooks.io/dummies-for-blockchain/content/).
 
 ## Introduction
-In [the previous article](https://jeiwan.cc/posts/building-blockchain-in-go-part-1/) we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work. Today we're going to fix this flaw.
+In [the previous article](https://jeiwan.net/posts/building-blockchain-in-go-part-1/) we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work. Today we're going to fix this flaw.
 
 
 ## Proof-of-Work

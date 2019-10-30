@@ -11,11 +11,11 @@ In the very first part of this series I said that blockchain is a distributed da
 
 Previous parts:
 
-1. [Basic Prototype](https://jeiwan.cc/posts/building-blockchain-in-go-part-1/)
-2. [Proof-of-Work](https://jeiwan.cc/posts/building-blockchain-in-go-part-2/)
-3. [Persistence and CLI](https://jeiwan.cc/posts/building-blockchain-in-go-part-3/)
-4. [Transactions 1](https://jeiwan.cc/posts/building-blockchain-in-go-part-4/)
-5. [Addresses](https://jeiwan.cc/posts/building-blockchain-in-go-part-5/)
+1. [Basic Prototype](https://jeiwan.net/posts/building-blockchain-in-go-part-1/)
+2. [Proof-of-Work](https://jeiwan.net/posts/building-blockchain-in-go-part-2/)
+3. [Persistence and CLI](https://jeiwan.net/posts/building-blockchain-in-go-part-3/)
+4. [Transactions 1](https://jeiwan.net/posts/building-blockchain-in-go-part-4/)
+5. [Addresses](https://jeiwan.net/posts/building-blockchain-in-go-part-5/)
 
 > This part introduces significant code changes, so it makes no sense explaining all of them here. Please refer to [this page](https://github.com/Jeiwan/blockchain_go/compare/part_5...part_6#files_bucket) to see all the changes since the last article.
 
@@ -44,7 +44,7 @@ func (cli *CLI) send(from, to string, amount int) {
 In our implementation, the one who creates a transaction mines the new block, and thus, receives a reward.
 
 ## The UTXO Set
-In [Part 3: Persistence and CLI](https://jeiwan.cc/posts/building-blockchain-in-go-part-3/) we studied the way Bitcoin Core stores blocks in a database. It was said that blocks are stored in `blocks` database and transaction outputs are stored in `chainstate` database. Let me remind you what the structure of `chainstate` is:
+In [Part 3: Persistence and CLI](https://jeiwan.net/posts/building-blockchain-in-go-part-3/) we studied the way Bitcoin Core stores blocks in a database. It was said that blocks are stored in `blocks` database and transaction outputs are stored in `chainstate` database. Let me remind you what the structure of `chainstate` is:
 
 1. `'c' + 32-byte transaction hash -> unspent transaction output record for that transaction`
 2. `'B' -> 32-byte block hash: the block hash up to which the database represents the unspent transaction outputs`
