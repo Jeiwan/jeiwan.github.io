@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="author" content="Ivan Kuznetsov">
 <meta name="description" content="Thoughts about web development, devops, and blockchain">
-<meta name="generator" content="Hugo 0.25.1" />
+<meta name="generator" content="Hugo 0.54.0" />
 <title>Building Blockchain in Go. Part 2: Proof-of-Work &middot; Going the distance</title>
 <link rel="shortcut icon" href="https://jeiwan.cc/images/favicon.ico">
 <link rel="stylesheet" href="https://jeiwan.cc/css/style.css">
@@ -24,21 +24,8 @@
  Introduction In the previous article we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://jeiwan.cc/posts/building-blockchain-in-go-part-2/" />
-
-
-
 <meta property="article:published_time" content="2017-08-22T12:42:19&#43;07:00"/>
 <meta property="article:modified_time" content="2017-08-22T12:42:19&#43;07:00"/>
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -47,6 +34,7 @@
  Introduction In the previous article we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work.">
 
 
+<meta itemprop="datePublished" content="2017-08-22T12:42:19&#43;07:00" />
 <meta itemprop="dateModified" content="2017-08-22T12:42:19&#43;07:00" />
 <meta itemprop="wordCount" content="1721">
 
@@ -54,13 +42,7 @@
 
 <meta itemprop="keywords" content="Golang,Blockchain,Bitcoin," />
 
-
-
-  <meta name="twitter:card" content="summary"/>
-
-
-
-<meta name="twitter:text:title" content="Building Blockchain in Go. Part 2: Proof-of-Work"/>
+<meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Building Blockchain in Go. Part 2: Proof-of-Work"/>
 <meta name="twitter:description" content="Chinese translations: by liuchengxu, by zhangli1.
  Introduction In the previous article we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work."/>
@@ -414,7 +396,7 @@ PoW: true
     <img class="avatar" src="https://jeiwan.cc/images/avatar.png">
     <div>
         <span class="dark">Ivan Kuznetsov</span>
-        <span>Write things</span>
+        <span>Golang and Clojure developer and DevOps interested in blockchain technologies</span>
     </div>
     </a>
     <section id="sharing">
@@ -438,6 +420,10 @@ PoW: true
 
     
     
+    
+        <li>
+            <a href="/posts/programming-bitcoin-network/">Programming the Bitcoin Network<aside class="dates">Oct 30 2019</aside></a>
+        </li>
     
         <li>
             <a href="/posts/what-is-lightning-network/">What is Lightning Network and How to Try It Today<aside class="dates">Mar 2 2018</aside></a>
@@ -524,14 +510,17 @@ PoW: true
 
 
 
-<script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-77183580-3', 'auto');
-ga('send', 'pageview');
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-77183580-3', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
 
