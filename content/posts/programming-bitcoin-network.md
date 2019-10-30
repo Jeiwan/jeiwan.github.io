@@ -2,7 +2,6 @@
 title: "Programming the Bitcoin Network"
 date: 2019-10-30T00:00:00+00:00
 tags: [Golang, Blockchain, Bitcoin]
-draft: true
 ---
 
 *Full code: [Jeiwan/tinybit/part_1](https://github.com/Jeiwan/tinybit/tree/part_1)*
