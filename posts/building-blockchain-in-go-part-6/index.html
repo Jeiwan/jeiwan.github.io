@@ -8,9 +8,9 @@
 <meta name="description" content="Thoughts about web development, devops, and blockchain">
 <meta name="generator" content="Hugo 0.54.0" />
 <title>Building Blockchain in Go. Part 6: Transactions 2 &middot; Going the distance</title>
-<link rel="shortcut icon" href="https://jeiwan.cc/images/favicon.ico">
-<link rel="stylesheet" href="https://jeiwan.cc/css/style.css">
-<link rel="stylesheet" href="https://jeiwan.cc/css/highlight.css">
+<link rel="shortcut icon" href="https://jeiwan.net/images/favicon.ico">
+<link rel="stylesheet" href="https://jeiwan.net/css/style.css">
+<link rel="stylesheet" href="https://jeiwan.net/css/highlight.css">
 
 
 
@@ -23,7 +23,7 @@
 <meta property="og:description" content="Chinese translations: by liuchengxu, by zhangli1
  Introduction In the very first part of this series I said that blockchain is a distributed database. Back then, we decided to skip the &ldquo;distributed&rdquo; part and focus on the &ldquo;database&rdquo; part. So far, we&rsquo;ve implemented almost all the things that make a blockchain database. In this post, we&rsquo;ll cover some mechanisms that were skipped in the previous parts, and in the next part we&rsquo;ll start working on the distributed nature of blockchain." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://jeiwan.cc/posts/building-blockchain-in-go-part-6/" />
+<meta property="og:url" content="https://jeiwan.net/posts/building-blockchain-in-go-part-6/" />
 <meta property="article:published_time" content="2017-09-18T13:02:26&#43;07:00"/>
 <meta property="article:modified_time" content="2017-09-18T13:02:26&#43;07:00"/>
 
@@ -53,7 +53,7 @@
 <body>
     <nav class="main-nav">
 	
-		<a href='https://jeiwan.cc'> <span class="arrow">←</span>Home</a>
+		<a href='https://jeiwan.net'> <span class="arrow">←</span>Home</a>
 	
 
 	
@@ -74,11 +74,11 @@
         
         
             
-                <a href="https://jeiwan.cc/tags/golang">Golang</a>
+                <a href="https://jeiwan.net/tags/golang">Golang</a>
             
-                <a href="https://jeiwan.cc/tags/blockchain">Blockchain</a>
+                <a href="https://jeiwan.net/tags/blockchain">Blockchain</a>
             
-                <a href="https://jeiwan.cc/tags/bitcoin">Bitcoin</a>
+                <a href="https://jeiwan.net/tags/bitcoin">Bitcoin</a>
             
         
         
@@ -109,11 +109,11 @@
 <p>Previous parts:</p>
 
 <ol>
-<li><a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-1/">Basic Prototype</a></li>
-<li><a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-2/">Proof-of-Work</a></li>
-<li><a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-3/">Persistence and CLI</a></li>
-<li><a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-4/">Transactions 1</a></li>
-<li><a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-5/">Addresses</a></li>
+<li><a href="https://jeiwan.net/posts/building-blockchain-in-go-part-1/">Basic Prototype</a></li>
+<li><a href="https://jeiwan.net/posts/building-blockchain-in-go-part-2/">Proof-of-Work</a></li>
+<li><a href="https://jeiwan.net/posts/building-blockchain-in-go-part-3/">Persistence and CLI</a></li>
+<li><a href="https://jeiwan.net/posts/building-blockchain-in-go-part-4/">Transactions 1</a></li>
+<li><a href="https://jeiwan.net/posts/building-blockchain-in-go-part-5/">Addresses</a></li>
 </ol>
 
 <blockquote>
@@ -147,7 +147,7 @@
 
 <h2 id="the-utxo-set">The UTXO Set</h2>
 
-<p>In <a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-3/">Part 3: Persistence and CLI</a> we studied the way Bitcoin Core stores blocks in a database. It was said that blocks are stored in <code>blocks</code> database and transaction outputs are stored in <code>chainstate</code> database. Let me remind you what the structure of <code>chainstate</code> is:</p>
+<p>In <a href="https://jeiwan.net/posts/building-blockchain-in-go-part-3/">Part 3: Persistence and CLI</a> we studied the way Bitcoin Core stores blocks in a database. It was said that blocks are stored in <code>blocks</code> database and transaction outputs are stored in <code>chainstate</code> database. Let me remind you what the structure of <code>chainstate</code> is:</p>
 
 <ol>
 <li><code>'c' + 32-byte transaction hash -&gt; unspent transaction output record for that transaction</code></li>
@@ -608,14 +608,14 @@ Script: <code>OP_CHECKSIG</code></p></li>
 
 <footer id="post-meta" class="clearfix">
     <a href="https://twitter.com/jeiwan7">
-    <img class="avatar" src="https://jeiwan.cc/images/avatar.png">
+    <img class="avatar" src="https://jeiwan.net/images/avatar.png">
     <div>
         <span class="dark">Ivan Kuznetsov</span>
         <span>Golang and Clojure developer and DevOps interested in blockchain technologies</span>
     </div>
     </a>
     <section id="sharing">
-        <a class="twitter" href="https://twitter.com/intent/tweet?text=Building%20Blockchain%20in%20Go.%20Part%206%3a%20Transactions%202 - https%3a%2f%2fjeiwan.cc%2fposts%2fbuilding-blockchain-in-go-part-6%2f"><span class="icon-twitter"> tweet</span></a>
+        <a class="twitter" href="https://twitter.com/intent/tweet?text=Building%20Blockchain%20in%20Go.%20Part%206%3a%20Transactions%202 - https%3a%2f%2fjeiwan.net%2fposts%2fbuilding-blockchain-in-go-part-6%2f"><span class="icon-twitter"> tweet</span></a>
 
 <a class="facebook" href="#" onclick="
     window.open(
@@ -718,8 +718,8 @@ Script: <code>OP_CHECKSIG</code></p></li>
 
     </section>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="https://jeiwan.cc/js/main.js"></script>
-<script src="https://jeiwan.cc/js/highlight.js"></script>
+<script src="https://jeiwan.net/js/main.js"></script>
+<script src="https://jeiwan.net/js/highlight.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 
 

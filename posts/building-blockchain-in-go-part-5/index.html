@@ -8,9 +8,9 @@
 <meta name="description" content="Thoughts about web development, devops, and blockchain">
 <meta name="generator" content="Hugo 0.54.0" />
 <title>Building Blockchain in Go. Part 5: Addresses &middot; Going the distance</title>
-<link rel="shortcut icon" href="https://jeiwan.cc/images/favicon.ico">
-<link rel="stylesheet" href="https://jeiwan.cc/css/style.css">
-<link rel="stylesheet" href="https://jeiwan.cc/css/highlight.css">
+<link rel="shortcut icon" href="https://jeiwan.net/images/favicon.ico">
+<link rel="stylesheet" href="https://jeiwan.net/css/style.css">
+<link rel="stylesheet" href="https://jeiwan.net/css/highlight.css">
 
 
 
@@ -23,7 +23,7 @@
 <meta property="og:description" content="Chinese translations: by liuchengxu, by zhangli1
  Introduction In the previous article, we started implementing transactions. You were also introduced to the impersonal nature of transactions: there are no user accounts, your personal data (e.g., name, passport number or SSN) is not required and not stored anywhere in Bitcoin. But there still must be something that identifies you as the owner of transaction outputs (i.e. the owner of coins locked on these outputs)." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://jeiwan.cc/posts/building-blockchain-in-go-part-5/" />
+<meta property="og:url" content="https://jeiwan.net/posts/building-blockchain-in-go-part-5/" />
 <meta property="article:published_time" content="2017-09-11T11:20:43&#43;07:00"/>
 <meta property="article:modified_time" content="2017-09-11T11:20:43&#43;07:00"/>
 
@@ -53,7 +53,7 @@
 <body>
     <nav class="main-nav">
 	
-		<a href='https://jeiwan.cc'> <span class="arrow">←</span>Home</a>
+		<a href='https://jeiwan.net'> <span class="arrow">←</span>Home</a>
 	
 
 	
@@ -74,11 +74,11 @@
         
         
             
-                <a href="https://jeiwan.cc/tags/golang">Golang</a>
+                <a href="https://jeiwan.net/tags/golang">Golang</a>
             
-                <a href="https://jeiwan.cc/tags/blockchain">Blockchain</a>
+                <a href="https://jeiwan.net/tags/blockchain">Blockchain</a>
             
-                <a href="https://jeiwan.cc/tags/bitcoin">Bitcoin</a>
+                <a href="https://jeiwan.net/tags/bitcoin">Bitcoin</a>
             
         
         
@@ -104,7 +104,7 @@
 
 <h2 id="introduction">Introduction</h2>
 
-<p>In <a href="https://jeiwan.cc/posts/building-blockchain-in-go-part-4/">the previous article</a>, we started implementing transactions. You were also introduced to the impersonal nature of transactions: there are no user accounts, your personal data (e.g., name, passport number or SSN) is not required and not stored anywhere in Bitcoin. But there still must be something that identifies you as the owner of transaction outputs (i.e. the owner of coins locked on these outputs). And this is what Bitcoin addresses are needed for. So far we&rsquo;ve used arbitrary user defined strings as addresses, and the time has come to implement real addresses, as they&rsquo;re implemented in Bitcoin.</p>
+<p>In <a href="https://jeiwan.net/posts/building-blockchain-in-go-part-4/">the previous article</a>, we started implementing transactions. You were also introduced to the impersonal nature of transactions: there are no user accounts, your personal data (e.g., name, passport number or SSN) is not required and not stored anywhere in Bitcoin. But there still must be something that identifies you as the owner of transaction outputs (i.e. the owner of coins locked on these outputs). And this is what Bitcoin addresses are needed for. So far we&rsquo;ve used arbitrary user defined strings as addresses, and the time has come to implement real addresses, as they&rsquo;re implemented in Bitcoin.</p>
 
 <blockquote>
 <p>This part introduces significant code changes, so it makes no sense explaining all of them here. Please refer to <a href="https://github.com/Jeiwan/blockchain_go/compare/part_4...part_5#files_bucket">this page</a> to see all the changes since the last article.</p>
@@ -714,14 +714,14 @@ $ blockchain_go send -from 1AmVdDvvQ977oVCpUqz7zAPUEiXKrX5avR -to 1NE86r4Esjf53E
 
 <footer id="post-meta" class="clearfix">
     <a href="https://twitter.com/jeiwan7">
-    <img class="avatar" src="https://jeiwan.cc/images/avatar.png">
+    <img class="avatar" src="https://jeiwan.net/images/avatar.png">
     <div>
         <span class="dark">Ivan Kuznetsov</span>
         <span>Golang and Clojure developer and DevOps interested in blockchain technologies</span>
     </div>
     </a>
     <section id="sharing">
-        <a class="twitter" href="https://twitter.com/intent/tweet?text=Building%20Blockchain%20in%20Go.%20Part%205%3a%20Addresses - https%3a%2f%2fjeiwan.cc%2fposts%2fbuilding-blockchain-in-go-part-5%2f"><span class="icon-twitter"> tweet</span></a>
+        <a class="twitter" href="https://twitter.com/intent/tweet?text=Building%20Blockchain%20in%20Go.%20Part%205%3a%20Addresses - https%3a%2f%2fjeiwan.net%2fposts%2fbuilding-blockchain-in-go-part-5%2f"><span class="icon-twitter"> tweet</span></a>
 
 <a class="facebook" href="#" onclick="
     window.open(
@@ -824,8 +824,8 @@ $ blockchain_go send -from 1AmVdDvvQ977oVCpUqz7zAPUEiXKrX5avR -to 1NE86r4Esjf53E
 
     </section>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script src="https://jeiwan.cc/js/main.js"></script>
-<script src="https://jeiwan.cc/js/highlight.js"></script>
+<script src="https://jeiwan.net/js/main.js"></script>
+<script src="https://jeiwan.net/js/highlight.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 
 
