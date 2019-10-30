@@ -500,3 +500,6 @@ And maybe something more 😉
 1. [Bitcoin Protocol Specificaiton](https://en.bitcoin.it/wiki/Protocol_documentation#version)
 1. [IPv6/IPv4 Address Embedding](http://www.tcpipguide.com/free/t_IPv6IPv4AddressEmbedding-2.htm)
 1. [btcd](https://github.com/btcsuite/btcd)
+
+
+**If you have any ideas how to improve the code, please [submit an issue](https://github.com/Jeiwan/tinybit/issues)!**
