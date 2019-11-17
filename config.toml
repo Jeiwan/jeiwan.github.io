@@ -1,5 +1,5 @@
 baseURL = "https://jeiwan.net"
-languageCode = "en-us"
+languageCode = "en"
 title = "Going the distance"
 theme = "hugo-cactus-theme"
 googleAnalytics = "UA-77183580-3"
