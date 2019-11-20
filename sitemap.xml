@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://jeiwan.net/posts/programming-bitcoin-network-2/</loc>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://jeiwan.net/posts/programming-bitcoin-network/</loc>
     <lastmod>2019-10-30T00:00:00+00:00</lastmod>
   </url>
@@ -54,13 +59,13 @@
   
   <url>
     <loc>https://jeiwan.net/tags/bitcoin/</loc>
-    <lastmod>2019-10-30T00:00:00+00:00</lastmod>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://jeiwan.net/tags/blockchain/</loc>
-    <lastmod>2019-10-30T00:00:00+00:00</lastmod>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -77,13 +82,13 @@
   
   <url>
     <loc>https://jeiwan.net/</loc>
-    <lastmod>2019-10-30T00:00:00+00:00</lastmod>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://jeiwan.net/tags/golang/</loc>
-    <lastmod>2019-10-30T00:00:00+00:00</lastmod>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -101,7 +106,7 @@
   
   <url>
     <loc>https://jeiwan.net/posts/</loc>
-    <lastmod>2019-10-30T00:00:00+00:00</lastmod>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -113,7 +118,7 @@
   
   <url>
     <loc>https://jeiwan.net/tags/</loc>
-    <lastmod>2019-10-30T00:00:00+00:00</lastmod>
+    <lastmod>2019-11-17T15:29:48+07:00</lastmod>
     <priority>0</priority>
   </url>
   
