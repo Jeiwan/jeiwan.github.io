@@ -12,11 +12,11 @@
     
     
     <item>
-      <title>Programming the Bitcoin Network, Part 2</title>
-      <link>https://jeiwan.net/posts/programming-bitcoin-network-2/</link>
+      <title>Programming Bitcoin Network, part 2</title>
+      <link>https://jeiwan.net/post/programming-bitcoin-network-2/</link>
       <pubDate>Sun, 17 Nov 2019 15:29:48 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/programming-bitcoin-network-2/</guid>
+      <guid>https://jeiwan.net/post/programming-bitcoin-network-2/</guid>
       <description>Previous part: here
  DISCLAIMER. In these blog posts I describe only significant changes I made to the code since the last part. There are also insignificant refactorings and improvements I make along the way and don&amp;rsquo;t explain them here for brevity. Please, check these links to see all the changes:
 Full code of this part: Jeiwan/tinybit/part_2
@@ -25,11 +25,11 @@ Changes since the previous part: part1&amp;hellip;part2
     </item>
     
     <item>
-      <title>Programming the Bitcoin Network</title>
-      <link>https://jeiwan.net/posts/programming-bitcoin-network/</link>
+      <title>Programming Bitcoin Network</title>
+      <link>https://jeiwan.net/post/programming-bitcoin-network/</link>
       <pubDate>Wed, 30 Oct 2019 00:00:00 +0000</pubDate>
       
-      <guid>https://jeiwan.net/posts/programming-bitcoin-network/</guid>
+      <guid>https://jeiwan.net/post/programming-bitcoin-network/</guid>
       <description>Full code: Jeiwan/tinybit/part_1
 Introduction This blog starts a series of posts dedicated to programming of the Bitcoin network in Golang. The goal of this series is to build a tiny Bitcoin network client that&amp;rsquo;s able to:
  Connect to a Bitcoin network (whether that&amp;rsquo;s mainnet, testnet, simnet, or a local network). Introduce itself to the network (what&amp;rsquo;s called &amp;ldquo;version handshake&amp;rdquo;). Get information about current blockchain state from a node in the network.</description>
@@ -37,89 +37,89 @@ Introduction This blog starts a series of posts dedicated to programming of the 
     
     <item>
       <title>What is Lightning Network and How to Try It Today</title>
-      <link>https://jeiwan.net/posts/what-is-lightning-network/</link>
+      <link>https://jeiwan.net/post/what-is-lightning-network/</link>
       <pubDate>Fri, 02 Mar 2018 16:58:56 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/what-is-lightning-network/</guid>
+      <guid>https://jeiwan.net/post/what-is-lightning-network/</guid>
       <description>Introduction As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain.</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 7: Network</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-7/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-7/</link>
       <pubDate>Fri, 06 Oct 2017 12:31:19 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-7/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-7/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1
  Introduction So far, we&amp;rsquo;ve build a blockchain that has all key features: anonymous, secure, and randomly generated addresses; blockchain data storage; Proof-of-Work system; reliable way to store transactions. While these features are crucial, it&amp;rsquo;s not enough. What makes these features really shine, and what make cryptocurrencies possible, is network. What&amp;rsquo;s the use of having such blockchain implementation running just on a single computer?</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 6: Transactions 2</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-6/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-6/</link>
       <pubDate>Mon, 18 Sep 2017 13:02:26 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-6/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-6/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1
  Introduction In the very first part of this series I said that blockchain is a distributed database. Back then, we decided to skip the &amp;ldquo;distributed&amp;rdquo; part and focus on the &amp;ldquo;database&amp;rdquo; part. So far, we&amp;rsquo;ve implemented almost all the things that make a blockchain database. In this post, we&amp;rsquo;ll cover some mechanisms that were skipped in the previous parts, and in the next part we&amp;rsquo;ll start working on the distributed nature of blockchain.</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 5: Addresses</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-5/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-5/</link>
       <pubDate>Mon, 11 Sep 2017 11:20:43 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-5/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-5/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1
  Introduction In the previous article, we started implementing transactions. You were also introduced to the impersonal nature of transactions: there are no user accounts, your personal data (e.g., name, passport number or SSN) is not required and not stored anywhere in Bitcoin. But there still must be something that identifies you as the owner of transaction outputs (i.e. the owner of coins locked on these outputs).</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 4: Transactions 1</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-4/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-4/</link>
       <pubDate>Mon, 04 Sep 2017 11:32:39 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-4/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-4/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1
  Introduction Transactions are the heart of Bitcoin and the only purpose of blockchain is to store transactions in a secure and reliable way, so no one could modify them after they are created. Today we&amp;rsquo;re starting implementing transactions. But because this is quite a big topic, I&amp;rsquo;ll split it into two parts: in this part, we&amp;rsquo;ll implement the general mechanism of transactions and in the second part we&amp;rsquo;ll work through details.</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 3: Persistence and CLI</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-3/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-3/</link>
       <pubDate>Tue, 29 Aug 2017 12:10:04 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-3/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-3/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1.
  Introduction So far, we&amp;rsquo;ve built a blockchain with a proof-of-work system, which makes mining possible. Our implementation is getting closer to a fully functional blockchain, but it still lacks some important features. Today will start storing a blockchain in a database, and after that we&amp;rsquo;ll make a simple command-line interface to perform operations with the blockchain. In its essence, blockchain is a distributed database.</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 2: Proof-of-Work</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-2/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-2/</link>
       <pubDate>Tue, 22 Aug 2017 12:42:19 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-2/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-2/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1.
  Introduction In the previous article we built a very simple data structure, which is the essence of blockchain database. And we made it possible to add blocks to it with the chain-like relation between them: each block is linked to the previous one. Alas, our blockchain implementation has one significant flaw: adding blocks to the chain is easy and cheap. One of the keystones of blockchain and Bitcoin is that adding new blocks is a hard work.</description>
     </item>
     
     <item>
       <title>Building Blockchain in Go. Part 1: Basic Prototype</title>
-      <link>https://jeiwan.net/posts/building-blockchain-in-go-part-1/</link>
+      <link>https://jeiwan.net/post/building-blockchain-in-go-part-1/</link>
       <pubDate>Wed, 16 Aug 2017 12:29:11 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/building-blockchain-in-go-part-1/</guid>
+      <guid>https://jeiwan.net/post/building-blockchain-in-go-part-1/</guid>
       <description>Chinese translations: by liuchengxu, by zhangli1.
  Introduction Blockchain is one of the most revolutionary technologies of the 21st century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a distributed database of records. But what makes it unique is that it&amp;rsquo;s not a private database, but a public one, i.e. everyone who uses it has a full or partial copy of it.</description>
     </item>
     
     <item>
       <title>TIL: Convolutional Filters Are Weights</title>
-      <link>https://jeiwan.net/posts/til-convolution-filters-are-weights/</link>
+      <link>https://jeiwan.net/post/til-convolution-filters-are-weights/</link>
       <pubDate>Sat, 05 Aug 2017 20:34:21 +0700</pubDate>
       
-      <guid>https://jeiwan.net/posts/til-convolution-filters-are-weights/</guid>
+      <guid>https://jeiwan.net/post/til-convolution-filters-are-weights/</guid>
       <description>It&amp;rsquo;s common knowledge that there&amp;rsquo;re weights in a fully-connected neural network. And these weights are not constant and are adjusted by an optimization algorithm (like gradient descent). Moreover, training a neural network actually means finding proper weights.
 When I started learning about convolution and convolutional networks, first thing I was introduced to is filters. Filters are said to be matrices that are applied to an image to distort it in a certain way, unveiling certain aspect of an image.</description>
     </item>
