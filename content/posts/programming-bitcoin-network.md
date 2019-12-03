@@ -1,5 +1,5 @@
 ---
-title: "Programming the Bitcoin Network"
+title: "Programming Bitcoin Network"
 date: 2019-10-30T00:00:00+00:00
 tags: [Golang, Blockchain, Bitcoin]
 ---
