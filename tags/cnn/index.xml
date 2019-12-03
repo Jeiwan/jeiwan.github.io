@@ -13,10 +13,10 @@
     
     <item>
       <title>TIL: Convolutional Filters Are Weights</title>
-      <link>https://jeiwan.net/post/til-convolution-filters-are-weights/</link>
+      <link>https://jeiwan.net/posts/til-convolution-filters-are-weights/</link>
       <pubDate>Sat, 05 Aug 2017 20:34:21 +0700</pubDate>
       
-      <guid>https://jeiwan.net/post/til-convolution-filters-are-weights/</guid>
+      <guid>https://jeiwan.net/posts/til-convolution-filters-are-weights/</guid>
       <description>It&amp;rsquo;s common knowledge that there&amp;rsquo;re weights in a fully-connected neural network. And these weights are not constant and are adjusted by an optimization algorithm (like gradient descent). Moreover, training a neural network actually means finding proper weights.
 When I started learning about convolution and convolutional networks, first thing I was introduced to is filters. Filters are said to be matrices that are applied to an image to distort it in a certain way, unveiling certain aspect of an image.</description>
     </item>
