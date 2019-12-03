@@ -68,6 +68,30 @@
 
   </article>
 
+<hr>
+<br>
+
+<div id="remark42"></div>
+<script>
+    var remark_config = {
+      host: "https://remark.jeiwan.net", 
+      site_id: 'jeiwan.net',
+      components: ['embed'],
+      url: 'PAGE_URL',
+      max_shown_comments: 10,
+      theme: 'light'
+    };
+  
+    (function(c) {
+      for(var i = 0; i < c.length; i++){
+        var d = document, s = d.createElement('script');
+        s.src = remark_config.host + '/web/' +c[i] +'.js';
+        s.defer = true;
+        (d.head || d.body).appendChild(s);
+      }
+    })(remark_config.components || ['embed']);
+  </script>
+
 
       <footer class="site-footer">
         <span itemscope itemtype="http://schema.org/Person">
