@@ -1,49 +1,20 @@
 baseURL = "https://jeiwan.net"
 languageCode = "en"
 title = "Going the distance"
-theme = "hugo-cactus-theme"
+# theme = "hugo-cactus-theme"
+theme = "hugo-journal"
 googleAnalytics = "UA-77183580-3"
 disqusShortname = ""
 
 [params]
   name = "Ivan Kuznetsov"
   description = "Thoughts about web development, devops, and blockchain"
+  tagline = "Thoughts about web development, devops, and blockchain"
   bio = "Web Development - DevOps - Blockchain"
-  # Enter optionally your twitter account
-  twitter = "jeiwan7"
-  enableRSS = false
 
-  # Integrate Javascript files or stylesheets by adding the url to the external assets or by
-  # linking local files with their path relative to the static folder, e.g. "css/styles.css"
-  customCSS = []
-  customJS  = []
+  githubUsername = "jeiwan"
+  telegramUsername = "jeiwan"
+  twitterUsername = "jeiwan7"
 
-  # The variables below are optionally too and can be used to
-  # translate or customize each string of the theme.
-
-  # Navigation links
-  home = ""
-  subscribe = ""
-  # Pagination links
-  olderPosts = ""
-  newerPosts = ""
-  readMore = ""
-  copyright = ""
-  # Sharing options and author information in posts
-  aboutAuthor = "Golang and Clojure developer and DevOps interested in blockchain technologies"
-  tweet = ""
-  share = ""
-  # 404 page
-  title404 = ""
-  subtitle404 = ""
-
-  # Choose a font for the social icons in the footer. Either "mono-social" or "font-awesome"
-  iconFont = "font-awesome"
-    # The social icons can be styled differently if you use mono as font - circle, rounded, or empty
-    socialIconStyle = "circle"
-
-# Add additional social link entries underneath
-[social]
-    twitter  = "https://twitter.com/jeiwan7"
-    github   = "https://github.com/Jeiwan"
-    telegram = "https://t.me/jeiwan"
+[author]
+  name = "Ivan Kuznetsov"
