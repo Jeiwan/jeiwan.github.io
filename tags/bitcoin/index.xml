@@ -6,10 +6,23 @@
     <description>Recent content in Bitcoin on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 17 Nov 2019 15:29:48 +0700</lastBuildDate>
+    <lastBuildDate>Tue, 03 Dec 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://jeiwan.net/tags/bitcoin/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Programming Bitcoin Network, part 3</title>
+      <link>https://jeiwan.net/post/programming-bitcoin-network-3/</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/post/programming-bitcoin-network-3/</guid>
+      <description>Previous parts:
+ Part 1 Part 2   DISCLAIMER. In these blog posts I describe only significant changes I made to the code since the last part. There are also insignificant refactorings and improvements I make along the way and don&amp;rsquo;t explain them here for brevity. Please, check these links to see all the changes:
+Full code of this part: Jeiwan/tinybit/part_3
+Changes since the previous part: part2&amp;hellip;part3
+ Introduction Aaand we&amp;rsquo;re back to continue our journey!</description>
+    </item>
     
     <item>
       <title>Programming Bitcoin Network, part 2</title>
