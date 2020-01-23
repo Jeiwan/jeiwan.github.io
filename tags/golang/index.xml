@@ -6,10 +6,22 @@
     <description>Recent content in Golang on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 03 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 22 Jan 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://jeiwan.net/tags/golang/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Programming Bitcoin Network, part 4</title>
+      <link>https://jeiwan.net/posts/programming-bitcoin-network-4/</link>
+      <pubDate>Wed, 22 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-bitcoin-network-4/</guid>
+      <description>Previous parts:
+ Part 1 Part 2 Part 3   DISCLAIMER. In these blog posts I describe only significant changes I made to the code since the last part. There are also insignificant refactorings and improvements I make along the way and don&amp;rsquo;t explain them here for brevity. Please, check these links to see all the changes:
+Full code of this part: Jeiwan/tinybit/part_4
+Changes since the previous part: part3&amp;hellip;part4</description>
+    </item>
     
     <item>
       <title>Programming Bitcoin Network, part 3</title>
