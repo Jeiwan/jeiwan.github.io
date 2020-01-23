@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.57.2" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-bitcoin-network-4/">
+
+  <title>Programming Bitcoin Network, part 4 - Going the distance</title>
+  <meta property="og:title" content="Programming Bitcoin Network, part 4 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming Bitcoin Network, part 4</h1>
+      <time class="post-date" datetime="2020-01-22 00:00:00 &#43;0000">22 Jan 2020</time>
+    </header>
+
+    
+
+<p>Previous parts:</p>
+
+<ol>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network/">Part 1</a></li>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network-2/">Part 2</a></li>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network-3/">Part 3</a></li>
+</ol>
+
+<blockquote>
+<p>DISCLAIMER. In these blog posts I describe only significant changes I made to the code
+since the last part. There are also insignificant refactorings and improvements I make
+along the way and don&rsquo;t explain them here for brevity. Please, check these links to
+see all the changes:</p>
+
+<p><em>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_4">Jeiwan/tinybit/part_4</a></em></p>
+
+<p><em>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_3...part_4#files">part3&hellip;part4</a></em></p>
+</blockquote>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>In the last part, we learned to keep our node connected to another node, check liveliness
+of peers, and receive transactions.
+We also set a goal of building a mempool monitor.</p>
+
+<p>In this part we&rsquo;ll face some difficulties that&rsquo;ll make us change the goal.
+It turns out, building a mempool monitor requires implementing a mechanism that&rsquo;s beyond
+the scope of this series and that requires a separate series of posts.</p>
+
+<p>But don&rsquo;t get disappointed! We&rsquo;ll set a new goal! And let&rsquo;s first try to build a mempool monitor to see why it&rsquo;s too difficult.</p>
+
+<h2 id="mempool">Mempool</h2>
+
+<p>Mempool is a data structure that keeps all unconfirmed (i.e. not included in any block)
+transactions in memory.
+As soon a transaction was added to a block and the block was mined, the transaction gets
+removed from mempool.</p>
+
+<blockquote>
+<p>Miners trend to order transactions in mempool by amount of fees, but that&rsquo;s not
+mandatory. Any miner can take any transaction from mempool and put it in a block.</p>
+</blockquote>
+
+<p>Where mempool is stored? <strong>On every node in the network (that opted in)</strong>.
+Are there content rules that enforce the content of mempool? <strong>Nope</strong>. Every node has its own
+mempool. While there might be discrepancies between mempools of different nodes (caused
+by network latency, for example), this doesn&rsquo;t bring any danger or harm.</p>
+
+<p>When you create, sign, and send a new transaction, it&rsquo;s received by all other nodes in
+the network and is stored in their mempools.
+When a new block containing your transaction is mined, it gets delivered to all nodes
+and each node removes your (and other transactions from the block) from its mempool.</p>
+
+<blockquote>
+<p>What happens if the only node holding your transaction in its mempool crushes? Right,
+your transaction disappears.</p>
+</blockquote>
+
+<h3 id="mempool-in-code">Mempool in code</h3>
+
+<p>We&rsquo;ll keep following the &ldquo;share memory by communicating&rdquo; approach when implementing
+mempool. So, <code>Mempool</code> looks like so:</p>
+
+<pre><code class="language-go">type Mempool struct {
+    NewBlockCh chan protocol.MsgBlock
+    NewTxCh    chan protocol.MsgTx
+    
+    txs map[string]*protocol.MsgTx
+}
+</code></pre>
+
+<p><code>NewBlockCh</code> receives new blocks, <code>NewTxCh</code> receives new transactions, and <code>txs</code> is the
+mempool state. We have to make it a field in the structure because we&rsquo;ll want to access
+it from outside later.</p>
+
+<p><code>txs</code> uses transaction hashes as keys, but we haven&rsquo;t yet implemented transaction hash
+calculation. Let&rsquo;s fix this:</p>
+
+<pre><code class="language-go">// protocol/msg_tx.go
+func (tx MsgTx) Hash() ([]byte, error) {
+    serialized, err := tx.MarshalBinary()    
+
+    hash := sha256.Sum256(serialized)
+    hash = sha256.Sum256(hash[:])    
+    txid := hash[:]    
+
+    sort.SliceStable(txid, func(i, j int) bool {
+        return true
+    })    
+
+    return txid, nil
+}
+</code></pre>
+
+<p>Transaction hash is basically a double-SHA-256 hash of raw transaction. And because
+Bitcoin uses little-endian byte ordering, we need to reverse the hash to get actual
+transaction hash that can be recognized by other nodes.</p>
+
+<p>Now we&rsquo;re ready to run <code>Mempool</code>:</p>
+
+<pre><code class="language-go">// node/mempool.go
+func (m Mempool) Run() {
+    for {
+        select {
+        case tx := &lt;-m.NewTxCh:
+            hash, err := tx.Hash()
+
+            txid := hex.EncodeToString(hash)
+            m.txs[txid] = &amp;tx
+        }
+    }
+}
+</code></pre>
+
+<p>Running <code>Mempool</code> simply handles new transactions and blocks. When a new
+transaction comes, it&rsquo;s added to the mempool; when a new block comes, mined transactions
+are removed from the mempool.
+We&rsquo;ll add blocks handling a little bit later.</p>
+
+<p>No, lets add <code>Mempool</code> to <code>Node</code>:</p>
+
+<pre><code class="language-go">// node/node.go
+type Node struct {
+    ...
+    mempool *Mempool
+}
+</code></pre>
+
+<p>We&rsquo;ll have it in a private field because mempool is an internal mechanism of the node.</p>
+
+<p>Run the mempool:</p>
+
+<pre><code class="language-go">// node/node.go
+func (no Node) Run(nodeAddr string) error {
+    ...
+    go no.monitorPeers()
+    go no.mempool.Run()
+    ...
+}
+</code></pre>
+
+<p>Now we can add new transactions to the mempool:</p>
+
+<pre><code class="language-go">// node/cmd_tx.go
+func (no Node) handleTx(header *protocol.MessageHeader, conn io.ReadWriter) error {
+    var tx protocol.MsgTx
+    ...
+
+    no.mempool.NewTxCh &lt;- tx
+
+    return nil
+}
+</code></pre>
+
+<p>That&rsquo;s actually it for the mempool. But how do we peek at the mempool when our node
+is running?</p>
+
+<h2 id="mempool-monitor">Mempool monitor</h2>
+
+<p>Currently, our node keeps everything internally and doesn&rsquo;t allow to access its state
+from the outside. Until this moment this was fine, but now we want to be able to see
+transactions in the mempool. In the end, this is what mempool monitor is for!</p>
+
+<h3 id="json-rpc-interface">JSON-RPC interface</h3>
+
+<p>We&rsquo;re going to add RPC interface to our node to allow seeing current mempool state,
+and we&rsquo;ll use JSON as data encoding algorithm.</p>
+
+<p>RPC stands for <em>remote procedure call</em> protocol, which basically means calling
+functions/methods on a remote server over HTTP or TCP. We&rsquo;ll use JSON-RPC protocol,
+which uses JSON to encode protocol messages. Golang has <code>net/rpc</code> and <code>net/jsonrpc</code> packages that implement the protocol, so let&rsquo;s use them.</p>
+
+<p>When implementing a REST interface you&rsquo;re using an HTTP server and define
+request handlers (in web-frameworks, they&rsquo;re called controllers) that handle incoming requests.
+Each handler is assigned to a separate HTTP path and method.</p>
+
+<p>When implementing a RPC interface you&rsquo;re defining a structure and its methods, and its
+these methods that are called remotely. <strong>RPC makes remote method calls look like they&rsquo;re
+local</strong>.</p>
+
+<p>Thus, we need to define a structure that we&rsquo;ll implement the interface:</p>
+
+<pre><code class="language-go">// rpc/rpc.go
+type Node interface {
+    Mempool() map[string]*protocol.MsgTx
+}
+
+type RPC struct {
+    node Node
+}
+</code></pre>
+
+<p>We called the structure simply <code>RPC</code>. It needs to communicate with the node to get data
+from it. Following best Golang practices we&rsquo;re defining <code>Node</code> interface that connects
+<code>RPC</code> and <code>Node</code>, and defines what <code>Node</code> methods are available to <code>RPC</code>. As I said
+above, we need a way to read the mempool from outside the node, let&rsquo;s add a public
+method <code>Mempool</code> method:</p>
+
+<pre><code class="language-go">// node/mempool.go
+func (n Node) Mempool() map[string]*protocol.MsgTx {
+    m := make(map[string]*protocol.MsgTx)
+
+    for k, v := range n.mempool.txs {
+        m[string(k)] = v
+    }
+
+    return m
+}
+</code></pre>
+
+<p>The method makes a copy of the mempool and returns it. We don&rsquo;t want to return actual
+mempool because it&rsquo;s an internal part of the node. We also don&rsquo;t care if something is
+being added or removed from the mempool at this moment; we&rsquo;re just making a copy of
+what&rsquo;s in there return it.</p>
+
+<p>Now, let&rsquo;s add our first and only RPC method:</p>
+
+<pre><code class="language-go">// rpc/rpc.go
+type MempoolArgs interface{}
+type MempoolReply string
+
+func (r RPC) GetMempool(args *MempoolArgs, reply *MempoolReply) error {
+    txs := r.node.Mempool()
+
+    *reply = MempoolReply(formatMempoolReply(txs))
+
+    return nil
+}
+</code></pre>
+
+<blockquote>
+<p>If you&rsquo;ve ever worked with GRPC, you&rsquo;ll notice the similarity: here, we also have to
+define custom argument types.</p>
+</blockquote>
+
+<p>The method simply gets a copy of mempool and writes it to <code>reply</code>. Let&rsquo;s look at the
+formatting function:</p>
+
+<pre><code class="language-go">func formatMempoolReply(txs map[string]*protocol.MsgTx) string {
+    var result string
+
+    for k := range txs {
+        result += fmt.Sprintf(&quot;%s\n&quot;, k)
+    }
+    result += fmt.Sprintf(&quot;Total %d transactions&quot;, len(txs))
+
+    return result
+}
+</code></pre>
+
+<p>It defines what we want the output of <code>GetMempool</code> call look like. In this case, it&rsquo;s a
+list of transaction IDs and a total transactions counter. We won&rsquo;t need more information,
+but feel free to add something else here.</p>
+
+<p>This is all we need to define the interface. No, let&rsquo;s add a way to expose it.</p>
+
+<blockquote>
+<p>There were no mentions of JSON. At this point we only defined an interface in pure Go code following some specific requirements.</p>
+</blockquote>
+
+<h3 id="json-rpc-server">JSON-RPC server</h3>
+
+<p>RPC server is responsible for reading data from a connection, parsing it, handling,
+and sending a reply. Pretty similar to HTTP server, but we don&rsquo;t need to define
+paths and there are no methods.</p>
+
+<pre><code class="language-go">// rpc/server.go
+type Server struct {
+    port int
+    rpc  *rpc.Server
+}
+</code></pre>
+
+<p>Our <code>rpc.Server</code> is a wrapper around the <code>Server</code> from <code>net/rpc</code> package. It&rsquo;ll
+additionally hold a port number so we could later run the server on the specified port.</p>
+
+<pre><code class="language-go">func NewServer(port int, node Node) (*Server, error) {
+    rpcs := rpc.NewServer()
+
+    handlers := RPC{node: node}
+    if err := rpcs.Register(handlers); err != nil {
+        return nil, err
+    }
+
+    s := Server{
+        port: port,
+        rpc:  rpcs,
+    }
+
+    return &amp;s, nil
+}
+</code></pre>
+
+<p><code>rpcs</code> is the actual RPC server. In Golang, it&rsquo;s an abstraction that doesn&rsquo;t depend on
+transport layer: we can use TCP or HTTP, RPC server doesn&rsquo;t need to know which we choose.</p>
+
+<p><code>Register</code> method registers our interface <code>RPC</code> on this server. Now, the server can
+handle the <code>GetMempool</code> call we defined earlier.</p>
+
+<p>Final step: running the server.</p>
+
+<pre><code class="language-go">func (s Server) Run() {
+    l, err := net.Listen(&quot;tcp&quot;, fmt.Sprintf(&quot;:%d&quot;, s.port))
+
+    for {
+        conn, err := l.Accept()
+
+        go s.rpc.ServeCodec(jsonrpc.NewServerCodec(conn))
+    }
+}
+</code></pre>
+
+<p>As you can see, we&rsquo;re simply listening on a TCP port, and as soon as there&rsquo;s a new
+connection, it&rsquo;s wrapped in a JSON-RPC codec and passed to the RPC-server.
+The codec does JSON encoding/decoding for us and the RPC-server parses RPC messages and
+calls corresponding methods.</p>
+
+<p>This is all we need to have an RPC server!</p>
+
+<p>Now, let&rsquo;s run it together with the node:</p>
+
+<pre><code class="language-go">// cmd/tinybit.go
+func init() {
+    tinybitCmd.Flags().IntVar(&amp;jsonrpcPort, &quot;jsonrpc-port&quot;, 9334, &quot;Port to listen JSON-RPC connections on&quot;)
+    ...
+}
+
+var tinybitCmd = &amp;cobra.Command{
+    Use: &quot;tinybit&quot;,
+    RunE: func(cmd *cobra.Command, args []string) error {
+        node, err := node.New(network, userAgent)
+
+        rpc, err := rpc.NewServer(jsonrpcPort, node)
+		
+        logrus.Infof(&quot;Running JSON-RPC server on port %d&quot;, jsonrpcPort)
+        go rpc.Run()
+        ...
+    }
+}
+</code></pre>
+
+<p>Now, we need a client to connect to the server and call RPC methods.</p>
+
+<h3 id="json-rpc-client">JSON-RPC client</h3>
+
+<p>A general practice is to separate RPC server and client by running the server in the
+background and providing a separate CLI tool to interact with the server.
+For simplicity, we&rsquo;ll keep these things together and define a new CLI command, <code>showmempool</code>:</p>
+
+<pre><code class="language-go">// cmd/showmempool.go
+func init() {
+    showMempoolCmd.Flags().IntVar(&amp;jsonrpcPort, &quot;jsonrpc-port&quot;, 9334, &quot;JSON-RPC port to connect to.&quot;)
+}
+
+var showMempoolCmd = &amp;cobra.Command{
+    Use: &quot;showmempool&quot;,
+    RunE: func(cmd *cobra.Command, args []string) error {
+        // TODO: call 'GetMempool' RPC method
+
+        return nil
+    },
+}
+</code></pre>
+
+<p>The command should call the <code>GetMempool</code> RPC method and print the response. To do this,
+we need a JSON-RPC client:</p>
+
+<pre><code class="language-go">// rpc/client.go
+type Client struct {
+    conn    net.Conn
+    jsonrpc *rpc.Client
+}
+
+func NewClient(port int) (*Client, error) {
+    conn, err := net.Dial(&quot;tcp&quot;, fmt.Sprintf(&quot;127.0.0.1:%d&quot;, port))
+
+    c := jsonrpc.NewClient(conn)
+
+    client := &amp;Client{
+        conn:    conn,
+        jsonrpc: c,
+    }
+
+    return client, nil
+}
+</code></pre>
+
+<p>Our <code>rpc.Client</code> is a thin wrapper around a TCP connection and Golang&rsquo;s JSON-RPC client.
+We&rsquo;re saving a TCP connection because we want to close it later, even though
+<code>jsonrpc.NewClient(conn)</code> also wraps it.</p>
+
+<p>To call RPC methods we&rsquo;re just calling the underlying <code>jsonrpc.Call</code> passing all
+the arguments as is:</p>
+
+<pre><code class="language-go">func (c Client) Call(serviceMethod string, args interface{}, reply interface{}) error {
+    return c.jsonrpc.Call(serviceMethod, args, reply)
+}
+</code></pre>
+
+<p>Don&rsquo;t forget to close a connection when we&rsquo;re done:</p>
+
+<pre><code class="language-go">func (c Client) Close() {
+    c.conn.Close()
+}
+</code></pre>
+
+<p>And now we&rsquo;re ready to finish the <code>showmempool</code> command:</p>
+
+<pre><code class="language-go">// cmd/showmempool.go
+...
+    RunE: func(cmd *cobra.Command, args []string) error {
+        c, err := rpc.NewClient(jsonrpcPort)
+        defer c.Close()
+
+        var reply string
+        if err := c.Call(&quot;RPC.GetMempool&quot;, nil, &amp;reply); err != nil {
+            return err
+        }
+
+        fmt.Println(reply)
+
+        return nil
+    },
+...
+</code></pre>
+
+<p>Here, we&rsquo;re calling &ldquo;RPC.GetMempool&rdquo; procedure, where &ldquo;RPC&rdquo; is the name of our interface (<code>RPC</code> structure, remember?) and &ldquo;GetMempool&rdquo; is the name of the method.</p>
+
+<h3 id="checking-mempool">Checking mempool</h3>
+
+<p>Let&rsquo;s send a transaction and see if it gets to the mempool:</p>
+
+<pre><code class="language-shell">// run btcd and create default and 'alice' wallet accounts
+$ btcd --configfile ./btcd.conf
+$ btcwallet -C ./btcwallet.conf --create
+$ btcwallet -C ./btcwallet.conf
+$ btcctl -C ./btcctl-wallet.conf walletpassphrase PASSPHRASE 3600
+$ btcctl -C ./btcctl-wallet.conf createnewaccount alice
+// generate some BTC
+$ btcctl -C ./btcctl-wallet.conf getnewaddress
+MINER_ADDRESS
+$ btcctl -C ./btcctl-wallet.conf getnewaddress alice
+ALICE_ADDRESS
+$ btcd --configfile ./btcd.conf --miningaddr=MINER_ADDRESS
+$ btcctl -C ./btcctl.conf generate 101
+$ btcctl -C ./btcctl-wallet.conf getbalance
+50
+// send a transaction
+$ DEBUG=1 tinybit
+$ btcctl -C ./btcctl-wallet.conf sendtoaddress ALICE_ADDRESS 0.00001
+// check the mempool
+$ tinybit showmempool
+285a5fc96a492661809145ee7578dc570fac4da1249715f8217423aaa963bcd8
+Total 1 transactions
+</code></pre>
+
+<p>Yay!</p>
+
+<h2 id="block-message">&lsquo;block&rsquo; message</h2>
+
+<p>Our node only adds to the mempool, but not removes from it. To remove transactions we
+need to know what transactions were mined. And to know this, we need to learn to receive
+and process new blocks. Let&rsquo;s begin with &lsquo;block&rsquo; message:</p>
+
+<pre><code class="language-go">// protocol/block.go
+type MsgBlock struct {
+    Version    int32
+    PrevBlock  [32]byte
+    MerkleRoot [32]byte
+    Timestamp  uint32
+    Bits       [4]byte
+    Nonce      uint32
+    TxCount    uint8
+    Txs        []MsgTx
+}
+</code></pre>
+
+<p>Let&rsquo;s review the fields:</p>
+
+<ol>
+<li><code>Version</code> specifies block version based on software used to mine this block.</li>
+<li><code>PrevBlock</code> is the hash of the previous block.</li>
+<li><code>MerkleRoot</code> is the root of a Merkle tree that has all block transactions as its
+nodes. Having such tree helps to check if a certain transaction included in a block
+without getting all block transactions.</li>
+<li><code>Timestamp</code> is the moment when the block was mined.</li>
+<li><code>Bits</code> contains compressed difficulty target that was used to mine this block. This field is explained below.</li>
+<li><code>Nonce</code> is a random number that was used to get the block hash that satisfies the difficulty target stored in <code>Bits</code>.</li>
+<li><code>TxCount</code> and <code>Txs</code> are the number of transactions in this block and the list of all transactions.</li>
+</ol>
+
+<p>First 6 fields in this exact order former block header, which is used to calculate
+block hash. We&rsquo;ll use this information later in this post.</p>
+
+<blockquote>
+<p>Because of <code>TxCount</code> and <code>Txs</code> fields, we have to implement a custom <code>UnmarshalBinary</code>
+method so our binary decoding library can decode raw &lsquo;block&rsquo; messages. I omitted this
+part for brevity.</p>
+</blockquote>
+
+<p>Now we&rsquo;re ready to handle &lsquo;block&rsquo; messages in the node:</p>
+
+<pre><code class="language-go">// node/cmd_block.go
+func (no Node) handleBlock(header *protocol.MessageHeader, conn io.ReadWriter) error {
+    var block protocol.MsgBlock
+
+    lr := io.LimitReader(conn, int64(header.Length))
+    if err := binary.NewDecoder(lr).Decode(&amp;block); err != nil {
+        return err
+    }
+
+    no.mempool.NewBlockCh &lt;- block
+
+    return nil
+}
+</code></pre>
+
+<p>And let&rsquo;s tell the mempool how to process new blocks:</p>
+
+<pre><code class="language-go">// node/mempool.go
+func (m Mempool) Run() {
+    for {
+        select {
+        case tx := &lt;-m.NewTxCh:
+            ...
+
+        case block := &lt;-m.NewBlockCh:
+            for _, tx := range block.Txs {
+                hash, err := tx.Hash()
+
+                txid := hex.EncodeToString(hash)
+                delete(m.txs, txid)
+            }
+        }
+    }
+}
+</code></pre>
+
+<p>As simple as that!</p>
+
+<p>Let&rsquo;s reproduce the test scenario and mine a new block after sending BTC to Alice:</p>
+
+<pre><code class="language-shell">...
+$ tinybit showmempool
+285a5fc96a492661809145ee7578dc570fac4da1249715f8217423aaa963bcd8
+Total 1 transactions
+$ btcctl -C ./btcctl.conf generate 1
+$ tinybit showmempool
+Total 0 transactions
+</code></pre>
+
+<p>It worked!</p>
+
+<p>The mempool is working, but there&rsquo;s a huuuge flaw&hellip;</p>
+
+<h2 id="verification">Verification</h2>
+
+<p>We cannot simply add to the mempool any transaction that comes and we cannot simply
+accept any block that the node receives. We have to verify all transactions an all
+blocks. And the problem is that <strong>transaction verification goes far beyond the scope of
+this blog series</strong>. To make our mempool 100% valid, we have to use the same verification
+rules as mining nodes use. We just cannot accept any transactions that are not accepted
+byt mining nodes. This protects the network from spamming: if someone submits an invalid
+transaction it&rsquo;ll get rejected quickly and won&rsquo;t get to mempools. If someone wants to
+spam the network with transactions, they have to construct valid transactions and, thus,
+they have to pay for including them in blocks. And it&rsquo;s transaction fees that prevent the network from spamming.</p>
+
+<p>So, to build a valid mempool we need to implement full transaction verification process.
+This includes signatures verification, which is really not difficult, but since
+signatures a part of transaction scripts, we also need to verify the scripts as well.
+And this means we need a virtual machine that executes Bitcoin scripts and that&rsquo;s fully
+compatible with Script language specification. That&rsquo;s too difficult!</p>
+
+<p>Thus, we&rsquo;ll set a different goal, that looks more realistic. We&rsquo;ll make this node an
+<strong>SPV-node</strong>. SPV stands for Simplified Payment Verification, which is a method for
+verification if particular transaction is included in a block. This method is used in
+lightweight Bitcoin nodes and wallets. <strong>We&rsquo;ll try to make our node a light Bitcoin node
+that builds full chain without downloading full blocks and without verifying all
+transactions.</strong>
+And we&rsquo;ll try to figure out how SPV clients validate payments by downloading only block
+headers.</p>
+
+<p>But since we&rsquo;ve started the mempool monitor, let&rsquo;s add some simple verification rules
+to demonstrate what they should look like. And, of course, feel free to add more (or all) of them!</p>
+
+<h3 id="basic-transaction-verification">Basic transaction verification</h3>
+
+<p>Here&rsquo;s the full list of transaction verification rules: <a href="https://en.bitcoin.it/wiki/Protocol_rules#.22tx.22_messages">&lsquo;tx&rsquo; verification rules</a>.
+Let&rsquo;s only verify that a transaction has correct number of inputs and outputs, that&rsquo;ll
+be enough for a demo:</p>
+
+<pre><code class="language-go">// protocol/msg_tx.go
+func (tx MsgTx) Verify() error {
+    if len(tx.TxIn) == 0 || tx.TxInCount == 0 {
+        return errInvalidTransaction
+    }
+
+    if len(tx.TxOut) == 0 || tx.TxOutCount == 0 {
+        return errInvalidTransaction
+    }
+
+    return nil
+}
+</code></pre>
+
+<p>Now, we can verify transactions before adding them to the mempool:</p>
+
+<pre><code class="language-go">// node/cmd_tx.go
+func (no Node) handleTx(header *protocol.MessageHeader, conn io.ReadWriter) error {
+    ...
+    if err := tx.Verify(); err != nil {
+        return fmt.Errorf(&quot;rejected invalid transaction %x&quot;, hash)
+    }
+
+    no.mempool.NewTxCh &lt;- tx
+    ...
+}
+</code></pre>
+
+<h3 id="basic-block-verification">Basic block verification</h3>
+
+<p>For blocks verification we&rsquo;ll do a more interesting thing: let&rsquo;s check if block hash is
+correct, i.e. it matches the difficulty target.</p>
+
+<p>The difficulty target is a 32 byte sequence that contains a number that&rsquo;s used as a
+threshold. Miners need to find such block hash that&rsquo;s less than this number, by
+manipulating <code>Nonce</code> field. The more hashpower in the network, the lower the threshold
+and the more difficult it is to find new blocks. The <code>Bits</code> field stores
+difficulty target, and we need to unpack it before we can compare it with block hash.</p>
+
+<pre><code class="language-go">// protocol/msg_block.go
+func (blck MsgBlock) unpackBits() []byte {
+    bits := make([]byte, len(blck.Bits))
+    copy(bits, blck.Bits[:])
+    sort.SliceStable(bits, func(i, j int) bool { return true })
+
+    target := make([]byte, 32)
+    i := 32 - bits[0]
+    target[i] = bits[1]
+    target[i+1] = bits[2]
+    target[i+2] = bits[3]
+
+    return target
+}
+</code></pre>
+
+<p>First three lines allow us to reverse the content of <code>Bits</code> field without modifying the
+actual field value. Again, we need this because Bitcoin uses little-endian order for storage, and we want big-endian order here.</p>
+
+<p>First byte of <code>Bits</code> is the exponent. In other words, it&rsquo;s the number of digits in the
+threshold. Since block hash is a 32 byte sequence, we use 32 byte target that has <code>n</code>
+zero-bytes in the beginning, where <code>n = 32 - bits[0]</code>. The lower the threshold, the
+smaller the exponent, thus there&rsquo;s a gap. The rest three bytes of <code>Bits</code> are the first
+three bytes of the threshold number. The rest bytes are zeros.</p>
+
+<p>Let&rsquo;s look at a real block:
+<a href="https://blockstream.info/block/0000000000000000001138a163e7747a3c3bbb92f10607969baf481091e709c1">614 135</a>. Click &lsquo;Details&rsquo;
+button to see the block&rsquo;s <code>Bits</code> field value: <code>0x17130c78</code>.</p>
+
+<ol>
+<li>The byte sequence is already big-endian, we don&rsquo;t need to revert it.</li>
+<li><code>17</code> is the exponent, which is 23 in decimal system. There are 23 digits in the number.</li>
+<li><code>130c78</code> are the mantissa, or the first three bytes of the 23 byte sequence.</li>
+
+<li><p>Let&rsquo;s build the threshold:</p>
+
+<pre><code>00 00 00 00 00 00 00 00 00 13 0c 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</code></pre></li>
+
+<li><p>Now let&rsquo;s see if the block hash is less than this threshold (T is threshold, H is block hash):</p>
+
+<pre><code>T: 00 00 00 00 00 00 00 00 00 13 0c 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+H: 00 00 00 00 00 00 00 00 00 11 38 a1 63 e7 74 7a 3c 3b bb 92 f1 06 07 96 9b af 48 10 91 e7 09 c1
+</code></pre></li>
+
+<li><p>It definitely is! So, this is a valid block.</p></li>
+</ol>
+
+<p>Hopefully, this is clear. I tried to explain this in simple words, if you want to get
+a more comprehensive explanation, please refer to
+<a href="https://bitcoin.org/en/developer-reference#target-nbits">&lsquo;Target nBits&rsquo; section of Bitcoin Developer Reference</a>.</p>
+
+<p>Now, we need to calculate block hash:</p>
+
+<pre><code class="language-go">// protocol/msg_block.go
+func (blck MsgBlock) Hash() ([]byte, error) {
+    raw, err := blck.MarshalHeader()
+
+    hash := sha256.Sum256(raw)
+    hash = sha256.Sum256(hash[:])
+    blockHash := hash[:]
+
+    sort.SliceStable(blockHash, func(i, j int) bool { return true })
+
+    return blockHash, nil
+}
+</code></pre>
+
+<p>As I said above, first 6 fields of <code>MsgBlock</code> form block header, and it&rsquo;s this header
+that we need to hash to get block hash. <code>MarshalHeader</code> serializes these 6 fields (I omitted
+its code for brevity). And again, we need to reverse bytes in the hash.</p>
+
+<p>Finally, the block verification function:</p>
+
+<pre><code class="language-go">// protocol/msg_block.go
+func (blck MsgBlock) Verify() error {
+    target := blck.unpackBits()
+
+    hash, err := blck.Hash()
+
+    targetNum := big.NewInt(0).SetBytes(target)
+    hashNum := big.NewInt(0).SetBytes(hash)
+
+    // Block hash must be &lt;= target threshold
+    if hashNum.Cmp(targetNum) &gt; 0 {
+        return errInvalidBlockHash
+    }
+
+    return nil
+}
+</code></pre>
+
+<p>It basically does what we discussed above: it gets difficulty target from <code>Bits</code> field,
+calculates block hash, and checks if the hash is less or equal to the target.</p>
+
+<p>We can now verify blocks before processing them:</p>
+
+<pre><code class="language-go">// node/cmd_block.go
+func (no Node) handleBlock(header *protocol.MessageHeader, conn io.ReadWriter) error {
+    ...
+    if err := block.Verify(); err != nil {
+        return fmt.Errorf(&quot;rejected invalid block %x&quot;, hash)
+    }
+
+    no.mempool.NewBlockCh &lt;- block
+    ...
+}
+</code></pre>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>That&rsquo;s it for today! Again, this was a very long post and I hope you learned something
+new about Bitcoin from it. See you in next posts where we&rsquo;ll continue building our
+SPV-node. 😉</p>
+
+<h2 id="links">Links</h2>
+
+<ol>
+<li>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_4">Jeiwan/tinybit/part_4</a></li>
+<li>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_3...part_4#files">part3&hellip;part4</a></li>
+<li><a href="https://en.bitcoin.it/wiki/Protocol_rules#.22tx.22_messages">&lsquo;tx&rsquo; verification rules</a></li>
+<li><a href="https://en.bitcoin.it/wiki/Protocol_rules#.22block.22_messages">&lsquo;block&rsquo; verification rules</a></li>
+<li><a href="https://bitcoin.org/en/developer-reference#target-nbits">&lsquo;Target nBits&rsquo; in Bitcoin Developer Reference</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+<div id="remark42"></div>
+<script>
+    var remark_config = {
+      host: "https://remark.jeiwan.net", 
+      site_id: 'jeiwan.net',
+      components: ['embed'],
+      max_shown_comments: 10,
+      theme: 'light'
+    };
+  
+    (function(c) {
+      for(var i = 0; i < c.length; i++){
+        var d = document, s = d.createElement('script');
+        s.src = remark_config.host + '/web/' +c[i] +'.js';
+        s.defer = true;
+        (d.head || d.body).appendChild(s);
+      }
+    })(remark_config.components || ['embed']);
+  </script>
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  </body>
+</html>
+
