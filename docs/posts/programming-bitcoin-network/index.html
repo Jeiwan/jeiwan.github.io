@@ -114,16 +114,16 @@ If you have any troubles with them, please refer to <a href="https://github.com/
 For this purpose I prefer <a href="https://github.com/btcsuite/btcd">btcd</a>, an alternative Bitcoin full node implementation written in Golang;
 it has simple configuration, nice logging, and the Simulation network (simnet) which is quite handy when developing for Bitcoin.
 Here&rsquo;s the <code>btcd</code> config I&rsquo;ll be using throughout this series:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ini" data-lang="ini"><span style="color:#75715e"># btcd.conf</span>
-<span style="color:#66d9ef">[Application Options]</span>
-<span style="color:#a6e22e">datadir</span><span style="color:#f92672">=</span><span style="color:#e6db74">./btcd/data</span>
+<div class="highlight"><pre class="chroma"><code class="language-ini" data-lang="ini"><span class="c1"># btcd.conf</span>
+<span class="k">[Application Options]</span>
+<span class="na">datadir</span><span class="o">=</span><span class="s">./btcd/data</span>
 
-<span style="color:#a6e22e">listen</span><span style="color:#f92672">=</span><span style="color:#e6db74">127.0.0.1:9333</span>
+<span class="na">listen</span><span class="o">=</span><span class="s">127.0.0.1:9333</span>
 
-<span style="color:#a6e22e">simnet</span><span style="color:#f92672">=</span><span style="color:#e6db74">1</span>
+<span class="na">simnet</span><span class="o">=</span><span class="s">1</span>
 
-<span style="color:#a6e22e">nobanning</span><span style="color:#f92672">=</span><span style="color:#e6db74">1</span>
-<span style="color:#a6e22e">debuglevel</span><span style="color:#f92672">=</span><span style="color:#e6db74">debug</span>
+<span class="na">nobanning</span><span class="o">=</span><span class="s">1</span>
+<span class="na">debuglevel</span><span class="o">=</span><span class="s">debug</span>
 </code></pre></div><ol>
 <li><code>listen</code> is the address the node will accept connections on. Default is 8333, but we&rsquo;ll  use 9333.</li>
 <li><code>simnet</code> enables Simulation network. It&rsquo;s a local network that gives us full control over mining.</li>
@@ -157,19 +157,19 @@ This process looks like so.</p>
 <h2 id="message-structure">Message Structure</h2>
 <p>All messages use the same wrapping structure that contains general information about the message.
 In Golang, it looks like so:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">const</span> (
-	<span style="color:#a6e22e">checksumLength</span> = <span style="color:#ae81ff">4</span>
-   	<span style="color:#a6e22e">commandLength</span> = <span style="color:#ae81ff">12</span>
-	<span style="color:#a6e22e">magicLength</span>    = <span style="color:#ae81ff">4</span>
-)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">checksumLength</span> <span class="p">=</span> <span class="mi">4</span>
+   	<span class="nx">commandLength</span> <span class="p">=</span> <span class="mi">12</span>
+	<span class="nx">magicLength</span>    <span class="p">=</span> <span class="mi">4</span>
+<span class="p">)</span>
 
-<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Message</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">Magic</span>    [<span style="color:#a6e22e">magicLength</span>]<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">Command</span>  [<span style="color:#a6e22e">commandLength</span>]<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">Length</span>   <span style="color:#66d9ef">uint32</span>
-	<span style="color:#a6e22e">Checksum</span> [<span style="color:#a6e22e">checksumLength</span>]<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">Payload</span>  []<span style="color:#66d9ef">byte</span>
-}
+<span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Magic</span>    <span class="p">[</span><span class="nx">magicLength</span><span class="p">]</span><span class="kt">byte</span>
+	<span class="nx">Command</span>  <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
+	<span class="nx">Length</span>   <span class="kt">uint32</span>
+	<span class="nx">Checksum</span> <span class="p">[</span><span class="nx">checksumLength</span><span class="p">]</span><span class="kt">byte</span>
+	<span class="nx">Payload</span>  <span class="p">[]</span><span class="kt">byte</span>
+<span class="p">}</span>
 </code></pre></div><ol>
 <li><code>Magic</code> is a four byte network identifier. We&rsquo;ll have it hardcoded.</li>
 <li><code>Command</code> is a 12 byte command name. The field has fixed size while actual command names can be shorter than 12 bytes. In such cases, zero bytes are appended. Commands cannot be longer than 12 characters.</li>
@@ -194,17 +194,17 @@ This is because messages can have different sizes, there&rsquo;s no way to stand
 To make deserialization of <code>Payload</code> possible, there&rsquo;s <code>Length</code> field that stores the length of payload.</p>
 <h2 id="version-message-structure">Version Message Structure</h2>
 <p>Bitcoin nodes cannot communicate before they&rsquo;ve exchanged their versions. Thus, very first message we&rsquo;re going to send is &ldquo;version&rdquo;.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgVersion</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">Version</span>     <span style="color:#66d9ef">int32</span>
-	<span style="color:#a6e22e">Services</span>    <span style="color:#66d9ef">uint64</span>
-	<span style="color:#a6e22e">Timestamp</span>   <span style="color:#66d9ef">int64</span>
-	<span style="color:#a6e22e">AddrRecv</span>    <span style="color:#a6e22e">NetAddr</span>
-	<span style="color:#a6e22e">AddrFrom</span>    <span style="color:#a6e22e">NetAddr</span>
-	<span style="color:#a6e22e">Nonce</span>       <span style="color:#66d9ef">uint64</span>
-	<span style="color:#a6e22e">UserAgent</span>   <span style="color:#a6e22e">VarStr</span>
-	<span style="color:#a6e22e">StartHeight</span> <span style="color:#66d9ef">int32</span>
-	<span style="color:#a6e22e">Relay</span>       <span style="color:#66d9ef">bool</span>
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">MsgVersion</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Version</span>     <span class="kt">int32</span>
+	<span class="nx">Services</span>    <span class="kt">uint64</span>
+	<span class="nx">Timestamp</span>   <span class="kt">int64</span>
+	<span class="nx">AddrRecv</span>    <span class="nx">NetAddr</span>
+	<span class="nx">AddrFrom</span>    <span class="nx">NetAddr</span>
+	<span class="nx">Nonce</span>       <span class="kt">uint64</span>
+	<span class="nx">UserAgent</span>   <span class="nx">VarStr</span>
+	<span class="nx">StartHeight</span> <span class="kt">int32</span>
+	<span class="nx">Relay</span>       <span class="kt">bool</span>
+<span class="p">}</span>
 </code></pre></div><blockquote>
 <p>Please keep in mind that the order of fields in every message shouldn&rsquo;t be changed.
 Fields must go in exact same order as shown in this and all future articles.</p>
@@ -230,14 +230,14 @@ We&rsquo;ll always use <code>true</code> here; one day, we&rsquo;ll want to rece
 </ol>
 <h2 id="netaddr-and-varstr-types">NetAddr and VarStr types</h2>
 <p><code>Version</code> message contains two custom types, <code>NetAddr</code> and <code>VarStr</code>. Let&rsquo;s look at them:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">IPv4</span> [<span style="color:#ae81ff">4</span>]<span style="color:#66d9ef">byte</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">IPv4</span> <span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">byte</span>
 
-<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">NetAddr</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">Time</span>     <span style="color:#66d9ef">uint32</span>
-	<span style="color:#a6e22e">Services</span> <span style="color:#66d9ef">uint64</span>
-	<span style="color:#a6e22e">IP</span>       <span style="color:#f92672">*</span><span style="color:#a6e22e">IPv4</span>
-	<span style="color:#a6e22e">Port</span>     <span style="color:#66d9ef">uint16</span>
-}
+<span class="kd">type</span> <span class="nx">NetAddr</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Time</span>     <span class="kt">uint32</span>
+	<span class="nx">Services</span> <span class="kt">uint64</span>
+	<span class="nx">IP</span>       <span class="o">*</span><span class="nx">IPv4</span>
+	<span class="nx">Port</span>     <span class="kt">uint16</span>
+<span class="p">}</span>
 </code></pre></div><ol>
 <li><code>Time</code> can be ignored for now because it&rsquo;s not used in &ldquo;version&rdquo; message.</li>
 <li><code>Services</code> is the same as in <code>Version</code>.</li>
@@ -245,10 +245,10 @@ We&rsquo;ll always use <code>true</code> here; one day, we&rsquo;ll want to rece
 <li><code>Port</code> is a port number the node is listening connections on.</li>
 </ol>
 <p>Next, <code>VarStr</code>. It&rsquo;s basically a type that contains a string and its length:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">VarStr</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">Length</span> <span style="color:#66d9ef">uint8</span>
-	<span style="color:#a6e22e">String</span> <span style="color:#66d9ef">string</span>
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">VarStr</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Length</span> <span class="kt">uint8</span>
+	<span class="nx">String</span> <span class="kt">string</span>
+<span class="p">}</span>
 </code></pre></div><p>To serialize a message, we need to know lengths of all fields.
 Since strings aren&rsquo;t fixed, we also need to store length of each string.</p>
 <p>One more thing to mention here is that, in the Bitcoin protocol, field <code>Length</code> of <code>VarStr</code> type has &ldquo;variable length integer&rdquo; type to save space.
@@ -275,31 +275,31 @@ For example (in pseudocode):</p>
 <p>Before we can serialize a message, we first need to serialize its payload to be able to calculate its length and checksum.</p>
 <h3 id="message-serialization">Message Serialization</h3>
 <p>Message serialization looks like so:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">Message</span>) <span style="color:#a6e22e">Serialize</span>() ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">buf</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="nx">Message</span><span class="p">)</span> <span class="nf">Serialize</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Magic</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
-	}
+	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Magic</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Command</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
-	}
+	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Command</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">LittleEndian</span>, <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Length</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
-	}
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">Length</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Checksum</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
-	}
+	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Checksum</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Payload</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
-	}
+	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Payload</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Bytes</span>(), <span style="color:#66d9ef">nil</span>
-}
+	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
+<span class="p">}</span>
 </code></pre></div><p>Only two things are happening here:</p>
 <ol>
 <li>Byte arrays and slices are written to the bytes buffer directly.</li>
@@ -317,9 +317,9 @@ Please refer to <a href="https://github.com/Jeiwan/tinybit/tree/part_1">the full
 <p><code>IPv4</code> type is slightly different.
 It stores IPv4 address which must be mapped to IPv6 address when serialized.
 This simply means the four bytes of IPv4 address are prepended with 12 other bytes, like so:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ip</span> <span style="color:#a6e22e">IPv4</span>) <span style="color:#a6e22e">ToIPv6</span>() []<span style="color:#66d9ef">byte</span> {
-	<span style="color:#66d9ef">return</span> append([]<span style="color:#66d9ef">byte</span>{<span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0xFF</span>, <span style="color:#ae81ff">0xFF</span>}, <span style="color:#a6e22e">ip</span>[:]<span style="color:#f92672">...</span>)
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">ip</span> <span class="nx">IPv4</span><span class="p">)</span> <span class="nf">ToIPv6</span><span class="p">()</span> <span class="p">[]</span><span class="kt">byte</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nb">append</span><span class="p">([]</span><span class="kt">byte</span><span class="p">{</span><span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">},</span> <span class="nx">ip</span><span class="p">[:]</span><span class="o">...</span><span class="p">)</span>
+<span class="p">}</span>
 </code></pre></div><p>IPv6 addresses returned by <code>ToIPv6</code> functions are known as <a href="http://www.tcpipguide.com/free/t_IPv6IPv4AddressEmbedding-2.htm">IPv4-mapped IPv6 addresses</a>.</p>
 <h3 id="communicating-with-bitcoin-node">Communicating with Bitcoin Node</h3>
 <p>Since we&rsquo;re in the very beginning of our journey, we&rsquo;re not going to build a server node.
@@ -334,69 +334,69 @@ Our node will be acting as a client for now and won&rsquo;t be listening for inc
 </ol>
 <p>That&rsquo;ll be enough to begin and have something working.</p>
 <p>Let&rsquo;s begin with &ldquo;version&rdquo; message serialization:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">version</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgVersion</span>{
-    <span style="color:#a6e22e">Version</span>:   <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">Version</span>, <span style="color:#75715e">// const Version = 70015
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Services</span>:  <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">SrvNodeNetwork</span>, <span style="color:#75715e">// const SrvNodeNetwork = 1
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Timestamp</span>: <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">UTC</span>().<span style="color:#a6e22e">Unix</span>(),
-    <span style="color:#a6e22e">AddrRecv</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NetAddr</span>{
-        <span style="color:#a6e22e">Services</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">SrvNodeNetwork</span>,
-        <span style="color:#a6e22e">IP</span>:       <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewIPv4</span>(<span style="color:#ae81ff">127</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>),
-        <span style="color:#a6e22e">Port</span>:     <span style="color:#ae81ff">9333</span>,
-    },
-    <span style="color:#a6e22e">AddrFrom</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NetAddr</span>{
-        <span style="color:#a6e22e">Services</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">SrvNodeNetwork</span>,
-        <span style="color:#a6e22e">IP</span>:       <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewIPv4</span>(<span style="color:#ae81ff">127</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>),
-        <span style="color:#a6e22e">Port</span>:     <span style="color:#ae81ff">9334</span>, <span style="color:#75715e">// dummy, we&#39;re not listening
-</span><span style="color:#75715e"></span>    },
-    <span style="color:#a6e22e">Nonce</span>:       <span style="color:#a6e22e">nonce</span>(), <span style="color:#75715e">// returns a random number
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">UserAgent</span>:   <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewUserAgent</span>(), <span style="color:#75715e">// returns a user-agent as a VarStr
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">StartHeight</span>: <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>,
-    <span style="color:#a6e22e">Relay</span>:       <span style="color:#66d9ef">true</span>,
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">version</span> <span class="o">:=</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MsgVersion</span><span class="p">{</span>
+    <span class="nx">Version</span><span class="p">:</span>   <span class="nx">protocol</span><span class="p">.</span><span class="nx">Version</span><span class="p">,</span> <span class="c1">// const Version = 70015
+</span><span class="c1"></span>    <span class="nx">Services</span><span class="p">:</span>  <span class="nx">protocol</span><span class="p">.</span><span class="nx">SrvNodeNetwork</span><span class="p">,</span> <span class="c1">// const SrvNodeNetwork = 1
+</span><span class="c1"></span>    <span class="nx">Timestamp</span><span class="p">:</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UTC</span><span class="p">().</span><span class="nf">Unix</span><span class="p">(),</span>
+    <span class="nx">AddrRecv</span><span class="p">:</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">NetAddr</span><span class="p">{</span>
+        <span class="nx">Services</span><span class="p">:</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">SrvNodeNetwork</span><span class="p">,</span>
+        <span class="nx">IP</span><span class="p">:</span>       <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewIPv4</span><span class="p">(</span><span class="mi">127</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="nx">Port</span><span class="p">:</span>     <span class="mi">9333</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="nx">AddrFrom</span><span class="p">:</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">NetAddr</span><span class="p">{</span>
+        <span class="nx">Services</span><span class="p">:</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">SrvNodeNetwork</span><span class="p">,</span>
+        <span class="nx">IP</span><span class="p">:</span>       <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewIPv4</span><span class="p">(</span><span class="mi">127</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="nx">Port</span><span class="p">:</span>     <span class="mi">9334</span><span class="p">,</span> <span class="c1">// dummy, we&#39;re not listening
+</span><span class="c1"></span>    <span class="p">},</span>
+    <span class="nx">Nonce</span><span class="p">:</span>       <span class="nf">nonce</span><span class="p">(),</span> <span class="c1">// returns a random number
+</span><span class="c1"></span>    <span class="nx">UserAgent</span><span class="p">:</span>   <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewUserAgent</span><span class="p">(),</span> <span class="c1">// returns a user-agent as a VarStr
+</span><span class="c1"></span>    <span class="nx">StartHeight</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="nx">Relay</span><span class="p">:</span>       <span class="kc">true</span><span class="p">,</span>
+<span class="p">}</span>
 </code></pre></div><p>I hope that it&rsquo;s clear and self-explanatory.
 The only thing I&rsquo;m not sure about are <code>AddrRecv</code> and <code>AddrFrom</code> fields, they seem to be optional and not handled by <code>btcd</code> nodes. We&rsquo;ll decide on them later.</p>
 <p>Next, we&rsquo;re creating a message and serializing it:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewMessage</span>(<span style="color:#a6e22e">cmd</span>, <span style="color:#a6e22e">network</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">payload</span> <span style="color:#a6e22e">MessagePayload</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
-	<span style="color:#a6e22e">serializedPayload</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">payload</span>.<span style="color:#a6e22e">Serialize</span>()
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewMessage</span><span class="p">(</span><span class="nx">cmd</span><span class="p">,</span> <span class="nx">network</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">payload</span> <span class="nx">MessagePayload</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Message</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">serializedPayload</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">()</span>
 
-	<span style="color:#a6e22e">command</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">commands</span>[<span style="color:#a6e22e">cmd</span>]
+	<span class="nx">command</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">commands</span><span class="p">[</span><span class="nx">cmd</span><span class="p">]</span>
 
-	<span style="color:#a6e22e">magic</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">networks</span>[<span style="color:#a6e22e">network</span>]
+	<span class="nx">magic</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">networks</span><span class="p">[</span><span class="nx">network</span><span class="p">]</span>
 
-	<span style="color:#a6e22e">msg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Message</span>{
-		<span style="color:#a6e22e">Magic</span>:    <span style="color:#a6e22e">magic</span>,
-		<span style="color:#a6e22e">Command</span>:  <span style="color:#a6e22e">command</span>,
-		<span style="color:#a6e22e">Length</span>:   uint32(len(<span style="color:#a6e22e">serializedPayload</span>)),
-		<span style="color:#a6e22e">Checksum</span>: <span style="color:#a6e22e">checksum</span>(<span style="color:#a6e22e">serializedPayload</span>),
-		<span style="color:#a6e22e">Payload</span>:  <span style="color:#a6e22e">serializedPayload</span>,
-	}
+	<span class="nx">msg</span> <span class="o">:=</span> <span class="nx">Message</span><span class="p">{</span>
+		<span class="nx">Magic</span><span class="p">:</span>    <span class="nx">magic</span><span class="p">,</span>
+		<span class="nx">Command</span><span class="p">:</span>  <span class="nx">command</span><span class="p">,</span>
+		<span class="nx">Length</span><span class="p">:</span>   <span class="nb">uint32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">serializedPayload</span><span class="p">)),</span>
+		<span class="nx">Checksum</span><span class="p">:</span> <span class="nf">checksum</span><span class="p">(</span><span class="nx">serializedPayload</span><span class="p">),</span>
+		<span class="nx">Payload</span><span class="p">:</span>  <span class="nx">serializedPayload</span><span class="p">,</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">msg</span>, <span style="color:#66d9ef">nil</span>
-}
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">msg</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
 
-<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewMessage</span>(<span style="color:#e6db74">&#34;version&#34;</span>, <span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">version</span>)
+<span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">NewMessage</span><span class="p">(</span><span class="s">&#34;version&#34;</span><span class="p">,</span> <span class="nx">network</span><span class="p">,</span> <span class="nx">version</span><span class="p">)</span>
 </code></pre></div><p>We&rsquo;re using a constructor function <code>NewMessage</code> that serializes message payload, validates command, network name, and builds a <code>Message</code>.</p>
 <p>Then, we need to serialize the message and actually send it:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">msgSerialized</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Serialize</span>()
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">msgSerialized</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">msg</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">()</span>
 </code></pre></div><p>Yes, we&rsquo;re simply calling <code>Sertialize</code> method which we implemented earlier.</p>
 <p>Now, let&rsquo;s connect to the local btcd node:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#e6db74">&#34;127.0.0.1:9333&#34;</span>)
-<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Close</span>()
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="s">&#34;tcp&#34;</span><span class="p">,</span> <span class="s">&#34;127.0.0.1:9333&#34;</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div><p>And send the message right away by writing the serialized message to the TCP connection:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">msgSerialized</span>)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">msgSerialized</span><span class="p">)</span>
 </code></pre></div><p>Next, we&rsquo;re waiting for any response and printing it out:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">tmp</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">256</span>)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">tmp</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
 
-<span style="color:#66d9ef">for</span> {
-    <span style="color:#a6e22e">n</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">tmp</span>)
-    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">EOF</span> {
-            <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Fatalln</span>(<span style="color:#a6e22e">err</span>)
-        }
-        <span style="color:#66d9ef">return</span>
-    }
-    <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;received: %x&#34;</span>, <span style="color:#a6e22e">tmp</span>[:<span style="color:#a6e22e">n</span>])
-}
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">tmp</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+            <span class="nx">logrus</span><span class="p">.</span><span class="nf">Fatalln</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">logrus</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;received: %x&#34;</span><span class="p">,</span> <span class="nx">tmp</span><span class="p">[:</span><span class="nx">n</span><span class="p">])</span>
+<span class="p">}</span>
 </code></pre></div><p>One important thing to keep in mind about TCP connections is that they&rsquo;re streams.
 TCP messages don&rsquo;t carry information about their sizes.
 This forces use to use a buffer when reading from a TCP connection.
@@ -418,13 +418,13 @@ INFO[0000] received: 161c141276657261636b000000000000000000005df6e0e2
 <li><code>verack</code>, the &ldquo;acknowledged&rdquo; message.</li>
 </ol>
 <p>You can know this by looking at the logs of the <code>btcd</code> node:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Received version <span style="color:#f92672">(</span>agent /Satoshi:5.64/tinybit:0.0.1/, pver 70015, block -1<span style="color:#f92672">)</span> from 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Negotiated protocol version <span style="color:#ae81ff">70013</span> <span style="color:#66d9ef">for</span> peer 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>INF<span style="color:#f92672">]</span> SYNC: New valid peer 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span> <span style="color:#f92672">(</span>/Satoshi:5.64/tinybit:0.0.1/<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending version <span style="color:#f92672">(</span>agent /btcwire:0.5.0/btcd:0.12.0/, pver 70013, block 0<span style="color:#f92672">)</span> to 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> SRVR: New peer 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Connected to 127.0.0.1:55154
-<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending verack to 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="o">[</span>DBG<span class="o">]</span> PEER: Received version <span class="o">(</span>agent /Satoshi:5.64/tinybit:0.0.1/, pver 70015, block -1<span class="o">)</span> from 127.0.0.1:55154 <span class="o">(</span>inbound<span class="o">)</span>
+<span class="o">[</span>DBG<span class="o">]</span> PEER: Negotiated protocol version <span class="m">70013</span> <span class="k">for</span> peer 127.0.0.1:55154 <span class="o">(</span>inbound<span class="o">)</span>
+<span class="o">[</span>INF<span class="o">]</span> SYNC: New valid peer 127.0.0.1:55154 <span class="o">(</span>inbound<span class="o">)</span> <span class="o">(</span>/Satoshi:5.64/tinybit:0.0.1/<span class="o">)</span>
+<span class="o">[</span>DBG<span class="o">]</span> PEER: Sending version <span class="o">(</span>agent /btcwire:0.5.0/btcd:0.12.0/, pver 70013, block 0<span class="o">)</span> to 127.0.0.1:55154 <span class="o">(</span>inbound<span class="o">)</span>
+<span class="o">[</span>DBG<span class="o">]</span> SRVR: New peer 127.0.0.1:55154 <span class="o">(</span>inbound<span class="o">)</span>
+<span class="o">[</span>DBG<span class="o">]</span> PEER: Connected to 127.0.0.1:55154
+<span class="o">[</span>DBG<span class="o">]</span> PEER: Sending verack to 127.0.0.1:55154 <span class="o">(</span>inbound<span class="o">)</span>
 </code></pre></div><p>As you can see, we have successfully communicated with another Bitcoin node!
 Congratulations!</p>
 <p>The <code>btcd</code> node correctly decoded our message and replied to it.

@@ -95,24 +95,24 @@
 <h2 id="serialization">Serialization</h2>
 <p>As said before, in BoltDB values can be only of <code>[]byte</code> type, and we want to store <code>Block</code> structs in the DB. We&rsquo;ll use <a href="https://golang.org/pkg/encoding/gob/">encoding/gob</a> to serialize the structs.</p>
 <p>Let&rsquo;s implement <code>Serialize</code> method of <code>Block</code> (errors processing is omitted for brevity):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">b</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Block</span>) <span style="color:#a6e22e">Serialize</span>() []<span style="color:#66d9ef">byte</span> {
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">result</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
-	<span style="color:#a6e22e">encoder</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gob</span>.<span style="color:#a6e22e">NewEncoder</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">result</span>)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">Block</span><span class="p">)</span> <span class="nf">Serialize</span><span class="p">()</span> <span class="p">[]</span><span class="kt">byte</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">result</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
+	<span class="nx">encoder</span> <span class="o">:=</span> <span class="nx">gob</span><span class="p">.</span><span class="nf">NewEncoder</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">result</span><span class="p">)</span>
 
-	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">encoder</span>.<span style="color:#a6e22e">Encode</span>(<span style="color:#a6e22e">b</span>)
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">encoder</span><span class="p">.</span><span class="nf">Encode</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">result</span>.<span style="color:#a6e22e">Bytes</span>()
-}
+	<span class="k">return</span> <span class="nx">result</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">()</span>
+<span class="p">}</span>
 </code></pre></div><p>The piece is straightforward: at first, we declare a buffer that will store serialized data; then we initialize a <code>gob</code> encoder and encode the block; the result is returned as a byte array.</p>
 <p>Next, we need a deserializing function that will receive a byte array as input and return a <code>Block</code>. This won&rsquo;t be a method but an independent function:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">DeserializeBlock</span>(<span style="color:#a6e22e">d</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Block</span> {
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">block</span> <span style="color:#a6e22e">Block</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">DeserializeBlock</span><span class="p">(</span><span class="nx">d</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="o">*</span><span class="nx">Block</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">block</span> <span class="nx">Block</span>
 
-	<span style="color:#a6e22e">decoder</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gob</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewReader</span>(<span style="color:#a6e22e">d</span>))
-	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">decoder</span>.<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">block</span>)
+	<span class="nx">decoder</span> <span class="o">:=</span> <span class="nx">gob</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">d</span><span class="p">))</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">decoder</span><span class="p">.</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">block</span><span class="p">)</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">block</span>
-}
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">block</span>
+<span class="p">}</span>
 </code></pre></div><p>And that&rsquo;s it for the serialization!</p>
 <h2 id="persistence">Persistence</h2>
 <p>Let&rsquo;s start with the <code>NewBlockchain</code> function. Currently, it creates a new instance of <code>Blockchain</code> and adds the genesis block to it. What we want it to do is to:</p>
@@ -135,261 +135,261 @@
 </li>
 </ol>
 <p>In code, it looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewBlockchain</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">Blockchain</span> {
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tip</span> []<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#a6e22e">dbFile</span>, <span style="color:#ae81ff">0600</span>, <span style="color:#66d9ef">nil</span>)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewBlockchain</span><span class="p">()</span> <span class="o">*</span><span class="nx">Blockchain</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">tip</span> <span class="p">[]</span><span class="kt">byte</span>
+	<span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bolt</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">dbFile</span><span class="p">,</span> <span class="mo">0600</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 
-	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">Update</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">tx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Tx</span>) <span style="color:#66d9ef">error</span> {
-		<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
+	<span class="nx">err</span> <span class="p">=</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Update</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">tx</span> <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">Tx</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
 
-		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">b</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
-			<span style="color:#a6e22e">genesis</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewGenesisBlock</span>()
-			<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">CreateBucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-			<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Hash</span>, <span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Serialize</span>())
-			<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>), <span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Hash</span>)
-			<span style="color:#a6e22e">tip</span> = <span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Hash</span>
-		} <span style="color:#66d9ef">else</span> {
-			<span style="color:#a6e22e">tip</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Get</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>))
-		}
+		<span class="k">if</span> <span class="nx">b</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">genesis</span> <span class="o">:=</span> <span class="nf">NewGenesisBlock</span><span class="p">()</span>
+			<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">CreateBucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+			<span class="nx">err</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">genesis</span><span class="p">.</span><span class="nx">Hash</span><span class="p">,</span> <span class="nx">genesis</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">())</span>
+			<span class="nx">err</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">),</span> <span class="nx">genesis</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
+			<span class="nx">tip</span> <span class="p">=</span> <span class="nx">genesis</span><span class="p">.</span><span class="nx">Hash</span>
+		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+			<span class="nx">tip</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Get</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">))</span>
+		<span class="p">}</span>
 
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-	})
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">})</span>
 
-	<span style="color:#a6e22e">bc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Blockchain</span>{<span style="color:#a6e22e">tip</span>, <span style="color:#a6e22e">db</span>}
+	<span class="nx">bc</span> <span class="o">:=</span> <span class="nx">Blockchain</span><span class="p">{</span><span class="nx">tip</span><span class="p">,</span> <span class="nx">db</span><span class="p">}</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">bc</span>
-}
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">bc</span>
+<span class="p">}</span>
 </code></pre></div><p>Let&rsquo;s review this piece by piece.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#a6e22e">dbFile</span>, <span style="color:#ae81ff">0600</span>, <span style="color:#66d9ef">nil</span>)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bolt</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">dbFile</span><span class="p">,</span> <span class="mo">0600</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 </code></pre></div><p>This is a standard way of opening a BoltDB file. Notice that it won&rsquo;t return an error if there&rsquo;s no such file.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">Update</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">tx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Tx</span>) <span style="color:#66d9ef">error</span> {
-<span style="color:#f92672">...</span>
-})
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="p">=</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Update</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">tx</span> <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">Tx</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+<span class="o">...</span>
+<span class="p">})</span>
 </code></pre></div><p>In BoltDB, operations with a database are run within a transaction. And there are two types of transactions: read-only and read-write. Here, we open a read-write transaction (<code>db.Update(...)</code>), because we expect to put the genesis block in the DB.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
 
-<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">b</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
-	<span style="color:#a6e22e">genesis</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewGenesisBlock</span>()
-	<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">CreateBucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Hash</span>, <span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Serialize</span>())
-	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>), <span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Hash</span>)
-	<span style="color:#a6e22e">tip</span> = <span style="color:#a6e22e">genesis</span>.<span style="color:#a6e22e">Hash</span>
-} <span style="color:#66d9ef">else</span> {
-	<span style="color:#a6e22e">tip</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Get</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>))
-}
+<span class="k">if</span> <span class="nx">b</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">genesis</span> <span class="o">:=</span> <span class="nf">NewGenesisBlock</span><span class="p">()</span>
+	<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">CreateBucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+	<span class="nx">err</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">genesis</span><span class="p">.</span><span class="nx">Hash</span><span class="p">,</span> <span class="nx">genesis</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">())</span>
+	<span class="nx">err</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">),</span> <span class="nx">genesis</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
+	<span class="nx">tip</span> <span class="p">=</span> <span class="nx">genesis</span><span class="p">.</span><span class="nx">Hash</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+	<span class="nx">tip</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Get</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">))</span>
+<span class="p">}</span>
 </code></pre></div><p>This is the core of the function. Here, we obtain the bucket storing our blocks: if it exists, we read the <code>l</code> key from it; if it doesn&rsquo;t exist, we generate the genesis block, create the bucket, save the block into it, and update the <code>l</code> key storing the last block hash of the chain.</p>
 <p>Also, notice the new way of creating a <code>Blockchain</code>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">bc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Blockchain</span>{<span style="color:#a6e22e">tip</span>, <span style="color:#a6e22e">db</span>}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">bc</span> <span class="o">:=</span> <span class="nx">Blockchain</span><span class="p">{</span><span class="nx">tip</span><span class="p">,</span> <span class="nx">db</span><span class="p">}</span>
 </code></pre></div><p>We don&rsquo;t store all the blocks in it anymore, instead only the tip of the chain is stored. Also, we store a DB connection, because we want to open it once and keep it open while the program is running. Thus, the <code>Blockchain</code> structure now looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Blockchain</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">tip</span> []<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">db</span>  <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">DB</span>
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Blockchain</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">tip</span> <span class="p">[]</span><span class="kt">byte</span>
+	<span class="nx">db</span>  <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">DB</span>
+<span class="p">}</span>
 </code></pre></div><p>Next thing we want to update is the <code>AddBlock</code> method: adding blocks to a chain now is not as easy as adding an element to an array. From now on we&rsquo;ll store blocks in the DB:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Blockchain</span>) <span style="color:#a6e22e">AddBlock</span>(<span style="color:#a6e22e">data</span> <span style="color:#66d9ef">string</span>) {
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">lastHash</span> []<span style="color:#66d9ef">byte</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="nf">AddBlock</span><span class="p">(</span><span class="nx">data</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">lastHash</span> <span class="p">[]</span><span class="kt">byte</span>
 
-	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">View</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">tx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Tx</span>) <span style="color:#66d9ef">error</span> {
-		<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-		<span style="color:#a6e22e">lastHash</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Get</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>))
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nf">View</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">tx</span> <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">Tx</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+		<span class="nx">lastHash</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Get</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">))</span>
 
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-	})
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">})</span>
 
-	<span style="color:#a6e22e">newBlock</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewBlock</span>(<span style="color:#a6e22e">data</span>, <span style="color:#a6e22e">lastHash</span>)
+	<span class="nx">newBlock</span> <span class="o">:=</span> <span class="nf">NewBlock</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">lastHash</span><span class="p">)</span>
 
-	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">Update</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">tx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Tx</span>) <span style="color:#66d9ef">error</span> {
-		<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Hash</span>, <span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Serialize</span>())
-		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>), <span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Hash</span>)
-		<span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">tip</span> = <span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Hash</span>
+	<span class="nx">err</span> <span class="p">=</span> <span class="nx">bc</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nf">Update</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">tx</span> <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">Tx</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">,</span> <span class="nx">newBlock</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">())</span>
+		<span class="nx">err</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">),</span> <span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
+		<span class="nx">bc</span><span class="p">.</span><span class="nx">tip</span> <span class="p">=</span> <span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span>
 
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-	})
-}
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">})</span>
+<span class="p">}</span>
 </code></pre></div><p>Let&rsquo;s review this piece by piece:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">View</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">tx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Tx</span>) <span style="color:#66d9ef">error</span> {
-	<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-	<span style="color:#a6e22e">lastHash</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Get</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>))
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nf">View</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">tx</span> <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">Tx</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+	<span class="nx">lastHash</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Get</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">))</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-})
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">})</span>
 </code></pre></div><p>This is the other (read-only) type of BoltDB transactions. Here we get the last block hash from the DB to use it to mine a new block hash.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">newBlock</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewBlock</span>(<span style="color:#a6e22e">data</span>, <span style="color:#a6e22e">lastHash</span>)
-<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Hash</span>, <span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Serialize</span>())
-<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>([]byte(<span style="color:#e6db74">&#34;l&#34;</span>), <span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Hash</span>)
-<span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">tip</span> = <span style="color:#a6e22e">newBlock</span>.<span style="color:#a6e22e">Hash</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">newBlock</span> <span class="o">:=</span> <span class="nf">NewBlock</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">lastHash</span><span class="p">)</span>
+<span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">,</span> <span class="nx">newBlock</span><span class="p">.</span><span class="nf">Serialize</span><span class="p">())</span>
+<span class="nx">err</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Put</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;l&#34;</span><span class="p">),</span> <span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
+<span class="nx">bc</span><span class="p">.</span><span class="nx">tip</span> <span class="p">=</span> <span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span>
 </code></pre></div><p>After mining a new block, we save its serialized representation into the DB and update the <code>l</code> key, which now stores the new block&rsquo;s hash.</p>
 <p>Done! It wasn&rsquo;t hard, was it?</p>
 <h2 id="inspecting-blockchain">Inspecting Blockchain</h2>
 <p>All new blocks are now saved in a database, so we can reopen a blockchain and add a new block to it. But after implementing this, we lost a nice feature: we cannot print out blockchain blocks anymore because we don&rsquo;t store blocks in an array any longer. Let&rsquo;s fix this flaw!</p>
 <p>BoltDB allows to iterate over all the keys in a bucket, but the keys are stored in byte-sorted order, and we want blocks to be printed in the order they take in a blockchain. Also, because we don&rsquo;t want to load all the blocks into memory (our blockchain DB could be huge!.. or let&rsquo;s just pretend it could), we&rsquo;ll read them one by one. For this purpose, we&rsquo;ll need a blockchain iterator:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">BlockchainIterator</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">currentHash</span> []<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">db</span>          <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">DB</span>
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">BlockchainIterator</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">currentHash</span> <span class="p">[]</span><span class="kt">byte</span>
+	<span class="nx">db</span>          <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">DB</span>
+<span class="p">}</span>
 </code></pre></div><p>An iterator will be created each time we want to iterate over blocks in a blockchain and it&rsquo;ll store the block hash of the current iteration and a connection to a DB. Because of the latter, an iterator is logically attached to a blockchain (it&rsquo;s a <code>Blockchain</code> instance that stores a DB connection) and, thus, is created in a <code>Blockchain</code> method:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Blockchain</span>) <span style="color:#a6e22e">Iterator</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">BlockchainIterator</span> {
-	<span style="color:#a6e22e">bci</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">BlockchainIterator</span>{<span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">tip</span>, <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">db</span>}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="nf">Iterator</span><span class="p">()</span> <span class="o">*</span><span class="nx">BlockchainIterator</span> <span class="p">{</span>
+	<span class="nx">bci</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">BlockchainIterator</span><span class="p">{</span><span class="nx">bc</span><span class="p">.</span><span class="nx">tip</span><span class="p">,</span> <span class="nx">bc</span><span class="p">.</span><span class="nx">db</span><span class="p">}</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bci</span>
-}
+	<span class="k">return</span> <span class="nx">bci</span>
+<span class="p">}</span>
 </code></pre></div><p>Notice that an iterator initially points at the tip of a blockchain, thus blocks will be obtained from top to bottom, from newest to oldest. In fact, <strong>choosing a tip means &ldquo;voting&rdquo; for a blockchain</strong>. A blockchain can have multiple branches, and it&rsquo;s the longest of them that&rsquo;s considered main. After getting a tip (it can be any block in the blockchain) we can reconstruct the whole blockchain and find its length and the work required to build it. This fact also means that a tip is a kind of an identifier of a blockchain.</p>
 <p><code>BlockchainIterator</code> will do only one thing: it&rsquo;ll return the next block from a blockchain.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BlockchainIterator</span>) <span style="color:#a6e22e">Next</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">Block</span> {
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">block</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Block</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">i</span> <span class="o">*</span><span class="nx">BlockchainIterator</span><span class="p">)</span> <span class="nf">Next</span><span class="p">()</span> <span class="o">*</span><span class="nx">Block</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">block</span> <span class="o">*</span><span class="nx">Block</span>
 
-	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">i</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">View</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">tx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bolt</span>.<span style="color:#a6e22e">Tx</span>) <span style="color:#66d9ef">error</span> {
-		<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Bucket</span>([]byte(<span style="color:#a6e22e">blocksBucket</span>))
-		<span style="color:#a6e22e">encodedBlock</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">i</span>.<span style="color:#a6e22e">currentHash</span>)
-		<span style="color:#a6e22e">block</span> = <span style="color:#a6e22e">DeserializeBlock</span>(<span style="color:#a6e22e">encodedBlock</span>)
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">i</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nf">View</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">tx</span> <span class="o">*</span><span class="nx">bolt</span><span class="p">.</span><span class="nx">Tx</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">b</span> <span class="o">:=</span> <span class="nx">tx</span><span class="p">.</span><span class="nf">Bucket</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">blocksBucket</span><span class="p">))</span>
+		<span class="nx">encodedBlock</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">i</span><span class="p">.</span><span class="nx">currentHash</span><span class="p">)</span>
+		<span class="nx">block</span> <span class="p">=</span> <span class="nf">DeserializeBlock</span><span class="p">(</span><span class="nx">encodedBlock</span><span class="p">)</span>
 
-		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-	})
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">})</span>
 
-	<span style="color:#a6e22e">i</span>.<span style="color:#a6e22e">currentHash</span> = <span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">PrevBlockHash</span>
+	<span class="nx">i</span><span class="p">.</span><span class="nx">currentHash</span> <span class="p">=</span> <span class="nx">block</span><span class="p">.</span><span class="nx">PrevBlockHash</span>
 
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">block</span>
-}
+	<span class="k">return</span> <span class="nx">block</span>
+<span class="p">}</span>
 </code></pre></div><p>That&rsquo;s it for the DB part!</p>
 <h2 id="cli">CLI</h2>
 <p>Until now our implementation hasn&rsquo;t provided any interface to interact with the program: we&rsquo;ve simply executed <code>NewBlockchain</code>, <code>bc.AddBlock</code> in the <code>main</code> function. Time to improve this! We want to have these commands:</p>
 <pre><code>blockchain_go addblock &quot;Pay 0.031337 for a coffee&quot;
 blockchain_go printchain
 </code></pre><p>All command-line related operations will be processed by the <code>CLI</code> struct:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">CLI</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Blockchain</span>
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">CLI</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span>
+<span class="p">}</span>
 </code></pre></div><p>Its &ldquo;entrypoint&rdquo; is the <code>Run</code> function:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">cli</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">CLI</span>) <span style="color:#a6e22e">Run</span>() {
-	<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">validateArgs</span>()
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">CLI</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">cli</span><span class="p">.</span><span class="nf">validateArgs</span><span class="p">()</span>
 
-	<span style="color:#a6e22e">addBlockCmd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">NewFlagSet</span>(<span style="color:#e6db74">&#34;addblock&#34;</span>, <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">ExitOnError</span>)
-	<span style="color:#a6e22e">printChainCmd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">NewFlagSet</span>(<span style="color:#e6db74">&#34;printchain&#34;</span>, <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">ExitOnError</span>)
+	<span class="nx">addBlockCmd</span> <span class="o">:=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">NewFlagSet</span><span class="p">(</span><span class="s">&#34;addblock&#34;</span><span class="p">,</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">ExitOnError</span><span class="p">)</span>
+	<span class="nx">printChainCmd</span> <span class="o">:=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">NewFlagSet</span><span class="p">(</span><span class="s">&#34;printchain&#34;</span><span class="p">,</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">ExitOnError</span><span class="p">)</span>
 
-	<span style="color:#a6e22e">addBlockData</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;data&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;Block data&#34;</span>)
+	<span class="nx">addBlockData</span> <span class="o">:=</span> <span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;data&#34;</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="s">&#34;Block data&#34;</span><span class="p">)</span>
 
-	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">1</span>] {
-	<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;addblock&#34;</span>:
-		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">2</span>:])
-	<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;printchain&#34;</span>:
-		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">printChainCmd</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">2</span>:])
-	<span style="color:#66d9ef">default</span>:
-		<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">printUsage</span>()
-		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">1</span>)
-	}
+	<span class="k">switch</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="s">&#34;addblock&#34;</span><span class="p">:</span>
+		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+	<span class="k">case</span> <span class="s">&#34;printchain&#34;</span><span class="p">:</span>
+		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">printChainCmd</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+	<span class="k">default</span><span class="p">:</span>
+		<span class="nx">cli</span><span class="p">.</span><span class="nf">printUsage</span><span class="p">()</span>
+		<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">Parsed</span>() {
-		<span style="color:#66d9ef">if</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">addBlockData</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
-			<span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">Usage</span>()
-			<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">1</span>)
-		}
-		<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">addBlock</span>(<span style="color:#f92672">*</span><span style="color:#a6e22e">addBlockData</span>)
-	}
+	<span class="k">if</span> <span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">Parsed</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="o">*</span><span class="nx">addBlockData</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+			<span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">Usage</span><span class="p">()</span>
+			<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="nx">cli</span><span class="p">.</span><span class="nf">addBlock</span><span class="p">(</span><span class="o">*</span><span class="nx">addBlockData</span><span class="p">)</span>
+	<span class="p">}</span>
 
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">printChainCmd</span>.<span style="color:#a6e22e">Parsed</span>() {
-		<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">printChain</span>()
-	}
-}
+	<span class="k">if</span> <span class="nx">printChainCmd</span><span class="p">.</span><span class="nf">Parsed</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">cli</span><span class="p">.</span><span class="nf">printChain</span><span class="p">()</span>
+	<span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div><p>We&rsquo;re using the standard <a href="https://golang.org/pkg/flag/">flag</a> package to parse command-line arguments.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">addBlockCmd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">NewFlagSet</span>(<span style="color:#e6db74">&#34;addblock&#34;</span>, <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">ExitOnError</span>)
-<span style="color:#a6e22e">printChainCmd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">NewFlagSet</span>(<span style="color:#e6db74">&#34;printchain&#34;</span>, <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">ExitOnError</span>)
-<span style="color:#a6e22e">addBlockData</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;data&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;Block data&#34;</span>)
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">addBlockCmd</span> <span class="o">:=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">NewFlagSet</span><span class="p">(</span><span class="s">&#34;addblock&#34;</span><span class="p">,</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">ExitOnError</span><span class="p">)</span>
+<span class="nx">printChainCmd</span> <span class="o">:=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">NewFlagSet</span><span class="p">(</span><span class="s">&#34;printchain&#34;</span><span class="p">,</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">ExitOnError</span><span class="p">)</span>
+<span class="nx">addBlockData</span> <span class="o">:=</span> <span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;data&#34;</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="s">&#34;Block data&#34;</span><span class="p">)</span>
 </code></pre></div><p>First, we create two subcommands, <code>addblock</code> and <code>printchain</code>, then we add <code>-data</code> flag to the former. <code>printchain</code> won&rsquo;t have any flags.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">1</span>] {
-<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;addblock&#34;</span>:
-	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">2</span>:])
-<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;printchain&#34;</span>:
-	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">printChainCmd</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">2</span>:])
-<span style="color:#66d9ef">default</span>:
-	<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">printUsage</span>()
-	<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">1</span>)
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">switch</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">{</span>
+<span class="k">case</span> <span class="s">&#34;addblock&#34;</span><span class="p">:</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+<span class="k">case</span> <span class="s">&#34;printchain&#34;</span><span class="p">:</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">printChainCmd</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+<span class="k">default</span><span class="p">:</span>
+	<span class="nx">cli</span><span class="p">.</span><span class="nf">printUsage</span><span class="p">()</span>
+	<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
 </code></pre></div><p>Next we check the command provided by user and parse related <code>flag</code> subcommand.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">Parsed</span>() {
-	<span style="color:#66d9ef">if</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">addBlockData</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
-		<span style="color:#a6e22e">addBlockCmd</span>.<span style="color:#a6e22e">Usage</span>()
-		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">1</span>)
-	}
-	<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">addBlock</span>(<span style="color:#f92672">*</span><span style="color:#a6e22e">addBlockData</span>)
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">Parsed</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="o">*</span><span class="nx">addBlockData</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+		<span class="nx">addBlockCmd</span><span class="p">.</span><span class="nf">Usage</span><span class="p">()</span>
+		<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">cli</span><span class="p">.</span><span class="nf">addBlock</span><span class="p">(</span><span class="o">*</span><span class="nx">addBlockData</span><span class="p">)</span>
+<span class="p">}</span>
 
-<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">printChainCmd</span>.<span style="color:#a6e22e">Parsed</span>() {
-	<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">printChain</span>()
-}
+<span class="k">if</span> <span class="nx">printChainCmd</span><span class="p">.</span><span class="nf">Parsed</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">cli</span><span class="p">.</span><span class="nf">printChain</span><span class="p">()</span>
+<span class="p">}</span>
 </code></pre></div><p>Next we check which of the subcommands were parsed and run related functions.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">cli</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">CLI</span>) <span style="color:#a6e22e">addBlock</span>(<span style="color:#a6e22e">data</span> <span style="color:#66d9ef">string</span>) {
-	<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">AddBlock</span>(<span style="color:#a6e22e">data</span>)
-	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Success!&#34;</span>)
-}
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">CLI</span><span class="p">)</span> <span class="nf">addBlock</span><span class="p">(</span><span class="nx">data</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">cli</span><span class="p">.</span><span class="nx">bc</span><span class="p">.</span><span class="nf">AddBlock</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Success!&#34;</span><span class="p">)</span>
+<span class="p">}</span>
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">cli</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">CLI</span>) <span style="color:#a6e22e">printChain</span>() {
-	<span style="color:#a6e22e">bci</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">Iterator</span>()
+<span class="kd">func</span> <span class="p">(</span><span class="nx">cli</span> <span class="o">*</span><span class="nx">CLI</span><span class="p">)</span> <span class="nf">printChain</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">bci</span> <span class="o">:=</span> <span class="nx">cli</span><span class="p">.</span><span class="nx">bc</span><span class="p">.</span><span class="nf">Iterator</span><span class="p">()</span>
 
-	<span style="color:#66d9ef">for</span> {
-		<span style="color:#a6e22e">block</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bci</span>.<span style="color:#a6e22e">Next</span>()
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">block</span> <span class="o">:=</span> <span class="nx">bci</span><span class="p">.</span><span class="nf">Next</span><span class="p">()</span>
 
-		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Prev. hash: %x\n&#34;</span>, <span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">PrevBlockHash</span>)
-		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Data: %s\n&#34;</span>, <span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">Data</span>)
-		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Hash: %x\n&#34;</span>, <span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">Hash</span>)
-		<span style="color:#a6e22e">pow</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewProofOfWork</span>(<span style="color:#a6e22e">block</span>)
-		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;PoW: %s\n&#34;</span>, <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">FormatBool</span>(<span style="color:#a6e22e">pow</span>.<span style="color:#a6e22e">Validate</span>()))
-		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>()
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Prev. hash: %x\n&#34;</span><span class="p">,</span> <span class="nx">block</span><span class="p">.</span><span class="nx">PrevBlockHash</span><span class="p">)</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Data: %s\n&#34;</span><span class="p">,</span> <span class="nx">block</span><span class="p">.</span><span class="nx">Data</span><span class="p">)</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Hash: %x\n&#34;</span><span class="p">,</span> <span class="nx">block</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
+		<span class="nx">pow</span> <span class="o">:=</span> <span class="nf">NewProofOfWork</span><span class="p">(</span><span class="nx">block</span><span class="p">)</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;PoW: %s\n&#34;</span><span class="p">,</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">FormatBool</span><span class="p">(</span><span class="nx">pow</span><span class="p">.</span><span class="nf">Validate</span><span class="p">()))</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
 
-		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">PrevBlockHash</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
-			<span style="color:#66d9ef">break</span>
-		}
-	}
-}
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">block</span><span class="p">.</span><span class="nx">PrevBlockHash</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+			<span class="k">break</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div><p>This piece is very similar to the one we had before. The only difference is that we&rsquo;re now using a <code>BlockchainIterator</code> to iterate over blocks in a blockchain.</p>
 <p>Also let&rsquo;s not forget to modify the <code>main</code> function accordingly:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
-	<span style="color:#a6e22e">bc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewBlockchain</span>()
-	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">Close</span>()
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">bc</span> <span class="o">:=</span> <span class="nf">NewBlockchain</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">bc</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 
-	<span style="color:#a6e22e">cli</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">CLI</span>{<span style="color:#a6e22e">bc</span>}
-	<span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">Run</span>()
-}
+	<span class="nx">cli</span> <span class="o">:=</span> <span class="nx">CLI</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
+	<span class="nx">cli</span><span class="p">.</span><span class="nf">Run</span><span class="p">()</span>
+<span class="p">}</span>
 </code></pre></div><p>Note that a new <code>Blockchain</code> is created no matter what command-line arguments are provided.</p>
 <p>And that&rsquo;s it! Let&rsquo;s check that everything works as expected:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ blockchain_go printchain
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go printchain
 No existing blockchain found. Creating a new one...
-Mining the block containing <span style="color:#e6db74">&#34;Genesis Block&#34;</span>
+Mining the block containing <span class="s2">&#34;Genesis Block&#34;</span>
 000000edc4a82659cebf087adee1ea353bd57fcd59927662cd5ff1c4f618109b
 
 Prev. hash:
 Data: Genesis Block
 Hash: 000000edc4a82659cebf087adee1ea353bd57fcd59927662cd5ff1c4f618109b
-PoW: true
+PoW: <span class="nb">true</span>
 
-$ blockchain_go addblock -data <span style="color:#e6db74">&#34;Send 1 BTC to Ivan&#34;</span>
-Mining the block containing <span style="color:#e6db74">&#34;Send 1 BTC to Ivan&#34;</span>
+$ blockchain_go addblock -data <span class="s2">&#34;Send 1 BTC to Ivan&#34;</span>
+Mining the block containing <span class="s2">&#34;Send 1 BTC to Ivan&#34;</span>
 000000d7b0c76e1001cdc1fc866b95a481d23f3027d86901eaeb77ae6d002b13
 
 Success!
 
-$ blockchain_go addblock -data <span style="color:#e6db74">&#34;Pay 0.31337 BTC for a coffee&#34;</span>
-Mining the block containing <span style="color:#e6db74">&#34;Pay 0.31337 BTC for a coffee&#34;</span>
+$ blockchain_go addblock -data <span class="s2">&#34;Pay 0.31337 BTC for a coffee&#34;</span>
+Mining the block containing <span class="s2">&#34;Pay 0.31337 BTC for a coffee&#34;</span>
 000000aa0748da7367dec6b9de5027f4fae0963df89ff39d8f20fd7299307148
 
 Success!
 
 $ blockchain_go printchain
 Prev. hash: 000000d7b0c76e1001cdc1fc866b95a481d23f3027d86901eaeb77ae6d002b13
-Data: Pay 0.31337 BTC <span style="color:#66d9ef">for</span> a coffee
+Data: Pay 0.31337 BTC <span class="k">for</span> a coffee
 Hash: 000000aa0748da7367dec6b9de5027f4fae0963df89ff39d8f20fd7299307148
-PoW: true
+PoW: <span class="nb">true</span>
 
 Prev. hash: 000000edc4a82659cebf087adee1ea353bd57fcd59927662cd5ff1c4f618109b
-Data: Send <span style="color:#ae81ff">1</span> BTC to Ivan
+Data: Send <span class="m">1</span> BTC to Ivan
 Hash: 000000d7b0c76e1001cdc1fc866b95a481d23f3027d86901eaeb77ae6d002b13
-PoW: true
+PoW: <span class="nb">true</span>
 
 Prev. hash:
 Data: Genesis Block
 Hash: 000000edc4a82659cebf087adee1ea353bd57fcd59927662cd5ff1c4f618109b
-PoW: true
+PoW: <span class="nb">true</span>
 </code></pre></div><p><em>(sound of a beer can opening)</em></p>
 <h2 id="conclusion">Conclusion</h2>
 <p>Next time we&rsquo;ll implement addresses, wallets, and (probably) transactions. So stay tuned!</p>
