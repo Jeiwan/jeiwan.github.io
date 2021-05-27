@@ -19,3 +19,8 @@ disqusShortname = ""
 
 [author]
   name = "Ivan Kuznetsov"
+
+[markup]
+  [markup.highlight]
+    noClasses=false
+    style=""
