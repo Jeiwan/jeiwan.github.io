@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-bitcoin-network-3/">
+
+  <title>Programming Bitcoin Network, part 3 - Going the distance</title>
+  <meta property="og:title" content="Programming Bitcoin Network, part 3 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming Bitcoin Network, part 3</h1>
+      <time class="post-date" datetime="2019-12-03 00:00:00 &#43;0000">03 Dec 2019</time>
+    </header>
+
+    <p>Previous parts:</p>
+<ol>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network/">Part 1</a></li>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network-2/">Part 2</a></li>
+</ol>
+<blockquote>
+<p>DISCLAIMER. In these blog posts I describe only significant changes I made to the code
+since the last part. There are also insignificant refactorings and improvements I make
+along the way and don&rsquo;t explain them here for brevity. Please, check these links to
+see all the changes:</p>
+</blockquote>
+<blockquote>
+<p><em>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_3">Jeiwan/tinybit/part_3</a></em></p>
+</blockquote>
+<blockquote>
+<p><em>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_2...part_3#files">part2&hellip;part3</a></em></p>
+</blockquote>
+<h2 id="introduction">Introduction</h2>
+<p>Aaand we&rsquo;re back to continue our journey!</p>
+<p>In the last part we finished <code>binary</code> subpackage that serializes and deserializes messages.
+Also, we finished the versions handshake, i.e. initial exchange of general information between nodes.
+As a result, our node can now connect to another node, send &lsquo;version&rsquo; and &lsquo;verack&rsquo; messages, and keep a connection alive.</p>
+<p>But, there&rsquo;s a problem with the latter&hellip;</p>
+<h2 id="liveliness-check">Liveliness check</h2>
+<p>If you leave the node running for several minutes, it&rsquo;ll get disconnected from the
+<code>btcd</code> node and you&rsquo;ll see this in <code>btcd</code> logs:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> SRVR: New peer 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Connected to 127.0.0.1:57606
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending verack to 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Received verack from 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending ping to 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending ping to 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>WRN<span style="color:#f92672">]</span> PEER: Peer 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span> no answer <span style="color:#66d9ef">for</span> 5m0s -- disconnecting
+<span style="color:#f92672">[</span>INF<span style="color:#f92672">]</span> SYNC: Lost peer 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> SRVR: Removed peer 127.0.0.1:57606 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+</code></pre></div><p>It turns out that the <code>btcd</code> node sends &lsquo;ping&rsquo; message to our node and expects an answer.
+If there&rsquo;s no answer, it removes our node from the list of its peers.
+We don&rsquo;t want that.</p>
+<p>Pinging other nodes in a network is a common way of checking their liveliness, i.e. if the other node is still running and responding.
+If a node fails to reply in time and with proper message, it gets removed from the list of peers.
+So, we want to handle &lsquo;ping&rsquo; message and send proper reply, which is a &lsquo;pong&rsquo; message.</p>
+<h3 id="ping-and-pong-messages">&lsquo;ping&rsquo; and &lsquo;pong&rsquo; messages</h3>
+<p>Both &lsquo;ping&rsquo; and &lsquo;pong&rsquo; messages are identical and quite minimal:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgPing</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Nonce</span> <span style="color:#66d9ef">uint64</span>
+}
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgPong</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Nonce</span> <span style="color:#66d9ef">uint64</span>
+}
+</code></pre></div><p>The only field they have is <code>Nonce</code>, which is just a random number that&rsquo;s used as an identifier of a &lsquo;ping&rsquo; message.
+&lsquo;pong&rsquo; messages simply returns the nonce that was sent in &lsquo;ping&rsquo; message. This difference is reflected in their constructors:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewPingMsg</span>(<span style="color:#a6e22e">network</span> <span style="color:#66d9ef">string</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">uint64</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#a6e22e">nonce</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">Uint64</span>()
+	<span style="color:#a6e22e">payload</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">MsgPing</span>{
+		<span style="color:#a6e22e">Nonce</span>: <span style="color:#a6e22e">nonce</span>,
+	}
+
+	<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewMessage</span>(<span style="color:#e6db74">&#34;ping&#34;</span>, <span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">payload</span>)
+
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">nonce</span>, <span style="color:#66d9ef">nil</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewPongMsg</span>(<span style="color:#a6e22e">network</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">nonce</span> <span style="color:#66d9ef">uint64</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#a6e22e">payload</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">MsgPong</span>{
+		<span style="color:#a6e22e">Nonce</span>: <span style="color:#a6e22e">nonce</span>,
+	}
+
+	<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewMessage</span>(<span style="color:#e6db74">&#34;pong&#34;</span>, <span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">payload</span>)
+
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">msg</span>, <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>These messages are handled differently though.
+Whenever a node receives a &lsquo;ping&rsquo; message, it should immediately built a &lsquo;pong&rsquo; message and send it back:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handlePing</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">ping</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgPing</span>
+
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">ping</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#a6e22e">pong</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewPongMsg</span>(<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">Network</span>, <span style="color:#a6e22e">ping</span>.<span style="color:#a6e22e">Nonce</span>)
+
+	<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">pong</span>)
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">msg</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>If a node receives a &lsquo;pong&rsquo; message, it means it sent a &lsquo;ping&rsquo; earlier.
+Sending pings is a part of a mechanism that we haven&rsquo;t implemented yet, and before
+starting implementing it we should first build a list of peers our node is aware of.</p>
+<h2 id="list-of-peers">List of peers</h2>
+<p>Nodes in the Bitcoin network shouldn&rsquo;t depend only on one other node.
+Instead, each node should be connected to several nodes and shouldn&rsquo;t trust one node
+more than any other node in the network.
+This means that nodes should be interchangeable. If one is removed it can be easily
+replaced by any other node.</p>
+<p>We haven&rsquo;t yet build a list of peers, and there&rsquo;s no better time to fix this than now.
+First, let&rsquo;s define a peer:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Peer</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Address</span>    <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Addr</span>
+	<span style="color:#a6e22e">Connection</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriteCloser</span>
+	<span style="color:#a6e22e">PongCh</span>     <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">Services</span>   <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">UserAgent</span>  <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Version</span>    <span style="color:#66d9ef">int32</span>
+}
+
+<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">p</span> <span style="color:#a6e22e">Peer</span>) <span style="color:#a6e22e">ID</span>() <span style="color:#66d9ef">string</span> {
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Address</span>.<span style="color:#a6e22e">String</span>()
+}
+</code></pre></div><p><code>Peers</code> describes everything we want to know and remember about a peer node.</p>
+<ul>
+<li><code>Address</code> is needed to identify a node in the list.</li>
+<li><code>Connection</code> is needed to send and receive messages. Eventually, we&rsquo;ll be handling multiple connections at once, one per peer node.</li>
+<li><code>PongCh</code> is used to to pass &lsquo;pong&rsquo; replies to a monitoring function (we&rsquo;ll implement it next).</li>
+<li><code>Services</code> describes feature supported by the peer node.</li>
+<li><code>UserAgent</code> keeps information about software used by the peer (we won&rsquo;t us it for now, but maybe one day&hellip;).</li>
+<li><code>Version</code> keeps the protocol version that the peer implements.</li>
+</ul>
+<p>Now, the node can have a list of peers:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/node.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Node</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#f92672">...</span>
+	<span style="color:#a6e22e">Peers</span>        <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">Peer</span>
+	<span style="color:#f92672">...</span>
+}
+</code></pre></div><blockquote>
+<p>I decided to use a map instead of a list because it&rsquo;s easier to get a node by its
+address, and removing one peer doesn&rsquo;t affect other peers in the map (doesn&rsquo;t change
+their indexes).</p>
+</blockquote>
+<p>At this stage, we only have one peer node. And that OK for now.</p>
+<p>Now, when do we want to add a peer? As soon we connect to a node?
+Actually, no. Before adding a peer we must first get basic information about it, i.e.
+finish a version handshake.
+Thus, we add new nodes as soon as we receive &lsquo;version&rsquo; message from them:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/cmd_version.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleVersion</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">version</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgVersion</span>
+
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">version</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#a6e22e">peer</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Peer</span>{
+		<span style="color:#a6e22e">Address</span>:    <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">RemoteAddr</span>(),
+		<span style="color:#a6e22e">Connection</span>: <span style="color:#a6e22e">conn</span>,
+		<span style="color:#a6e22e">PongCh</span>:     make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">uint64</span>),
+		<span style="color:#a6e22e">Services</span>:   <span style="color:#a6e22e">version</span>.<span style="color:#a6e22e">Services</span>,
+		<span style="color:#a6e22e">UserAgent</span>:  <span style="color:#a6e22e">version</span>.<span style="color:#a6e22e">UserAgent</span>.<span style="color:#a6e22e">String</span>,
+		<span style="color:#a6e22e">Version</span>:    <span style="color:#a6e22e">version</span>.<span style="color:#a6e22e">Version</span>,
+	}
+
+	<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">Peers</span>[<span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">ID</span>()] = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">peer</span>
+	<span style="color:#f92672">...</span>
+}
+</code></pre></div><p>And that&rsquo;s it. Having a list of peers, we&rsquo;re now ready to monitor their liveliness.</p>
+<h2 id="monitoring-peers-liveliness">Monitoring peers' liveliness</h2>
+<p>(This is where we implement handling of &lsquo;pong&rsquo; messages.)</p>
+<p>As soon as a peer is added, a peer liveliness monitor should start running.
+Let&rsquo;s define how it should work:</p>
+<ol>
+<li>The monitor triggers once in a while and sends a &lsquo;ping&rsquo; message to the peer.</li>
+<li>It waits for a &lsquo;pong&rsquo; message containing the nonce from the &lsquo;ping&rsquo; message.</li>
+<li>If no &lsquo;pong&rsquo; message is received in a certain time span, then the peer is considered dead and is removed from the list.</li>
+</ol>
+<p>In Golang terms, we want to have a goroutine running for each peer, that checks their
+liveliness.
+This means we want to have several concurrent processes that communicate with each other
+(or maybe not, what do you think?) and update/remove peers in a list.</p>
+<h3 id="share-memory-by-communicating">Share Memory By Communicating</h3>
+<p>Traditionally, such concurrent tasks (that work on the same memory segments) are solved
+with the help of mutexes.
+Mutexes allow to temporarily lock certain memory segments to prevent multiple
+simultaneous reads and/or writes.</p>
+<p>Golang, on the other hand, incentivizes a different approach, which is outlined in an
+official Golang blog post <a href="https://blog.golang.org/share-memory-by-communicating">Share Memory By Communicating</a>.
+I recommend you reading it and checking this <a href="https://golang.org/doc/codewalk/sharemem/">wonderful code example</a> before moving on.</p>
+<p>So, instead of mutexes we&rsquo;ll be using channels and goroutines. It took me some time to
+come up with this design:</p>
+<ol>
+<li>There will be a part that sends ping messages, waits for replies, and handles &lsquo;no reply&rsquo; case.
+We haven&rsquo;t built anything related to this.</li>
+<li>Another part that receives &lsquo;pong&rsquo; messages from other nodes.
+This will be a handler of &lsquo;pong&rsquo; messages.</li>
+<li>Third part that connects the two above. This part knows what nonce was sent to what
+node and directs &lsquo;pong&rsquo; replies.</li>
+</ol>
+<p>Let&rsquo;s begin with the latter part. This is a simple function like:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">monitorPeers</span>() {
+	<span style="color:#a6e22e">peerPings</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">uint64</span>]<span style="color:#66d9ef">string</span>)
+
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">nonce</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">PongCh</span>:
+			<span style="color:#a6e22e">peerID</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">peerPings</span>[<span style="color:#a6e22e">nonce</span>]
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">peerID</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+				<span style="color:#66d9ef">break</span>
+			}
+			<span style="color:#a6e22e">peer</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">Peers</span>[<span style="color:#a6e22e">peerID</span>]
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">peer</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+				<span style="color:#66d9ef">break</span>
+			}
+
+			<span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">PongCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">nonce</span>
+			delete(<span style="color:#a6e22e">peerPings</span>, <span style="color:#a6e22e">nonce</span>)
+
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pp</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">PingCh</span>:
+			<span style="color:#a6e22e">peerPings</span>[<span style="color:#a6e22e">pp</span>.<span style="color:#a6e22e">nonce</span>] = <span style="color:#a6e22e">pp</span>.<span style="color:#a6e22e">peerID</span>
+		}
+	}
+}
+</code></pre></div><p>We also need two new channels:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/node.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Node</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#f92672">...</span>
+	<span style="color:#a6e22e">PingCh</span>       <span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">peerPing</span>
+	<span style="color:#a6e22e">PongCh</span>       <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">uint64</span>
+	<span style="color:#f92672">...</span>
+}
+</code></pre></div><p><code>peerPings</code> is a state data structure that couples ping nonces and peer identifiers.
+<code>n.PingCh</code> is intended to pass ping notifications that are sent whenever a &lsquo;ping&rsquo;
+message is sent (this will be implemented next).
+This notifications are as simple as:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">peerPing</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">nonce</span>  <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">peerID</span> <span style="color:#66d9ef">string</span>
+}
+</code></pre></div><blockquote>
+<p>This is where we share memory by communicating.</p>
+</blockquote>
+<p>Whenever a <code>peerPings</code> notification is received, the state data structure (<code>peerPings</code>)
+is updated to be aware of a new ping message.</p>
+<p><code>n.PongCh</code> is intended to pass &lsquo;pong&rsquo; messages from the handler to monitoring
+functions.
+Before doing this we should check the nonce and ensure the peer is stil in the list.
+After directing the nonce, it should be removed from <code>peerPings</code> to avoid memory leak.</p>
+<p>I hope that part is clear.</p>
+<p>Now, let&rsquo;s implement this part:</p>
+<blockquote>
+<p>There will be a part that sends ping messages, waits for replies, and handles &lsquo;no reply&rsquo; case.</p>
+</blockquote>
+<p>For every new peer our node will do the following:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">monitorPeer</span>(<span style="color:#a6e22e">peer</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Peer</span>) {
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">pingIntervalSec</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+
+		<span style="color:#a6e22e">ping</span>, <span style="color:#a6e22e">nonce</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewPingMsg</span>(<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">Network</span>)
+
+		<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">ping</span>)
+
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">Connection</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">msg</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">disconnectPeer</span>(<span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">ID</span>())
+		}
+</code></pre></div><p>First, wait a few minutes.
+It&rsquo;s very likely that a newly added peer is alive, so we don&rsquo;t need to fire a ping
+message right away.
+Then, build a &lsquo;ping&rsquo; message and send it.</p>
+<p>After a &lsquo;ping&rsquo; was sent, we need to notify <code>monitorPeers</code> function:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">		<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">PingCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">peerPing</span>{
+			<span style="color:#a6e22e">nonce</span>:  <span style="color:#a6e22e">nonce</span>,
+			<span style="color:#a6e22e">peerID</span>: <span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">ID</span>(),
+		}
+</code></pre></div><p>And now we can start waiting for a reply:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">		<span style="color:#a6e22e">t</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">NewTimer</span>(<span style="color:#a6e22e">pingTimeoutSec</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pn</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">PongCh</span>:
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">pn</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">nonce</span> {
+				<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">disconnectPeer</span>(<span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">ID</span>())
+				<span style="color:#66d9ef">return</span>
+			}
+			<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Debugf</span>(<span style="color:#e6db74">&#34;got &#39;pong&#39; from %s&#34;</span>, <span style="color:#a6e22e">peer</span>)
+		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">C</span>:
+			<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">disconnectPeer</span>(<span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">ID</span>())
+			<span style="color:#66d9ef">return</span>
+		}
+
+        <span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Stop</span>()
+    }
+}
+</code></pre></div><p>If the timer is triggered before we receive a &lsquo;pong&rsquo;, the peer must be disconnected.
+If a &lsquo;pong&rsquo; is received, validate the nonce and that&rsquo;s it – we don&rsquo;t need to do anything
+else.</p>
+<p>This whole cycle should run indefinitely, as long as the peer is in the list.
+And it should be started as soon as a peer is added:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/cmd_version.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleVersion</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#f92672">...</span>
+	<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">Peers</span>[<span style="color:#a6e22e">peer</span>.<span style="color:#a6e22e">ID</span>()] = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">peer</span>
+	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">monitorPeer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">peer</span>)
+	<span style="color:#f92672">...</span>
+}
+</code></pre></div><p>Now, the final part:</p>
+<blockquote>
+<p>Another part that receives &lsquo;pong&rsquo; messages from other nodes.</p>
+</blockquote>
+<p>We already know how to build these:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handlePong</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">pong</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgPing</span>
+
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pong</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">PongCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">pong</span>.<span style="color:#a6e22e">Nonce</span>
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Yes, that&rsquo;s simple: read a &lsquo;pong&rsquo; message, decode it, and send to <code>n.PongCh</code>.
+The other guys will do all the work.</p>
+<p>And that&rsquo;s it! At this point we&rsquo;re having a node that:</p>
+<ol>
+<li>Can stay alive by replying to &lsquo;ping&rsquo; messages sent by other nodes.</li>
+<li>Maintain a list of peers, check their liveliness, and remove dead ones.</li>
+</ol>
+<p>Sweet! Time to add new features!</p>
+<h2 id="mempool-monitor">Mempool Monitor</h2>
+<p>After so many lines of code we can finally start thinking about usefulness.
+For the next several blog posts, let&rsquo;s set a goal of building a <strong>Mempool Monitor</strong>.</p>
+<p>Mempool is simply a list of transactions that haven&rsquo;t been mined yet.
+The Bitcoin network is organized in such way that there&rsquo;re no centralized nodes.
+As a consequence, <strong>all transactions and all blocks are delivered to every node in the
+network</strong>.
+This means that our node too can received every transaction and every block!
+But we won&rsquo;t go for the blocks for now.</p>
+<p>Let&rsquo;s begin with receiving transactions.</p>
+<h2 id="inv-message">&lsquo;inv&rsquo; message</h2>
+<p>As I said above, every node in the network receives every transaction.
+But there&rsquo;s an optimization was made to reduce the bandwidth and to not literally send
+every transaction to every node as soon as a new transaction is submitted.</p>
+<p>Transactions and blocks transferring happens this way:</p>
+<ol>
+<li>When a node gets a new transaction, it sends &lsquo;inv&rsquo; message to its peers.
+&lsquo;inv&rsquo; means <em>inventory</em> and it literally says &ldquo;Hey! I have these&hellip;&rdquo;.
+But &lsquo;inv&rsquo; doesn&rsquo;t contain full data, only hashes.</li>
+<li>Any peer that receives the message can decide where it wants to get full data or not.</li>
+<li>If a peer wants full data, it sends a &lsquo;getdata&rsquo; reply specifying a list of hashes
+it want to get full data for.</li>
+<li>A node that receives &lsquo;getdata&rsquo; checks what objects were requested (transactions or
+blocks) and sends them in related messages: &lsquo;tx&rsquo; for transaction and &lsquo;block&rsquo; for block
+(one transaction/block per message).</li>
+</ol>
+<p>In code, &lsquo;inv&rsquo; message looks like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgInv</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Count</span>     <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">Inventory</span> []<span style="color:#a6e22e">InvVector</span>
+}
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">InvVector</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Type</span> <span style="color:#66d9ef">uint32</span>
+	<span style="color:#a6e22e">Hash</span> [<span style="color:#ae81ff">32</span>]<span style="color:#66d9ef">byte</span>
+}
+</code></pre></div><ol>
+<li><code>Count</code> specifies the number of objects it describes.</li>
+<li><code>Type</code> (besides other values) can be 1 for transactions or 2 for bocks.</li>
+<li><code>Hash</code> is a hash of a transaction or a block.</li>
+</ol>
+<blockquote>
+<p>Serialization and deserialization of this and other new types is omitted to save
+space. They&rsquo;re a bit different but not hard.
+See <a href="https://github.com/Jeiwan/tinybit/compare/part_2...part_3#files">full changes</a>.</p>
+</blockquote>
+<p>&lsquo;getdata&rsquo; is absolutely identical.</p>
+<h2 id="tx-message">&lsquo;tx&rsquo; message</h2>
+<p>And here comes the most difficult part: &lsquo;tx&rsquo; message.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgTx</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Version</span>    <span style="color:#66d9ef">int32</span>
+	<span style="color:#a6e22e">Flag</span>       <span style="color:#66d9ef">uint16</span>
+	<span style="color:#a6e22e">TxInCount</span>  <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">TxIn</span>       []<span style="color:#a6e22e">TxInput</span>
+	<span style="color:#a6e22e">TxOutCount</span> <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">TxOut</span>      []<span style="color:#a6e22e">TxOutput</span>
+	<span style="color:#a6e22e">TxWitness</span>  <span style="color:#a6e22e">TxWitnessData</span>
+	<span style="color:#a6e22e">LockTime</span>   <span style="color:#66d9ef">uint32</span>
+}
+</code></pre></div><ol>
+<li><code>Version</code> specifies transaction format version. It&rsquo;s always 1 as of now.</li>
+<li><code>Flag</code> is very tricky to deserialize and serialize because it can be missing or can
+be set to 1.
+When it&rsquo;s set to 1, the transaction uses Segwit data to store signature script.
+When it&rsquo;s missing, the transaction is a legacy one.
+As of December 2019 there are slightly more than 50% of Segwit transactions in the
+network, which means that our node must support them too.</li>
+<li><code>TxInCount</code> is the number of inputs.</li>
+<li><code>TxIn</code> is a list of inputs.</li>
+<li><code>TxOutCount</code> is the number of outputs.</li>
+<li><code>TxOut</code> is a list of outputs.</li>
+<li><code>TxWitness</code> is only set when <code>Flag</code> is set to 1. It holds a list of witness data elements.</li>
+<li><code>LockTime</code> is used to delay transactions.</li>
+</ol>
+<p>Next, transaction inputs:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TxInput</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">PreviousOutput</span>  <span style="color:#a6e22e">OutPoint</span>
+	<span style="color:#a6e22e">ScriptLength</span>    <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">SignatureScript</span> []<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Sequence</span>        <span style="color:#66d9ef">uint32</span>
+}
+</code></pre></div><p>Inputs reference previous outputs and contain unlocking scripts, which are called signature scripts.
+<code>OutPoint</code> is a structure that points to a previous output.
+To find an output, we need to know a transaction hash and output&rsquo;s index – and these are
+the only two fields <code>OutPoint</code> has.</p>
+<p>Now, let&rsquo;s look at output:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TxOutput</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Value</span>          <span style="color:#66d9ef">int64</span>
+	<span style="color:#a6e22e">PkScriptLength</span> <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">PkScript</span>       []<span style="color:#66d9ef">byte</span>
+}
+</code></pre></div><p>Transaction outputs hold Bitcoin amount and locking script, which is called public
+key script. Not much interesting here.</p>
+<p>But here&rsquo;s what&rsquo;s interesting:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TxWitnessData</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Count</span>   <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">Witness</span> []<span style="color:#a6e22e">TxWitness</span>
+}
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TxWitness</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Length</span> <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">Data</span>   []<span style="color:#66d9ef">byte</span>
+}
+</code></pre></div><p>Witness data is an alternative way of specifying signature scripts.
+These are basically the same thing.</p>
+<p>Before <a href="https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki">Segwit soft fork</a> happened
+there were only signature scripts.
+The soft fork moved them outside of inputs so they&rsquo;re not calculated in the transaction
+merkle tree.
+To make the change backwards compatible, old <code>SignatureScript</code> was saved and the new
+field got name &ldquo;witness&rdquo;.
+If a transaction has the witness flag set (<code>Flag</code> field of <code>MsgTx</code>), it must contain
+witness data and it&rsquo;s witness data that is used to unlock Bitcoins.</p>
+<h2 id="new-handlers">New handlers</h2>
+<p>Alright, we&rsquo;re now having all the structures we need to start receiving transactions.
+Let&rsquo;s add handlers for the newly implemented messages.</p>
+<p>First, &lsquo;inv&rsquo;:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleInv</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">inv</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgInv</span>
+
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">inv</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">getData</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgGetData</span>
+	<span style="color:#a6e22e">getData</span>.<span style="color:#a6e22e">Count</span> = <span style="color:#a6e22e">inv</span>.<span style="color:#a6e22e">Count</span>
+	<span style="color:#a6e22e">getData</span>.<span style="color:#a6e22e">Inventory</span> = <span style="color:#a6e22e">inv</span>.<span style="color:#a6e22e">Inventory</span>
+
+	<span style="color:#a6e22e">getDataMsg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewMessage</span>(<span style="color:#e6db74">&#34;getdata&#34;</span>, <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">Network</span>, <span style="color:#a6e22e">getData</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">getDataMsg</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">msg</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>The logic behind this is simple: whenever our node gets an &lsquo;inv&rsquo; message, it replies
+with an identical &lsquo;getdata&rsquo; message because we want to get all new transactions (and
+blocks).</p>
+<p>Now, &lsquo;tx&rsquo; handler:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleTx</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tx</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>
+
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">tx</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Debugf</span>(<span style="color:#e6db74">&#34;transaction: %+v&#34;</span>, <span style="color:#a6e22e">tx</span>)
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>For now, let&rsquo;s just print a new transaction out and not save it to the mempool.</p>
+<h2 id="setting-up-a-wallet">Setting up a wallet</h2>
+<p>The time has come to set up a wallet, because we want to send a test transaction to
+ensure that our node does indeed receive it.</p>
+<p><code>btcd</code> doesn&rsquo;t have wallet functionality included.
+Actually, it was extracted into a separate application called <code>btcwallet</code>.
+So, we&rsquo;re going to us it.</p>
+<p>As of December 2019, there&rsquo;s a bug in <code>btcwallet</code> that doesn&rsquo;t allow to use it.
+We&rsquo;ll need to fix it, luckily it&rsquo;s just one line.</p>
+<h3 id="installing-btcwallet">Installing <code>btcwallet</code></h3>
+<p>Repeat these steps to install <code>btcwallet</code>:</p>
+<ol>
+<li>
+<p><code>cd ~/.tmp</code></p>
+</li>
+<li>
+<p><code>git clone https://github.com/btcsuite/btcwallet</code></p>
+</li>
+<li>
+<p><code>cd btcwallet</code></p>
+</li>
+<li>
+<p>Open file <code>walletsetup.go</code> and, on line 222, change:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">walletdb</span>.<span style="color:#a6e22e">Create</span>(<span style="color:#e6db74">&#34;bdb&#34;</span>, <span style="color:#a6e22e">dbPath</span>)
+</code></pre></div><p>``
+To:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">walletdb</span>.<span style="color:#a6e22e">Create</span>(<span style="color:#e6db74">&#34;bdb&#34;</span>, <span style="color:#a6e22e">dbPath</span>, <span style="color:#66d9ef">true</span>)
+</code></pre></div><p>``
+(add a <code>true</code> as the third argument)</p>
+</li>
+<li>
+<p>Save the file and run:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ go install -v . ./cmd/...
+</code></pre></div><p>``</p>
+</li>
+<li>
+<p><code>btcwallet</code> should now be installed.</p>
+</li>
+</ol>
+<blockquote>
+<p>I&rsquo;ve prepared a btcwallet config, we&rsquo;ll be always using it. The file is called <code>btcwallet.conf</code>.</p>
+</blockquote>
+<h3 id="installing-btcctl">Installing <code>btcctl</code></h3>
+<p>Both <code>btcd</code> and <code>btcwallet</code> are servers, and we need somehow to control
+them.
+We need to tell <code>btcd</code> to mine new blocks and we need to use <code>btcwallet</code>
+to send transactions.
+There&rsquo;s one tool to control both of them, it&rsquo;s called <code>btcctl</code> and it should already
+be installed in your system if you have <code>btcd</code> installed.
+Otherwise, install <a href="https://github.com/btcsuite/btcd">btcd</a>.</p>
+<blockquote>
+<p>I&rsquo;ve also prepared two configs for btcctl. One of them, <code>btcctl-wallet.conf</code>, is used
+to interact with the wallet, and the other, <code>btcctl.conf</code>, is used to control the btcd
+node.</p>
+</blockquote>
+<h3 id="setting-up-wallets">Setting up wallets</h3>
+<p>We&rsquo;ll need two wallets: one for the miner and one for the user (we&rsquo;ll call her Alice).</p>
+<p>Before running <code>btcwallet</code> we must create a default wallet.
+Since, this is purely for development and testing, you can use whatever
+passphrase you want.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ btcwallet -C ./btcwallet.conf --create
+Enter the private passphrase <span style="color:#66d9ef">for</span> your new wallet:
+Confirm passphrase:
+Do you want to add an additional layer of encryption <span style="color:#66d9ef">for</span> public data? <span style="color:#f92672">(</span>n/no/y/yes<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>no<span style="color:#f92672">]</span>: no
+Do you have an existing wallet seed you want to use? <span style="color:#f92672">(</span>n/no/y/yes<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>no<span style="color:#f92672">]</span>: no
+Your wallet generation seed is:
+...
+Once you have stored the seed in a safe and secure location, enter <span style="color:#e6db74">&#34;OK&#34;</span> to <span style="color:#66d9ef">continue</span>: OK
+Creating the wallet...
+<span style="color:#f92672">[</span>INF<span style="color:#f92672">]</span> WLLT: Opened wallet
+</code></pre></div><p><code>btcwallet</code> is also a server, so we need to run it alongside <code>btcd</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">// Console window <span style="color:#ae81ff">1</span>
+$ btcd --configfile ./btcd.conf
+
+// Console window <span style="color:#ae81ff">2</span>
+$ btcwallet -C ./btcwallet.conf
+</code></pre></div><p>With both of the servers running, we can create an account for Alice:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ btcctl -C ./btcctl-wallet.conf createnewaccount alice
+$ btcctl -C ./btcctl-wallet.conf listaccounts
+<span style="color:#f92672">{</span>
+  <span style="color:#e6db74">&#34;alice&#34;</span>: 0,
+  <span style="color:#e6db74">&#34;default&#34;</span>: 0,
+  <span style="color:#e6db74">&#34;imported&#34;</span>: <span style="color:#ae81ff">0</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Good! Now we need to generate two addresses: one for the miner and one for Alice.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">// Unlock your wallet first
+$ btcctl -C ./btcctl-wallet.conf walletpassphrase PASSPHRASE <span style="color:#ae81ff">3600</span>
+$ btcctl -C ./btcctl-wallet.conf getnewaddress
+MINER_ADDRESS
+$ btcctl -C ./btcctl-wallet.conf getnewaddress alice
+ALICE_ADDRESS
+</code></pre></div><p>Next step is to setup miner&rsquo;s address. Stop <code>btcd</code> and start it like that:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ btcd --configfile ./btcd.conf --miningaddr<span style="color:#f92672">=</span>MINER_ADDRESS
+</code></pre></div><p><code>MINER_ADDRESS</code> will now receive all block rewards!</p>
+<p>Let&rsquo;s mine a few blocks:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ btcctl -C ./btcctl.conf generate <span style="color:#ae81ff">100</span>
+<span style="color:#f92672">[</span>...a hundred of hashes...<span style="color:#f92672">]</span>
+$ btcctl -C ./btcctl-wallet.conf getbalance
+<span style="color:#ae81ff">50</span>
+</code></pre></div><p>Awesome! The balance is 50 BTC because coinbase transactions need 100 confirmations to
+become spendable.
+50 is quite enough for our purposes</p>
+<h2 id="final-testing">Final testing</h2>
+<p>Now, run or node to see what messages it receives.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ DEBUG<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> tinybit
+</code></pre></div><p>Finally, let&rsquo;s send a few bitcoins to Alice:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ btcctl -C ./btcctl-wallet.conf sendtoaddress ALICE_ADDRESS 0.00001
+</code></pre></div><p>And check logs of <code>tinybit</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">DEBU<span style="color:#f92672">[</span>0000<span style="color:#f92672">]</span> received message: version
+DEBU<span style="color:#f92672">[</span>0000<span style="color:#f92672">]</span> new peer /btcwire:0.5.0/btcd:0.12.0/ <span style="color:#f92672">(</span>127.0.0.1:9333<span style="color:#f92672">)</span>
+DEBU<span style="color:#f92672">[</span>0000<span style="color:#f92672">]</span> received message: verack
+DEBU<span style="color:#f92672">[</span>0050<span style="color:#f92672">]</span> received message: inv
+DEBU<span style="color:#f92672">[</span>0050<span style="color:#f92672">]</span> received message: tx
+DEBU<span style="color:#f92672">[</span>0050<span style="color:#f92672">]</span> transaction: <span style="color:#f92672">{</span>Version:1 Flag:0 TxInCount:1 TxIn:<span style="color:#f92672">[{</span>PreviousOutput:<span style="color:#f92672">{</span>Hash:<span style="color:#f92672">[</span>...<span style="color:#f92672">]</span> Index:0<span style="color:#f92672">}</span> ScriptLength:106 SignatureScript:<span style="color:#f92672">[</span>...<span style="color:#f92672">]</span> Sequence:4294967295<span style="color:#f92672">}]</span> TxOutCount:2 TxOut:<span style="color:#f92672">[{</span>Value:1000 PkScriptLength:25 PkScript:<span style="color:#f92672">[</span>...<span style="color:#f92672">]}</span> <span style="color:#f92672">{</span>Value:4999998776 PkScriptLength:22 PkScript:<span style="color:#f92672">[</span>...<span style="color:#f92672">]}]</span> TxWitness:<span style="color:#f92672">{</span>Count:0 Witness:<span style="color:#f92672">[]}</span> LockTime:0<span style="color:#f92672">}</span>
+</code></pre></div><p>Congratulations!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>That&rsquo;s it for today.
+Our node now can monitor peers and receive transactions!
+It&rsquo;s too early to save transactions in the mempool because we don&rsquo;t know yet how to
+remove them from there. For this, we first need to learn to handle new blocks.</p>
+<p>Also, our node can only connect to a single peer and we definitely want to fix this
+before running the node in the testnet 😉</p>
+<p>See you!</p>
+<h2 id="links">Links</h2>
+<ol>
+<li>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_3">Jeiwan/tinybit/part_3</a></li>
+<li>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_2...part_3#files">part2&hellip;part3</a></li>
+<li>A Golang blog post: <a href="https://blog.golang.org/share-memory-by-communicating">Share Memory By Communicating</a></li>
+<li>BIP 141, <a href="https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki">Segregated witness</a></li>
+<li>Bitcoin <a href="https://en.bitcoin.it/wiki/Protocol_documentation">Protocol documentation</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  </body>
+</html>
+

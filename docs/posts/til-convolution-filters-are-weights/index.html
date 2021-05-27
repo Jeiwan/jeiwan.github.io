@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/til-convolution-filters-are-weights/">
+
+  <title>TIL: Convolutional Filters Are Weights - Going the distance</title>
+  <meta property="og:title" content="TIL: Convolutional Filters Are Weights - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">TIL: Convolutional Filters Are Weights</h1>
+      <time class="post-date" datetime="2017-08-05 20:34:21 &#43;07">05 Aug 2017</time>
+    </header>
+
+    <p>It&rsquo;s common knowledge that there&rsquo;re weights in a fully-connected neural network. And these weights are not constant and are adjusted by an optimization algorithm (like gradient descent). Moreover, training a neural network actually means finding proper weights.</p>
+<p>When I started learning about convolution and convolutional networks, first thing I was introduced to is filters. Filters are said to be matrices that are applied to an image to distort it in a certain way, unveiling certain aspect of an image. For example, applying a filter to an image can unveil its contour edges:</p>
+<p><img src="/images/convolution-filter-example.png" alt="Convolution filter example">
+(this example is created via <a href="http://setosa.io/ev/image-kernels/">http://setosa.io/ev/image-kernels/</a>)</p>
+<p>Then I started trying running different examples of convolution networks and noticed that I never decided what filters I wanted to use in a network. I thought that people somehow find proper filter manually, but now the truth has finally revealed: <em>filters are weights</em>. And they&rsquo;re adjusted while network is trained.</p>
+<blockquote>
+<p><em>Isn&rsquo;t this marvelous?</em> A convolutional neural network learns to &ldquo;see&rdquo; something that makes the whole network produce better results.</p>
+</blockquote>
+<p>Initially, filters are often initialized randomly, so network &ldquo;sees&rdquo; random stuff. But, after more and more iterations are passed, network learns to &ldquo;see&rdquo; such aspects of image that make the whole network give better results.</p>
+<p>To demonstrate this, I took this <a href="https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py">mnist_cnn.py</a> example from <a href="https://keras.io/">Keras</a> and visualized the filters of the first convolutional layer three times:</p>
+<ol>
+<li>After training the network for 1 iteration.</li>
+<li>After training the network for 7 iterations.</li>
+<li>And after training the network for 15 iterations.</li>
+</ol>
+<p>Here&rsquo;re the visualisations:</p>
+<p><img src="/images/convolution-filter-weights.png" alt="Convolution filters change"></p>
+<p>These images make no sense for a human, but it&rsquo;s these filters that allow the whole network to correctly recognize hand digits.</p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  </body>
+</html>
+

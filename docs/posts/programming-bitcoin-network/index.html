@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-bitcoin-network/">
+
+  <title>Programming Bitcoin Network - Going the distance</title>
+  <meta property="og:title" content="Programming Bitcoin Network - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming Bitcoin Network</h1>
+      <time class="post-date" datetime="2019-10-30 00:00:00 &#43;0000">30 Oct 2019</time>
+    </header>
+
+    <p><em>Full code: <a href="https://github.com/Jeiwan/tinybit/tree/part_1">Jeiwan/tinybit/part_1</a></em></p>
+<h2 id="introduction">Introduction</h2>
+<p>This blog starts a series of posts dedicated to programming of the Bitcoin network in Golang.
+The goal of this series is to build a tiny Bitcoin network client that&rsquo;s able to:</p>
+<ol>
+<li>Connect to a Bitcoin network (whether that&rsquo;s mainnet, testnet, simnet, or a local network).</li>
+<li>Introduce itself to the network (what&rsquo;s called &ldquo;version handshake&rdquo;).</li>
+<li>Get information about current blockchain state from a node in the network.</li>
+<li>Download full blockchain history (blocks with transactions).</li>
+<li>Verify and relay new transactions.</li>
+<li>Verify and relay new blocks.</li>
+</ol>
+<p>The result will be a tiny Bitcoin node implementation that can act as a fully-fledged participant of the network.</p>
+<h2 id="bitcoin-network">Bitcoin Network</h2>
+<p>Before beginning, let&rsquo;s look at the Bitcoin network in details to understand how it works and what it&rsquo;s needed for.</p>
+<p>Whenever you see a definition of blockchain, it usually says something like:
+&ldquo;blockchain is a database that stores blocks, with every next block being linked to
+the previous one in a cryptographically secure way so it&rsquo;s not possible to change
+anything in previous blocks&rdquo;.
+Such definitions miss one of the cornerstones: network.
+Because without network there&rsquo;s no blockchain.</p>
+<p>Bitcoin implements a P2P (peer to peer) network.
+In such networks, every participant (which is called <em>node</em>) acts as <strong>both client and server</strong>.
+Every node in a P2P network is a full-fledged member of the network, there are no master and slave nodes.</p>
+<blockquote>
+<p>Actually, nodes can act differently in the network.
+There are different light client implementations that don&rsquo;t require full blockchain history and that rely on full nodes to get information from.
+Also, it&rsquo;s only mining nodes that change the blockchain database (by mining new blocks).</p>
+</blockquote>
+<p>Since there are no centralized servers that define business logic (like HTTP servers),
+every node has to define and verify the rules of mining and the structure of transactions and blocks.
+Every node is responsible for supporting the consensus.</p>
+<blockquote>
+<p>Yes, when you&rsquo;re using Bitcoin Core or any other implementation of the Bitcoin protocol, you trust the piece of software to properly implement the protocol and properly handle all the operations.
+What&rsquo;s really awesome about the Bitcoin network is that it protects itself from any malicious or misbehaving nodes.</p>
+</blockquote>
+<p>Full Bitcoin nodes serve multiple purposes:</p>
+<ol>
+<li>Downloading all blocks and transactions.</li>
+<li>Verifying all downloaded blocks and transactions.</li>
+<li>Let other nodes in the network to get blocks and transactions from this node&rsquo;s database.</li>
+<li>Verify and relay unconfirmed transactions.</li>
+</ol>
+<blockquote>
+<p>Often, Bitcoin node implementations come with additional features, like wallet and mining operations.
+We won&rsquo;t discuss them in this series.</p>
+</blockquote>
+<p>Thus, the Bitcoin network is designed to make these functions possible.
+Whenever something happens in the network (a new transaction is submitted, a new block is mined, a new node is connected),
+every other node in the network should know about this.
+Whenever user submits a transaction, the network must guarantee that the transaction gets to mining nodes.
+Whenever a new block is mined, the network must guarantee that the block is delivered to every node.
+That&rsquo;s the goal of the network: without relying on centralized servers, letting every member of the network know about what&rsquo;s going on an letting every node to get all the information required to build and verify latest state of the blockchain.</p>
+<h2 id="project-layout">Project Layout</h2>
+<p>I&rsquo;ll be using <a href="https://github.com/spf13/cobra/">Cobra</a> to organize files in the project.
+If you prefer other library or approach, you&rsquo;re free to use it, of course. By the end of this post, the project will have such structure:</p>
+<pre><code>├── btcd
+│   └── &lt;blockchain data&gt;
+├── btcd.conf
+├── cmd
+│   └── tinybit.go
+├── go.mod
+├── go.sum
+├── main.go
+└── protocol
+    ├── command.go
+    ├── message.go
+    ├── message_version.go
+    ├── netaddr.go
+    └── protocol.go
+</code></pre><p>As you also noticed, I&rsquo;m using Go modules in this project.
+If you have any troubles with them, please refer to <a href="https://github.com/golang/go/wiki/Modules">this comprehensive guide</a>.</p>
+<h2 id="local-bitcoin-network">Local Bitcoin Network</h2>
+<p>While coding, we won&rsquo;t use the main Bitcoin network. Instead, we&rsquo;ll run a local network.
+For this purpose I prefer <a href="https://github.com/btcsuite/btcd">btcd</a>, an alternative Bitcoin full node implementation written in Golang;
+it has simple configuration, nice logging, and the Simulation network (simnet) which is quite handy when developing for Bitcoin.
+Here&rsquo;s the <code>btcd</code> config I&rsquo;ll be using throughout this series:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-ini" data-lang="ini"><span style="color:#75715e"># btcd.conf</span>
+<span style="color:#66d9ef">[Application Options]</span>
+<span style="color:#a6e22e">datadir</span><span style="color:#f92672">=</span><span style="color:#e6db74">./btcd/data</span>
+
+<span style="color:#a6e22e">listen</span><span style="color:#f92672">=</span><span style="color:#e6db74">127.0.0.1:9333</span>
+
+<span style="color:#a6e22e">simnet</span><span style="color:#f92672">=</span><span style="color:#e6db74">1</span>
+
+<span style="color:#a6e22e">nobanning</span><span style="color:#f92672">=</span><span style="color:#e6db74">1</span>
+<span style="color:#a6e22e">debuglevel</span><span style="color:#f92672">=</span><span style="color:#e6db74">debug</span>
+</code></pre></div><ol>
+<li><code>listen</code> is the address the node will accept connections on. Default is 8333, but we&rsquo;ll  use 9333.</li>
+<li><code>simnet</code> enables Simulation network. It&rsquo;s a local network that gives us full control over mining.</li>
+<li><code>nobanning</code> disables banning of nodes for misbehavior (we&rsquo;ll experiment a lot).</li>
+<li><code>debuglevel=debug</code> enables debug level logging so we can see how the node handles our requests.</li>
+</ol>
+<p>Start <code>btcd</code> with <code>btcd --configfile ./btcd.conf</code> and let&rsquo;s start programming.</p>
+<h2 id="messages">Messages</h2>
+<p>In the Bitcoin network, nodes communicate with each other by exchanging messages.
+There are many types of messages, some of them act as requests and some of them act as responses.
+While developing a Bitcoin node, our main tasks would be:</p>
+<ol>
+<li>Implementing messages as they&rsquo;re defined in <a href="https://en.bitcoin.it/wiki/Protocol_documentation">the protocol specification</a> (it might be outdated though).</li>
+<li>Properly encoding and decoding them.</li>
+<li>Sending them over the network.</li>
+<li>Properly handling incoming messages.</li>
+</ol>
+<p>In this part we&rsquo;ll start implementing what&rsquo;s called &ldquo;version handshake&rdquo;.
+According to the specification, before two nodes can start doing something (exchanging blocks, transactions, etc.) they have to exchange their versions.
+This process looks like so.</p>
+<ol>
+<li>Node A connects to Node B.</li>
+<li>Node A sends information about its version to Node B.</li>
+<li>Node B sends information about its version back to Node A.</li>
+<li>Node B sends information &ldquo;acknowledged&rdquo; message to Node A.</li>
+<li>Node B sets version to the minimum of these 2 versions.</li>
+<li>Node A sends &ldquo;acknowledged&rdquo; message to Node B.</li>
+<li>Node A sets version to the minimum of these 2 versions.</li>
+</ol>
+<p>Eventually, the two nodes &ldquo;know&rdquo; about each other, about what protocol version is implemented and what features are supported by the other node.</p>
+<h2 id="message-structure">Message Structure</h2>
+<p>All messages use the same wrapping structure that contains general information about the message.
+In Golang, it looks like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">const</span> (
+	<span style="color:#a6e22e">checksumLength</span> = <span style="color:#ae81ff">4</span>
+   	<span style="color:#a6e22e">commandLength</span> = <span style="color:#ae81ff">12</span>
+	<span style="color:#a6e22e">magicLength</span>    = <span style="color:#ae81ff">4</span>
+)
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Message</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Magic</span>    [<span style="color:#a6e22e">magicLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Command</span>  [<span style="color:#a6e22e">commandLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Length</span>   <span style="color:#66d9ef">uint32</span>
+	<span style="color:#a6e22e">Checksum</span> [<span style="color:#a6e22e">checksumLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Payload</span>  []<span style="color:#66d9ef">byte</span>
+}
+</code></pre></div><ol>
+<li><code>Magic</code> is a four byte network identifier. We&rsquo;ll have it hardcoded.</li>
+<li><code>Command</code> is a 12 byte command name. The field has fixed size while actual command names can be shorter than 12 bytes. In such cases, zero bytes are appended. Commands cannot be longer than 12 characters.</li>
+<li><code>Length</code> is the length of message payload.</li>
+<li><code>Checksum</code> verifies the integrity of message payload. It&rsquo;s calculated as <code>SHA256(SHA256(payload))</code>.</li>
+<li><code>Payload</code> is the actual message. It&rsquo;s serialized (encoded) before being put here. That&rsquo;s why the type is a byte sequence.</li>
+</ol>
+<p>As you can see, all the fields, except <code>Payload</code>, have fixed length.
+This is crucial for deserialization of messages.
+Every message received by a node must have a magic number in its first four bytes.
+If it&rsquo;s not so (a magic is not recognized), the message is invalid and ignored.
+The same goes for all other fields.</p>
+<blockquote>
+<p>Messages serialization and deserialization is very important.
+Without proper (de)serialization it won&rsquo;t be possible to build communication between nodes.
+While the (de)serialization algorithm in the Bitcoin protocol is quite simple, Golang doesn&rsquo;t provide a library that fully implements it.
+Thus, we&rsquo;ll be busy building our own (de)serializer later in the series.
+But, in this post, we&rsquo;ll use a basic and simple approach.</p>
+</blockquote>
+<p>As you noticed, <code>Payload</code> is the only field that doesn&rsquo;t have fixed size.
+This is because messages can have different sizes, there&rsquo;s no way to standardize them.
+To make deserialization of <code>Payload</code> possible, there&rsquo;s <code>Length</code> field that stores the length of payload.</p>
+<h2 id="version-message-structure">Version Message Structure</h2>
+<p>Bitcoin nodes cannot communicate before they&rsquo;ve exchanged their versions. Thus, very first message we&rsquo;re going to send is &ldquo;version&rdquo;.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgVersion</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Version</span>     <span style="color:#66d9ef">int32</span>
+	<span style="color:#a6e22e">Services</span>    <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">Timestamp</span>   <span style="color:#66d9ef">int64</span>
+	<span style="color:#a6e22e">AddrRecv</span>    <span style="color:#a6e22e">NetAddr</span>
+	<span style="color:#a6e22e">AddrFrom</span>    <span style="color:#a6e22e">NetAddr</span>
+	<span style="color:#a6e22e">Nonce</span>       <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">UserAgent</span>   <span style="color:#a6e22e">VarStr</span>
+	<span style="color:#a6e22e">StartHeight</span> <span style="color:#66d9ef">int32</span>
+	<span style="color:#a6e22e">Relay</span>       <span style="color:#66d9ef">bool</span>
+}
+</code></pre></div><blockquote>
+<p>Please keep in mind that the order of fields in every message shouldn&rsquo;t be changed.
+Fields must go in exact same order as shown in this and all future articles.</p>
+</blockquote>
+<p>Let&rsquo;s review the fields:</p>
+<ol>
+<li><code>Version</code> specifies Bitcoin protocol version. We&rsquo;ll always use the latest version, 70015. You can find more info about protocol versions on <a href="https://bitcoin.org/en/developer-reference#protocol-versions">Protocol Versions</a> page.</li>
+<li><code>Services</code> specifies features supported by our node.
+For now, we&rsquo;ll use only value <code>1</code>, which means that our node is a Bitcoin node that can provide full blocks.
+If we add support for Segwit, we&rsquo;re going to use a different value here to let other nodes know that we support Segwit.</li>
+<li><code>Timestamp</code> current timestamp in seconds.</li>
+<li><code>AddrRecv</code>, <code>AddrFrom</code> contain information about network addresses of  the node the message is sent to and the node that sends the message.
+These fields have custom type <code>NetAddr</code>, we&rsquo;ll discuss it next.</li>
+<li><code>Nonce</code> a random number that allows to distinguish similar messages.</li>
+<li><code>UseAgent</code> is analogous to the <code>User-Agent</code> HTTP header:
+It contains information about node&rsquo;s software name and version.
+We&rsquo;ll discuss <code>VarStr</code> type next.</li>
+<li><code>StartHeight</code> holds the number of the last block received by our node. For now, we&rsquo;ll always use <code>-1</code>, which means we have no blocks
+(<code>0</code> would mean one block).</li>
+<li><code>Relay</code> tells the node we&rsquo;re sending &ldquo;version&rdquo; message to whether it should send us transactions or not.
+This flag allows to filter transactions we want to receive.
+We&rsquo;ll always use <code>true</code> here; one day, we&rsquo;ll want to receive all transactions from other nodes.</li>
+</ol>
+<h2 id="netaddr-and-varstr-types">NetAddr and VarStr types</h2>
+<p><code>Version</code> message contains two custom types, <code>NetAddr</code> and <code>VarStr</code>. Let&rsquo;s look at them:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">IPv4</span> [<span style="color:#ae81ff">4</span>]<span style="color:#66d9ef">byte</span>
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">NetAddr</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Time</span>     <span style="color:#66d9ef">uint32</span>
+	<span style="color:#a6e22e">Services</span> <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">IP</span>       <span style="color:#f92672">*</span><span style="color:#a6e22e">IPv4</span>
+	<span style="color:#a6e22e">Port</span>     <span style="color:#66d9ef">uint16</span>
+}
+</code></pre></div><ol>
+<li><code>Time</code> can be ignored for now because it&rsquo;s not used in &ldquo;version&rdquo; message.</li>
+<li><code>Services</code> is the same as in <code>Version</code>.</li>
+<li><code>IP</code> contains four bytes of an IP address. We&rsquo;re going to use IPv4 addresses only, but during serialization they&rsquo;re converted to IPv4-mapped IPv6 addresses.</li>
+<li><code>Port</code> is a port number the node is listening connections on.</li>
+</ol>
+<p>Next, <code>VarStr</code>. It&rsquo;s basically a type that contains a string and its length:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">VarStr</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Length</span> <span style="color:#66d9ef">uint8</span>
+	<span style="color:#a6e22e">String</span> <span style="color:#66d9ef">string</span>
+}
+</code></pre></div><p>To serialize a message, we need to know lengths of all fields.
+Since strings aren&rsquo;t fixed, we also need to store length of each string.</p>
+<p>One more thing to mention here is that, in the Bitcoin protocol, field <code>Length</code> of <code>VarStr</code> type has &ldquo;variable length integer&rdquo; type to save space.
+We&rsquo;ll just use 1 unsigned byte for simplicity.</p>
+<h3 id="serialization">Serialization</h3>
+<p>We now have a message to send.
+Let&rsquo;s learn to encode it so it can be successfully sent over the network and decoded by any other Bitcoin node.</p>
+<p>At current stage, we&rsquo;re having a bunch of Golang structs.
+Other Bitcoin nodes might be implemented in other languages and they won&rsquo;t definitely understand what Golang structs are.
+We need to find a way to send these structs over the network.</p>
+<p>Such structs (or classes, in other languages) encoding and decoding is called serialization and deserialization.
+There&rsquo;re different formats of serialization.
+For example, Golang comes with <code>encoding/gob</code> library that allows to serialize and deserialize Golang structs.
+Again, this is very Golang way of serialization, other languages don&rsquo;t support it.</p>
+<p>We could also use JSON, YAML, etc. to serialize the messages, but other Bitcoin nodes won&rsquo;t understand them as well as the Bitcoin specification describes a different way.</p>
+<p>The Bitcoin protocol uses a very simple serialization mechanic: we just need to take byte representation of every field and concatenate them preserving the order.
+For example (in pseudocode):</p>
+<pre><code>BYTES(Msg.Magic) + BYTES(Msg.Command) + BYTES(Msg.Length) + BYTES(Msg.Checksum) + BYTES(Msg.Payload)
+</code></pre><p>We&rsquo;ll be serializing messages in two steps:</p>
+<ol>
+<li>First, serialize the payload.</li>
+<li>Then, serialize the message.</li>
+</ol>
+<p>Before we can serialize a message, we first need to serialize its payload to be able to calculate its length and checksum.</p>
+<h3 id="message-serialization">Message Serialization</h3>
+<p>Message serialization looks like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">Message</span>) <span style="color:#a6e22e">Serialize</span>() ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">buf</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Magic</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Command</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">LittleEndian</span>, <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Length</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Checksum</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Payload</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Bytes</span>(), <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Only two things are happening here:</p>
+<ol>
+<li>Byte arrays and slices are written to the bytes buffer directly.</li>
+<li>Number types are encoded using <code>encoding/binary</code> package.
+This package does bare minimum, that&rsquo;s why we&rsquo;ll implement our own binary encoding package later.</li>
+</ol>
+<p>Notice, that we&rsquo;re using little-endian byte order, this is required by the specification.
+The only exceptions are IP address and port number, they&rsquo;re encoded using big-endian byte order.</p>
+<h3 id="serialization-of-other-types">Serialization of Other Types</h3>
+<p><code>Version</code>, <code>VarStr</code>, and <code>NetAddr</code> are serialized in absolutely identical way, except that there are no byte array fields in <code>Version</code>.</p>
+<blockquote>
+<p>I won&rsquo;t include their <code>Serialize</code> functions here for brevity.
+Please refer to <a href="https://github.com/Jeiwan/tinybit/tree/part_1">the full code</a> if you need help implementing them.</p>
+</blockquote>
+<p><code>IPv4</code> type is slightly different.
+It stores IPv4 address which must be mapped to IPv6 address when serialized.
+This simply means the four bytes of IPv4 address are prepended with 12 other bytes, like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ip</span> <span style="color:#a6e22e">IPv4</span>) <span style="color:#a6e22e">ToIPv6</span>() []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#66d9ef">return</span> append([]<span style="color:#66d9ef">byte</span>{<span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0x00</span>, <span style="color:#ae81ff">0xFF</span>, <span style="color:#ae81ff">0xFF</span>}, <span style="color:#a6e22e">ip</span>[:]<span style="color:#f92672">...</span>)
+}
+</code></pre></div><p>IPv6 addresses returned by <code>ToIPv6</code> functions are known as <a href="http://www.tcpipguide.com/free/t_IPv6IPv4AddressEmbedding-2.htm">IPv4-mapped IPv6 addresses</a>.</p>
+<h3 id="communicating-with-bitcoin-node">Communicating with Bitcoin Node</h3>
+<p>Since we&rsquo;re in the very beginning of our journey, we&rsquo;re not going to build a server node.
+Our node will be acting as a client for now and won&rsquo;t be listening for incoming connections.</p>
+<p>This is what we want to achieve at this stage:</p>
+<ol>
+<li>Connect to other node.</li>
+<li>Send &ldquo;version&rdquo; message.</li>
+<li>Receive proper response from the other node.</li>
+<li>Investigate and understand what was responded.</li>
+<li>Disconnect or get timed out.</li>
+</ol>
+<p>That&rsquo;ll be enough to begin and have something working.</p>
+<p>Let&rsquo;s begin with &ldquo;version&rdquo; message serialization:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">version</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgVersion</span>{
+    <span style="color:#a6e22e">Version</span>:   <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">Version</span>, <span style="color:#75715e">// const Version = 70015
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Services</span>:  <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">SrvNodeNetwork</span>, <span style="color:#75715e">// const SrvNodeNetwork = 1
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Timestamp</span>: <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">UTC</span>().<span style="color:#a6e22e">Unix</span>(),
+    <span style="color:#a6e22e">AddrRecv</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NetAddr</span>{
+        <span style="color:#a6e22e">Services</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">SrvNodeNetwork</span>,
+        <span style="color:#a6e22e">IP</span>:       <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewIPv4</span>(<span style="color:#ae81ff">127</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>),
+        <span style="color:#a6e22e">Port</span>:     <span style="color:#ae81ff">9333</span>,
+    },
+    <span style="color:#a6e22e">AddrFrom</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NetAddr</span>{
+        <span style="color:#a6e22e">Services</span>: <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">SrvNodeNetwork</span>,
+        <span style="color:#a6e22e">IP</span>:       <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewIPv4</span>(<span style="color:#ae81ff">127</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>),
+        <span style="color:#a6e22e">Port</span>:     <span style="color:#ae81ff">9334</span>, <span style="color:#75715e">// dummy, we&#39;re not listening
+</span><span style="color:#75715e"></span>    },
+    <span style="color:#a6e22e">Nonce</span>:       <span style="color:#a6e22e">nonce</span>(), <span style="color:#75715e">// returns a random number
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">UserAgent</span>:   <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewUserAgent</span>(), <span style="color:#75715e">// returns a user-agent as a VarStr
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">StartHeight</span>: <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>,
+    <span style="color:#a6e22e">Relay</span>:       <span style="color:#66d9ef">true</span>,
+}
+</code></pre></div><p>I hope that it&rsquo;s clear and self-explanatory.
+The only thing I&rsquo;m not sure about are <code>AddrRecv</code> and <code>AddrFrom</code> fields, they seem to be optional and not handled by <code>btcd</code> nodes. We&rsquo;ll decide on them later.</p>
+<p>Next, we&rsquo;re creating a message and serializing it:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewMessage</span>(<span style="color:#a6e22e">cmd</span>, <span style="color:#a6e22e">network</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">payload</span> <span style="color:#a6e22e">MessagePayload</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#a6e22e">serializedPayload</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">payload</span>.<span style="color:#a6e22e">Serialize</span>()
+
+	<span style="color:#a6e22e">command</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">commands</span>[<span style="color:#a6e22e">cmd</span>]
+
+	<span style="color:#a6e22e">magic</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">networks</span>[<span style="color:#a6e22e">network</span>]
+
+	<span style="color:#a6e22e">msg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Message</span>{
+		<span style="color:#a6e22e">Magic</span>:    <span style="color:#a6e22e">magic</span>,
+		<span style="color:#a6e22e">Command</span>:  <span style="color:#a6e22e">command</span>,
+		<span style="color:#a6e22e">Length</span>:   uint32(len(<span style="color:#a6e22e">serializedPayload</span>)),
+		<span style="color:#a6e22e">Checksum</span>: <span style="color:#a6e22e">checksum</span>(<span style="color:#a6e22e">serializedPayload</span>),
+		<span style="color:#a6e22e">Payload</span>:  <span style="color:#a6e22e">serializedPayload</span>,
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">msg</span>, <span style="color:#66d9ef">nil</span>
+}
+
+<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewMessage</span>(<span style="color:#e6db74">&#34;version&#34;</span>, <span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">version</span>)
+</code></pre></div><p>We&rsquo;re using a constructor function <code>NewMessage</code> that serializes message payload, validates command, network name, and builds a <code>Message</code>.</p>
+<p>Then, we need to serialize the message and actually send it:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">msgSerialized</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Serialize</span>()
+</code></pre></div><p>Yes, we&rsquo;re simply calling <code>Sertialize</code> method which we implemented earlier.</p>
+<p>Now, let&rsquo;s connect to the local btcd node:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#e6db74">&#34;127.0.0.1:9333&#34;</span>)
+<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Close</span>()
+</code></pre></div><p>And send the message right away by writing the serialized message to the TCP connection:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">msgSerialized</span>)
+</code></pre></div><p>Next, we&rsquo;re waiting for any response and printing it out:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">tmp</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">256</span>)
+
+<span style="color:#66d9ef">for</span> {
+    <span style="color:#a6e22e">n</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">tmp</span>)
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">EOF</span> {
+            <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Fatalln</span>(<span style="color:#a6e22e">err</span>)
+        }
+        <span style="color:#66d9ef">return</span>
+    }
+    <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;received: %x&#34;</span>, <span style="color:#a6e22e">tmp</span>[:<span style="color:#a6e22e">n</span>])
+}
+</code></pre></div><p>One important thing to keep in mind about TCP connections is that they&rsquo;re streams.
+TCP messages don&rsquo;t carry information about their sizes.
+This forces use to use a buffer when reading from a TCP connection.
+<code>tmp</code> is a 256 byte buffer we&rsquo;re reading any message into.</p>
+<blockquote>
+<p>Later, we&rsquo;ll need to find a better way of reading from a TCP connection because messages in the Bitcoin network can be bigger than 256 bytes.</p>
+</blockquote>
+<p>That&rsquo;s it!</p>
+<h3 id="running-and-testing">Running and Testing</h3>
+<p>Let&rsquo;s run it (ensure <code>btcd</code> is also running):</p>
+<pre><code class="language-console" data-lang="console">$ go build
+$ tinybit
+INFO[0000] received: 161c141276657273696f6e000000000071000000346bd6747d1101004d000000000000001f48b95d000000004d0000000000000000000000000000000000ffff7f000001d7724d000000000000000000000000000000000000000000000000001bd8588e3fcc097a1b2f627463776972653a302e352e302f627463643a302e31322e302f0000000001
+INFO[0000] received: 161c141276657261636b000000000000000000005df6e0e2
+</code></pre><p>What has happened?</p>
+<p>We received two messages from the <code>btcd</code> node! They are:</p>
+<ol>
+<li><code>version</code>, contains information about the other node&rsquo;s version.</li>
+<li><code>verack</code>, the &ldquo;acknowledged&rdquo; message.</li>
+</ol>
+<p>You can know this by looking at the logs of the <code>btcd</code> node:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Received version <span style="color:#f92672">(</span>agent /Satoshi:5.64/tinybit:0.0.1/, pver 70015, block -1<span style="color:#f92672">)</span> from 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Negotiated protocol version <span style="color:#ae81ff">70013</span> <span style="color:#66d9ef">for</span> peer 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>INF<span style="color:#f92672">]</span> SYNC: New valid peer 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span> <span style="color:#f92672">(</span>/Satoshi:5.64/tinybit:0.0.1/<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending version <span style="color:#f92672">(</span>agent /btcwire:0.5.0/btcd:0.12.0/, pver 70013, block 0<span style="color:#f92672">)</span> to 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> SRVR: New peer 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Connected to 127.0.0.1:55154
+<span style="color:#f92672">[</span>DBG<span style="color:#f92672">]</span> PEER: Sending verack to 127.0.0.1:55154 <span style="color:#f92672">(</span>inbound<span style="color:#f92672">)</span>
+</code></pre></div><p>As you can see, we have successfully communicated with another Bitcoin node!
+Congratulations!</p>
+<p>The <code>btcd</code> node correctly decoded our message and replied to it.
+It sent <code>version</code> and <code>verack</code> messages as part of &ldquo;version handshake&rdquo; procedure.</p>
+<p>Right now, we can also make the <code>btcd</code> node to send one more message, <code>getblocks</code>.
+Try changing <code>StartHeight</code> to <code>0</code> in <code>MsgVersion</code> and see what happens.</p>
+<h3 id="conclusion">Conclusion</h3>
+<p>That&rsquo;s enough for today!
+In the next part, we&rsquo;ll improve serialization by implementing our own <code>binary</code> package.
+We&rsquo;ll implement messages deserialization and will finish &ldquo;version handshake&rdquo;.
+And maybe something more 😉</p>
+<h3 id="links">Links</h3>
+<ol>
+<li>Full code: <a href="https://github.com/Jeiwan/tinybit/tree/part_1">Jeiwan/tinybit/part_1</a></li>
+<li><a href="https://en.bitcoin.it/wiki/Protocol_documentation#version">Bitcoin Protocol Specificaiton</a></li>
+<li><a href="http://www.tcpipguide.com/free/t_IPv6IPv4AddressEmbedding-2.htm">IPv6/IPv4 Address Embedding</a></li>
+<li><a href="https://github.com/btcsuite/btcd">btcd</a></li>
+</ol>
+<p><strong>If you have any ideas how to improve the code, please <a href="https://github.com/Jeiwan/tinybit/issues">submit an issue</a>!</strong></p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  </body>
+</html>
+

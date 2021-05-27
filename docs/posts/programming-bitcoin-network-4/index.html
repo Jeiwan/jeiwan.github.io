@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-bitcoin-network-4/">
+
+  <title>Programming Bitcoin Network, part 4 - Going the distance</title>
+  <meta property="og:title" content="Programming Bitcoin Network, part 4 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming Bitcoin Network, part 4</h1>
+      <time class="post-date" datetime="2020-01-22 00:00:00 &#43;0000">22 Jan 2020</time>
+    </header>
+
+    <p>Previous parts:</p>
+<ol>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network/">Part 1</a></li>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network-2/">Part 2</a></li>
+<li><a href="https://jeiwan.net/posts/programming-bitcoin-network-3/">Part 3</a></li>
+</ol>
+<blockquote>
+<p>DISCLAIMER. In these blog posts I describe only significant changes I made to the code
+since the last part. There are also insignificant refactorings and improvements I make
+along the way and don&rsquo;t explain them here for brevity. Please, check these links to
+see all the changes:</p>
+</blockquote>
+<blockquote>
+<p><em>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_4">Jeiwan/tinybit/part_4</a></em></p>
+</blockquote>
+<blockquote>
+<p><em>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_3...part_4#files">part3&hellip;part4</a></em></p>
+</blockquote>
+<h2 id="introduction">Introduction</h2>
+<p>In the last part, we learned to keep our node connected to another node, check liveliness
+of peers, and receive transactions.
+We also set a goal of building a mempool monitor.</p>
+<p>In this part we&rsquo;ll face some difficulties that&rsquo;ll make us change the goal.
+It turns out, building a mempool monitor requires implementing a mechanism that&rsquo;s beyond
+the scope of this series and that requires a separate series of posts.</p>
+<p>But don&rsquo;t get disappointed! We&rsquo;ll set a new goal! And let&rsquo;s first try to build a mempool monitor to see why it&rsquo;s too difficult.</p>
+<h2 id="mempool">Mempool</h2>
+<p>Mempool is a data structure that keeps all unconfirmed (i.e. not included in any block)
+transactions in memory.
+As soon a transaction was added to a block and the block was mined, the transaction gets
+removed from mempool.</p>
+<blockquote>
+<p>Miners trend to order transactions in mempool by amount of fees, but that&rsquo;s not
+mandatory. Any miner can take any transaction from mempool and put it in a block.</p>
+</blockquote>
+<p>Where mempool is stored? <strong>On every node in the network (that opted in)</strong>.
+Are there content rules that enforce the content of mempool? <strong>Nope</strong>. Every node has its own
+mempool. While there might be discrepancies between mempools of different nodes (caused
+by network latency, for example), this doesn&rsquo;t bring any danger or harm.</p>
+<p>When you create, sign, and send a new transaction, it&rsquo;s received by all other nodes in
+the network and is stored in their mempools.
+When a new block containing your transaction is mined, it gets delivered to all nodes
+and each node removes your (and other transactions from the block) from its mempool.</p>
+<blockquote>
+<p>What happens if the only node holding your transaction in its mempool crushes? Right,
+your transaction disappears.</p>
+</blockquote>
+<h3 id="mempool-in-code">Mempool in code</h3>
+<p>We&rsquo;ll keep following the &ldquo;share memory by communicating&rdquo; approach when implementing
+mempool. So, <code>Mempool</code> looks like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Mempool</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">NewBlockCh</span> <span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgBlock</span>
+    <span style="color:#a6e22e">NewTxCh</span>    <span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>
+    
+    <span style="color:#a6e22e">txs</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>
+}
+</code></pre></div><p><code>NewBlockCh</code> receives new blocks, <code>NewTxCh</code> receives new transactions, and <code>txs</code> is the
+mempool state. We have to make it a field in the structure because we&rsquo;ll want to access
+it from outside later.</p>
+<p><code>txs</code> uses transaction hashes as keys, but we haven&rsquo;t yet implemented transaction hash
+calculation. Let&rsquo;s fix this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// protocol/msg_tx.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">tx</span> <span style="color:#a6e22e">MsgTx</span>) <span style="color:#a6e22e">Hash</span>() ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+    <span style="color:#a6e22e">serialized</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">MarshalBinary</span>()    
+
+    <span style="color:#a6e22e">hash</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sha256</span>.<span style="color:#a6e22e">Sum256</span>(<span style="color:#a6e22e">serialized</span>)
+    <span style="color:#a6e22e">hash</span> = <span style="color:#a6e22e">sha256</span>.<span style="color:#a6e22e">Sum256</span>(<span style="color:#a6e22e">hash</span>[:])    
+    <span style="color:#a6e22e">txid</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hash</span>[:]    
+
+    <span style="color:#a6e22e">sort</span>.<span style="color:#a6e22e">SliceStable</span>(<span style="color:#a6e22e">txid</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">j</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">bool</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+    })    
+
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">txid</span>, <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Transaction hash is basically a double-SHA-256 hash of raw transaction. And because
+Bitcoin uses little-endian byte ordering, we need to reverse the hash to get actual
+transaction hash that can be recognized by other nodes.</p>
+<p>Now we&rsquo;re ready to run <code>Mempool</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/mempool.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">Mempool</span>) <span style="color:#a6e22e">Run</span>() {
+    <span style="color:#66d9ef">for</span> {
+        <span style="color:#66d9ef">select</span> {
+        <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">tx</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">NewTxCh</span>:
+            <span style="color:#a6e22e">hash</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Hash</span>()
+
+            <span style="color:#a6e22e">txid</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hex</span>.<span style="color:#a6e22e">EncodeToString</span>(<span style="color:#a6e22e">hash</span>)
+            <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">txs</span>[<span style="color:#a6e22e">txid</span>] = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">tx</span>
+        }
+    }
+}
+</code></pre></div><p>Running <code>Mempool</code> simply handles new transactions and blocks. When a new
+transaction comes, it&rsquo;s added to the mempool; when a new block comes, mined transactions
+are removed from the mempool.
+We&rsquo;ll add blocks handling a little bit later.</p>
+<p>No, lets add <code>Mempool</code> to <code>Node</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/node.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Node</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#f92672">...</span>
+    <span style="color:#a6e22e">mempool</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Mempool</span>
+}
+</code></pre></div><p>We&rsquo;ll have it in a private field because mempool is an internal mechanism of the node.</p>
+<p>Run the mempool:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/node.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">Run</span>(<span style="color:#a6e22e">nodeAddr</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#f92672">...</span>
+    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">monitorPeers</span>()
+    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">mempool</span>.<span style="color:#a6e22e">Run</span>()
+    <span style="color:#f92672">...</span>
+}
+</code></pre></div><p>Now we can add new transactions to the mempool:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/cmd_tx.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleTx</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tx</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>
+    <span style="color:#f92672">...</span>
+
+    <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">mempool</span>.<span style="color:#a6e22e">NewTxCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">tx</span>
+
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>That&rsquo;s actually it for the mempool. But how do we peek at the mempool when our node
+is running?</p>
+<h2 id="mempool-monitor">Mempool monitor</h2>
+<p>Currently, our node keeps everything internally and doesn&rsquo;t allow to access its state
+from the outside. Until this moment this was fine, but now we want to be able to see
+transactions in the mempool. In the end, this is what mempool monitor is for!</p>
+<h3 id="json-rpc-interface">JSON-RPC interface</h3>
+<p>We&rsquo;re going to add RPC interface to our node to allow seeing current mempool state,
+and we&rsquo;ll use JSON as data encoding algorithm.</p>
+<p>RPC stands for <em>remote procedure call</em> protocol, which basically means calling
+functions/methods on a remote server over HTTP or TCP. We&rsquo;ll use JSON-RPC protocol,
+which uses JSON to encode protocol messages. Golang has <code>net/rpc</code> and <code>net/jsonrpc</code> packages that implement the protocol, so let&rsquo;s use them.</p>
+<p>When implementing a REST interface you&rsquo;re using an HTTP server and define
+request handlers (in web-frameworks, they&rsquo;re called controllers) that handle incoming requests.
+Each handler is assigned to a separate HTTP path and method.</p>
+<p>When implementing a RPC interface you&rsquo;re defining a structure and its methods, and its
+these methods that are called remotely. <strong>RPC makes remote method calls look like they&rsquo;re
+local</strong>.</p>
+<p>Thus, we need to define a structure that we&rsquo;ll implement the interface:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// rpc/rpc.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Node</span> <span style="color:#66d9ef">interface</span> {
+    <span style="color:#a6e22e">Mempool</span>() <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>
+}
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">RPC</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">node</span> <span style="color:#a6e22e">Node</span>
+}
+</code></pre></div><p>We called the structure simply <code>RPC</code>. It needs to communicate with the node to get data
+from it. Following best Golang practices we&rsquo;re defining <code>Node</code> interface that connects
+<code>RPC</code> and <code>Node</code>, and defines what <code>Node</code> methods are available to <code>RPC</code>. As I said
+above, we need a way to read the mempool from outside the node, let&rsquo;s add a public
+method <code>Mempool</code> method:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/mempool.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">n</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">Mempool</span>() <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span> {
+    <span style="color:#a6e22e">m</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>)
+
+    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">k</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">n</span>.<span style="color:#a6e22e">mempool</span>.<span style="color:#a6e22e">txs</span> {
+        <span style="color:#a6e22e">m</span>[string(<span style="color:#a6e22e">k</span>)] = <span style="color:#a6e22e">v</span>
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">m</span>
+}
+</code></pre></div><p>The method makes a copy of the mempool and returns it. We don&rsquo;t want to return actual
+mempool because it&rsquo;s an internal part of the node. We also don&rsquo;t care if something is
+being added or removed from the mempool at this moment; we&rsquo;re just making a copy of
+what&rsquo;s in there return it.</p>
+<p>Now, let&rsquo;s add our first and only RPC method:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// rpc/rpc.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MempoolArgs</span> <span style="color:#66d9ef">interface</span>{}
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MempoolReply</span> <span style="color:#66d9ef">string</span>
+
+<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">r</span> <span style="color:#a6e22e">RPC</span>) <span style="color:#a6e22e">GetMempool</span>(<span style="color:#a6e22e">args</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">MempoolArgs</span>, <span style="color:#a6e22e">reply</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">MempoolReply</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#a6e22e">txs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">node</span>.<span style="color:#a6e22e">Mempool</span>()
+
+    <span style="color:#f92672">*</span><span style="color:#a6e22e">reply</span> = <span style="color:#a6e22e">MempoolReply</span>(<span style="color:#a6e22e">formatMempoolReply</span>(<span style="color:#a6e22e">txs</span>))
+
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><blockquote>
+<p>If you&rsquo;ve ever worked with GRPC, you&rsquo;ll notice the similarity: here, we also have to
+define custom argument types.</p>
+</blockquote>
+<p>The method simply gets a copy of mempool and writes it to <code>reply</code>. Let&rsquo;s look at the
+formatting function:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">formatMempoolReply</span>(<span style="color:#a6e22e">txs</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgTx</span>) <span style="color:#66d9ef">string</span> {
+    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">result</span> <span style="color:#66d9ef">string</span>
+
+    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">k</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">txs</span> {
+        <span style="color:#a6e22e">result</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%s\n&#34;</span>, <span style="color:#a6e22e">k</span>)
+    }
+    <span style="color:#a6e22e">result</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;Total %d transactions&#34;</span>, len(<span style="color:#a6e22e">txs</span>))
+
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">result</span>
+}
+</code></pre></div><p>It defines what we want the output of <code>GetMempool</code> call look like. In this case, it&rsquo;s a
+list of transaction IDs and a total transactions counter. We won&rsquo;t need more information,
+but feel free to add something else here.</p>
+<p>This is all we need to define the interface. No, let&rsquo;s add a way to expose it.</p>
+<blockquote>
+<p>There were no mentions of JSON. At this point we only defined an interface in pure Go code following some specific requirements.</p>
+</blockquote>
+<h3 id="json-rpc-server">JSON-RPC server</h3>
+<p>RPC server is responsible for reading data from a connection, parsing it, handling,
+and sending a reply. Pretty similar to HTTP server, but we don&rsquo;t need to define
+paths and there are no methods.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// rpc/server.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Server</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">port</span> <span style="color:#66d9ef">int</span>
+    <span style="color:#a6e22e">rpc</span>  <span style="color:#f92672">*</span><span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">Server</span>
+}
+</code></pre></div><p>Our <code>rpc.Server</code> is a wrapper around the <code>Server</code> from <code>net/rpc</code> package. It&rsquo;ll
+additionally hold a port number so we could later run the server on the specified port.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewServer</span>(<span style="color:#a6e22e">port</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">node</span> <span style="color:#a6e22e">Node</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>, <span style="color:#66d9ef">error</span>) {
+    <span style="color:#a6e22e">rpcs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">NewServer</span>()
+
+    <span style="color:#a6e22e">handlers</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">RPC</span>{<span style="color:#a6e22e">node</span>: <span style="color:#a6e22e">node</span>}
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rpcs</span>.<span style="color:#a6e22e">Register</span>(<span style="color:#a6e22e">handlers</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+    }
+
+    <span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Server</span>{
+        <span style="color:#a6e22e">port</span>: <span style="color:#a6e22e">port</span>,
+        <span style="color:#a6e22e">rpc</span>:  <span style="color:#a6e22e">rpcs</span>,
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">s</span>, <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p><code>rpcs</code> is the actual RPC server. In Golang, it&rsquo;s an abstraction that doesn&rsquo;t depend on
+transport layer: we can use TCP or HTTP, RPC server doesn&rsquo;t need to know which we choose.</p>
+<p><code>Register</code> method registers our interface <code>RPC</code> on this server. Now, the server can
+handle the <code>GetMempool</code> call we defined earlier.</p>
+<p>Final step: running the server.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">Run</span>() {
+    <span style="color:#a6e22e">l</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;:%d&#34;</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">port</span>))
+
+    <span style="color:#66d9ef">for</span> {
+        <span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">Accept</span>()
+
+        <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">ServeCodec</span>(<span style="color:#a6e22e">jsonrpc</span>.<span style="color:#a6e22e">NewServerCodec</span>(<span style="color:#a6e22e">conn</span>))
+    }
+}
+</code></pre></div><p>As you can see, we&rsquo;re simply listening on a TCP port, and as soon as there&rsquo;s a new
+connection, it&rsquo;s wrapped in a JSON-RPC codec and passed to the RPC-server.
+The codec does JSON encoding/decoding for us and the RPC-server parses RPC messages and
+calls corresponding methods.</p>
+<p>This is all we need to have an RPC server!</p>
+<p>Now, let&rsquo;s run it together with the node:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// cmd/tinybit.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+    <span style="color:#a6e22e">tinybitCmd</span>.<span style="color:#a6e22e">Flags</span>().<span style="color:#a6e22e">IntVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">jsonrpcPort</span>, <span style="color:#e6db74">&#34;jsonrpc-port&#34;</span>, <span style="color:#ae81ff">9334</span>, <span style="color:#e6db74">&#34;Port to listen JSON-RPC connections on&#34;</span>)
+    <span style="color:#f92672">...</span>
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tinybitCmd</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">cobra</span>.<span style="color:#a6e22e">Command</span>{
+    <span style="color:#a6e22e">Use</span>: <span style="color:#e6db74">&#34;tinybit&#34;</span>,
+    <span style="color:#a6e22e">RunE</span>: <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">cmd</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">cobra</span>.<span style="color:#a6e22e">Command</span>, <span style="color:#a6e22e">args</span> []<span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+        <span style="color:#a6e22e">node</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">node</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">userAgent</span>)
+
+        <span style="color:#a6e22e">rpc</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">NewServer</span>(<span style="color:#a6e22e">jsonrpcPort</span>, <span style="color:#a6e22e">node</span>)
+		
+        <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;Running JSON-RPC server on port %d&#34;</span>, <span style="color:#a6e22e">jsonrpcPort</span>)
+        <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">Run</span>()
+        <span style="color:#f92672">...</span>
+    }
+}
+</code></pre></div><p>Now, we need a client to connect to the server and call RPC methods.</p>
+<h3 id="json-rpc-client">JSON-RPC client</h3>
+<p>A general practice is to separate RPC server and client by running the server in the
+background and providing a separate CLI tool to interact with the server.
+For simplicity, we&rsquo;ll keep these things together and define a new CLI command, <code>showmempool</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// cmd/showmempool.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+    <span style="color:#a6e22e">showMempoolCmd</span>.<span style="color:#a6e22e">Flags</span>().<span style="color:#a6e22e">IntVar</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">jsonrpcPort</span>, <span style="color:#e6db74">&#34;jsonrpc-port&#34;</span>, <span style="color:#ae81ff">9334</span>, <span style="color:#e6db74">&#34;JSON-RPC port to connect to.&#34;</span>)
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">showMempoolCmd</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">cobra</span>.<span style="color:#a6e22e">Command</span>{
+    <span style="color:#a6e22e">Use</span>: <span style="color:#e6db74">&#34;showmempool&#34;</span>,
+    <span style="color:#a6e22e">RunE</span>: <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">cmd</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">cobra</span>.<span style="color:#a6e22e">Command</span>, <span style="color:#a6e22e">args</span> []<span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+        <span style="color:#75715e">// TODO: call &#39;GetMempool&#39; RPC method
+</span><span style="color:#75715e"></span>
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+    },
+}
+</code></pre></div><p>The command should call the <code>GetMempool</code> RPC method and print the response. To do this,
+we need a JSON-RPC client:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// rpc/client.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Client</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">conn</span>    <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>
+    <span style="color:#a6e22e">jsonrpc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">Client</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">port</span> <span style="color:#66d9ef">int</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Client</span>, <span style="color:#66d9ef">error</span>) {
+    <span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;127.0.0.1:%d&#34;</span>, <span style="color:#a6e22e">port</span>))
+
+    <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">jsonrpc</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">conn</span>)
+
+    <span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Client</span>{
+        <span style="color:#a6e22e">conn</span>:    <span style="color:#a6e22e">conn</span>,
+        <span style="color:#a6e22e">jsonrpc</span>: <span style="color:#a6e22e">c</span>,
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">client</span>, <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Our <code>rpc.Client</code> is a thin wrapper around a TCP connection and Golang&rsquo;s JSON-RPC client.
+We&rsquo;re saving a TCP connection because we want to close it later, even though
+<code>jsonrpc.NewClient(conn)</code> also wraps it.</p>
+<p>To call RPC methods we&rsquo;re just calling the underlying <code>jsonrpc.Call</code> passing all
+the arguments as is:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">Client</span>) <span style="color:#a6e22e">Call</span>(<span style="color:#a6e22e">serviceMethod</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">args</span> <span style="color:#66d9ef">interface</span>{}, <span style="color:#a6e22e">reply</span> <span style="color:#66d9ef">interface</span>{}) <span style="color:#66d9ef">error</span> {
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">jsonrpc</span>.<span style="color:#a6e22e">Call</span>(<span style="color:#a6e22e">serviceMethod</span>, <span style="color:#a6e22e">args</span>, <span style="color:#a6e22e">reply</span>)
+}
+</code></pre></div><p>Don&rsquo;t forget to close a connection when we&rsquo;re done:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">Client</span>) <span style="color:#a6e22e">Close</span>() {
+    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Close</span>()
+}
+</code></pre></div><p>And now we&rsquo;re ready to finish the <code>showmempool</code> command:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// cmd/showmempool.go
+</span><span style="color:#75715e"></span><span style="color:#f92672">...</span>
+    <span style="color:#a6e22e">RunE</span>: <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">cmd</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">cobra</span>.<span style="color:#a6e22e">Command</span>, <span style="color:#a6e22e">args</span> []<span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+        <span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">jsonrpcPort</span>)
+        <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Close</span>()
+
+        <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">reply</span> <span style="color:#66d9ef">string</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Call</span>(<span style="color:#e6db74">&#34;RPC.GetMempool&#34;</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">reply</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+        }
+
+        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">reply</span>)
+
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+    },
+<span style="color:#f92672">...</span>
+</code></pre></div><p>Here, we&rsquo;re calling &ldquo;RPC.GetMempool&rdquo; procedure, where &ldquo;RPC&rdquo; is the name of our interface (<code>RPC</code> structure, remember?) and &ldquo;GetMempool&rdquo; is the name of the method.</p>
+<h3 id="checking-mempool">Checking mempool</h3>
+<p>Let&rsquo;s send a transaction and see if it gets to the mempool:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">// run btcd and create default and <span style="color:#e6db74">&#39;alice&#39;</span> wallet accounts
+$ btcd --configfile ./btcd.conf
+$ btcwallet -C ./btcwallet.conf --create
+$ btcwallet -C ./btcwallet.conf
+$ btcctl -C ./btcctl-wallet.conf walletpassphrase PASSPHRASE <span style="color:#ae81ff">3600</span>
+$ btcctl -C ./btcctl-wallet.conf createnewaccount alice
+// generate some BTC
+$ btcctl -C ./btcctl-wallet.conf getnewaddress
+MINER_ADDRESS
+$ btcctl -C ./btcctl-wallet.conf getnewaddress alice
+ALICE_ADDRESS
+$ btcd --configfile ./btcd.conf --miningaddr<span style="color:#f92672">=</span>MINER_ADDRESS
+$ btcctl -C ./btcctl.conf generate <span style="color:#ae81ff">101</span>
+$ btcctl -C ./btcctl-wallet.conf getbalance
+<span style="color:#ae81ff">50</span>
+// send a transaction
+$ DEBUG<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> tinybit
+$ btcctl -C ./btcctl-wallet.conf sendtoaddress ALICE_ADDRESS 0.00001
+// check the mempool
+$ tinybit showmempool
+285a5fc96a492661809145ee7578dc570fac4da1249715f8217423aaa963bcd8
+Total <span style="color:#ae81ff">1</span> transactions
+</code></pre></div><p>Yay!</p>
+<h2 id="block-message">&lsquo;block&rsquo; message</h2>
+<p>Our node only adds to the mempool, but not removes from it. To remove transactions we
+need to know what transactions were mined. And to know this, we need to learn to receive
+and process new blocks. Let&rsquo;s begin with &lsquo;block&rsquo; message:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// protocol/block.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MsgBlock</span> <span style="color:#66d9ef">struct</span> {
+    <span style="color:#a6e22e">Version</span>    <span style="color:#66d9ef">int32</span>
+    <span style="color:#a6e22e">PrevBlock</span>  [<span style="color:#ae81ff">32</span>]<span style="color:#66d9ef">byte</span>
+    <span style="color:#a6e22e">MerkleRoot</span> [<span style="color:#ae81ff">32</span>]<span style="color:#66d9ef">byte</span>
+    <span style="color:#a6e22e">Timestamp</span>  <span style="color:#66d9ef">uint32</span>
+    <span style="color:#a6e22e">Bits</span>       [<span style="color:#ae81ff">4</span>]<span style="color:#66d9ef">byte</span>
+    <span style="color:#a6e22e">Nonce</span>      <span style="color:#66d9ef">uint32</span>
+    <span style="color:#a6e22e">TxCount</span>    <span style="color:#66d9ef">uint8</span>
+    <span style="color:#a6e22e">Txs</span>        []<span style="color:#a6e22e">MsgTx</span>
+}
+</code></pre></div><p>Let&rsquo;s review the fields:</p>
+<ol>
+<li><code>Version</code> specifies block version based on software used to mine this block.</li>
+<li><code>PrevBlock</code> is the hash of the previous block.</li>
+<li><code>MerkleRoot</code> is the root of a Merkle tree that has all block transactions as its
+nodes. Having such tree helps to check if a certain transaction included in a block
+without getting all block transactions.</li>
+<li><code>Timestamp</code> is the moment when the block was mined.</li>
+<li><code>Bits</code> contains compressed difficulty target that was used to mine this block. This field is explained below.</li>
+<li><code>Nonce</code> is a random number that was used to get the block hash that satisfies the difficulty target stored in <code>Bits</code>.</li>
+<li><code>TxCount</code> and <code>Txs</code> are the number of transactions in this block and the list of all transactions.</li>
+</ol>
+<p>First 6 fields in this exact order former block header, which is used to calculate
+block hash. We&rsquo;ll use this information later in this post.</p>
+<blockquote>
+<p>Because of <code>TxCount</code> and <code>Txs</code> fields, we have to implement a custom <code>UnmarshalBinary</code>
+method so our binary decoding library can decode raw &lsquo;block&rsquo; messages. I omitted this
+part for brevity.</p>
+</blockquote>
+<p>Now we&rsquo;re ready to handle &lsquo;block&rsquo; messages in the node:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/cmd_block.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleBlock</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">block</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgBlock</span>
+
+    <span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">block</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+    }
+
+    <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">mempool</span>.<span style="color:#a6e22e">NewBlockCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">block</span>
+
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>And let&rsquo;s tell the mempool how to process new blocks:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/mempool.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">Mempool</span>) <span style="color:#a6e22e">Run</span>() {
+    <span style="color:#66d9ef">for</span> {
+        <span style="color:#66d9ef">select</span> {
+        <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">tx</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">NewTxCh</span>:
+            <span style="color:#f92672">...</span>
+
+        <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">block</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">NewBlockCh</span>:
+            <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">tx</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">Txs</span> {
+                <span style="color:#a6e22e">hash</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Hash</span>()
+
+                <span style="color:#a6e22e">txid</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hex</span>.<span style="color:#a6e22e">EncodeToString</span>(<span style="color:#a6e22e">hash</span>)
+                delete(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">txs</span>, <span style="color:#a6e22e">txid</span>)
+            }
+        }
+    }
+}
+</code></pre></div><p>As simple as that!</p>
+<p>Let&rsquo;s reproduce the test scenario and mine a new block after sending BTC to Alice:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">...
+$ tinybit showmempool
+285a5fc96a492661809145ee7578dc570fac4da1249715f8217423aaa963bcd8
+Total <span style="color:#ae81ff">1</span> transactions
+$ btcctl -C ./btcctl.conf generate <span style="color:#ae81ff">1</span>
+$ tinybit showmempool
+Total <span style="color:#ae81ff">0</span> transactions
+</code></pre></div><p>It worked!</p>
+<p>The mempool is working, but there&rsquo;s a huuuge flaw&hellip;</p>
+<h2 id="verification">Verification</h2>
+<p>We cannot simply add to the mempool any transaction that comes and we cannot simply
+accept any block that the node receives. We have to verify all transactions an all
+blocks. And the problem is that <strong>transaction verification goes far beyond the scope of
+this blog series</strong>. To make our mempool 100% valid, we have to use the same verification
+rules as mining nodes use. We just cannot accept any transactions that are not accepted
+byt mining nodes. This protects the network from spamming: if someone submits an invalid
+transaction it&rsquo;ll get rejected quickly and won&rsquo;t get to mempools. If someone wants to
+spam the network with transactions, they have to construct valid transactions and, thus,
+they have to pay for including them in blocks. And it&rsquo;s transaction fees that prevent the network from spamming.</p>
+<p>So, to build a valid mempool we need to implement full transaction verification process.
+This includes signatures verification, which is really not difficult, but since
+signatures a part of transaction scripts, we also need to verify the scripts as well.
+And this means we need a virtual machine that executes Bitcoin scripts and that&rsquo;s fully
+compatible with Script language specification. That&rsquo;s too difficult!</p>
+<p>Thus, we&rsquo;ll set a different goal, that looks more realistic. We&rsquo;ll make this node an
+<strong>SPV-node</strong>. SPV stands for Simplified Payment Verification, which is a method for
+verification if particular transaction is included in a block. This method is used in
+lightweight Bitcoin nodes and wallets. <strong>We&rsquo;ll try to make our node a light Bitcoin node
+that builds full chain without downloading full blocks and without verifying all
+transactions.</strong>
+And we&rsquo;ll try to figure out how SPV clients validate payments by downloading only block
+headers.</p>
+<p>But since we&rsquo;ve started the mempool monitor, let&rsquo;s add some simple verification rules
+to demonstrate what they should look like. And, of course, feel free to add more (or all) of them!</p>
+<h3 id="basic-transaction-verification">Basic transaction verification</h3>
+<p>Here&rsquo;s the full list of transaction verification rules: <a href="https://en.bitcoin.it/wiki/Protocol_rules#.22tx.22_messages">&lsquo;tx&rsquo; verification rules</a>.
+Let&rsquo;s only verify that a transaction has correct number of inputs and outputs, that&rsquo;ll
+be enough for a demo:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// protocol/msg_tx.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">tx</span> <span style="color:#a6e22e">MsgTx</span>) <span style="color:#a6e22e">Verify</span>() <span style="color:#66d9ef">error</span> {
+    <span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">TxIn</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">TxInCount</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errInvalidTransaction</span>
+    }
+
+    <span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">TxOut</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">TxOutCount</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errInvalidTransaction</span>
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Now, we can verify transactions before adding them to the mempool:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/cmd_tx.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleTx</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#f92672">...</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tx</span>.<span style="color:#a6e22e">Verify</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;rejected invalid transaction %x&#34;</span>, <span style="color:#a6e22e">hash</span>)
+    }
+
+    <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">mempool</span>.<span style="color:#a6e22e">NewTxCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">tx</span>
+    <span style="color:#f92672">...</span>
+}
+</code></pre></div><h3 id="basic-block-verification">Basic block verification</h3>
+<p>For blocks verification we&rsquo;ll do a more interesting thing: let&rsquo;s check if block hash is
+correct, i.e. it matches the difficulty target.</p>
+<p>The difficulty target is a 32 byte sequence that contains a number that&rsquo;s used as a
+threshold. Miners need to find such block hash that&rsquo;s less than this number, by
+manipulating <code>Nonce</code> field. The more hashpower in the network, the lower the threshold
+and the more difficult it is to find new blocks. The <code>Bits</code> field stores
+difficulty target, and we need to unpack it before we can compare it with block hash.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// protocol/msg_block.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">blck</span> <span style="color:#a6e22e">MsgBlock</span>) <span style="color:#a6e22e">unpackBits</span>() []<span style="color:#66d9ef">byte</span> {
+    <span style="color:#a6e22e">bits</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, len(<span style="color:#a6e22e">blck</span>.<span style="color:#a6e22e">Bits</span>))
+    copy(<span style="color:#a6e22e">bits</span>, <span style="color:#a6e22e">blck</span>.<span style="color:#a6e22e">Bits</span>[:])
+    <span style="color:#a6e22e">sort</span>.<span style="color:#a6e22e">SliceStable</span>(<span style="color:#a6e22e">bits</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">j</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">bool</span> { <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span> })
+
+    <span style="color:#a6e22e">target</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">32</span>)
+    <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">32</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">bits</span>[<span style="color:#ae81ff">0</span>]
+    <span style="color:#a6e22e">target</span>[<span style="color:#a6e22e">i</span>] = <span style="color:#a6e22e">bits</span>[<span style="color:#ae81ff">1</span>]
+    <span style="color:#a6e22e">target</span>[<span style="color:#a6e22e">i</span><span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>] = <span style="color:#a6e22e">bits</span>[<span style="color:#ae81ff">2</span>]
+    <span style="color:#a6e22e">target</span>[<span style="color:#a6e22e">i</span><span style="color:#f92672">+</span><span style="color:#ae81ff">2</span>] = <span style="color:#a6e22e">bits</span>[<span style="color:#ae81ff">3</span>]
+
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">target</span>
+}
+</code></pre></div><p>First three lines allow us to reverse the content of <code>Bits</code> field without modifying the
+actual field value. Again, we need this because Bitcoin uses little-endian order for storage, and we want big-endian order here.</p>
+<p>First byte of <code>Bits</code> is the exponent. In other words, it&rsquo;s the number of digits in the
+threshold. Since block hash is a 32 byte sequence, we use 32 byte target that has <code>n</code>
+zero-bytes in the beginning, where <code>n = 32 - bits[0]</code>. The lower the threshold, the
+smaller the exponent, thus there&rsquo;s a gap. The rest three bytes of <code>Bits</code> are the first
+three bytes of the threshold number. The rest bytes are zeros.</p>
+<p>Let&rsquo;s look at a real block:
+<a href="https://blockstream.info/block/0000000000000000001138a163e7747a3c3bbb92f10607969baf481091e709c1">614 135</a>. Click &lsquo;Details&rsquo;
+button to see the block&rsquo;s <code>Bits</code> field value: <code>0x17130c78</code>.</p>
+<ol>
+<li>The byte sequence is already big-endian, we don&rsquo;t need to revert it.</li>
+<li><code>17</code> is the exponent, which is 23 in decimal system. There are 23 digits in the number.</li>
+<li><code>130c78</code> are the mantissa, or the first three bytes of the 23 byte sequence.</li>
+<li>Let&rsquo;s build the threshold:
+<pre><code>00 00 00 00 00 00 00 00 00 13 0c 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</code></pre></li>
+<li>Now let&rsquo;s see if the block hash is less than this threshold (T is threshold, H is block hash):
+<pre><code>T: 00 00 00 00 00 00 00 00 00 13 0c 78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+H: 00 00 00 00 00 00 00 00 00 11 38 a1 63 e7 74 7a 3c 3b bb 92 f1 06 07 96 9b af 48 10 91 e7 09 c1
+</code></pre></li>
+<li>It definitely is! So, this is a valid block.</li>
+</ol>
+<p>Hopefully, this is clear. I tried to explain this in simple words, if you want to get
+a more comprehensive explanation, please refer to
+<a href="https://bitcoin.org/en/developer-reference#target-nbits">&lsquo;Target nBits&rsquo; section of Bitcoin Developer Reference</a>.</p>
+<p>Now, we need to calculate block hash:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// protocol/msg_block.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">blck</span> <span style="color:#a6e22e">MsgBlock</span>) <span style="color:#a6e22e">Hash</span>() ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+    <span style="color:#a6e22e">raw</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">blck</span>.<span style="color:#a6e22e">MarshalHeader</span>()
+
+    <span style="color:#a6e22e">hash</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sha256</span>.<span style="color:#a6e22e">Sum256</span>(<span style="color:#a6e22e">raw</span>)
+    <span style="color:#a6e22e">hash</span> = <span style="color:#a6e22e">sha256</span>.<span style="color:#a6e22e">Sum256</span>(<span style="color:#a6e22e">hash</span>[:])
+    <span style="color:#a6e22e">blockHash</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hash</span>[:]
+
+    <span style="color:#a6e22e">sort</span>.<span style="color:#a6e22e">SliceStable</span>(<span style="color:#a6e22e">blockHash</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">j</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">bool</span> { <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span> })
+
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">blockHash</span>, <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>As I said above, first 6 fields of <code>MsgBlock</code> form block header, and it&rsquo;s this header
+that we need to hash to get block hash. <code>MarshalHeader</code> serializes these 6 fields (I omitted
+its code for brevity). And again, we need to reverse bytes in the hash.</p>
+<p>Finally, the block verification function:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// protocol/msg_block.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">blck</span> <span style="color:#a6e22e">MsgBlock</span>) <span style="color:#a6e22e">Verify</span>() <span style="color:#66d9ef">error</span> {
+    <span style="color:#a6e22e">target</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">blck</span>.<span style="color:#a6e22e">unpackBits</span>()
+
+    <span style="color:#a6e22e">hash</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">blck</span>.<span style="color:#a6e22e">Hash</span>()
+
+    <span style="color:#a6e22e">targetNum</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">big</span>.<span style="color:#a6e22e">NewInt</span>(<span style="color:#ae81ff">0</span>).<span style="color:#a6e22e">SetBytes</span>(<span style="color:#a6e22e">target</span>)
+    <span style="color:#a6e22e">hashNum</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">big</span>.<span style="color:#a6e22e">NewInt</span>(<span style="color:#ae81ff">0</span>).<span style="color:#a6e22e">SetBytes</span>(<span style="color:#a6e22e">hash</span>)
+
+    <span style="color:#75715e">// Block hash must be &lt;= target threshold
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">hashNum</span>.<span style="color:#a6e22e">Cmp</span>(<span style="color:#a6e22e">targetNum</span>) &gt; <span style="color:#ae81ff">0</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errInvalidBlockHash</span>
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>It basically does what we discussed above: it gets difficulty target from <code>Bits</code> field,
+calculates block hash, and checks if the hash is less or equal to the target.</p>
+<p>We can now verify blocks before processing them:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// node/cmd_block.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">no</span> <span style="color:#a6e22e">Node</span>) <span style="color:#a6e22e">handleBlock</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+    <span style="color:#f92672">...</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">block</span>.<span style="color:#a6e22e">Verify</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;rejected invalid block %x&#34;</span>, <span style="color:#a6e22e">hash</span>)
+    }
+
+    <span style="color:#a6e22e">no</span>.<span style="color:#a6e22e">mempool</span>.<span style="color:#a6e22e">NewBlockCh</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">block</span>
+    <span style="color:#f92672">...</span>
+}
+</code></pre></div><h2 id="conclusion">Conclusion</h2>
+<p>That&rsquo;s it for today! Again, this was a very long post and I hope you learned something
+new about Bitcoin from it. See you in next posts where we&rsquo;ll continue building our
+SPV-node. 😉</p>
+<h2 id="links">Links</h2>
+<ol>
+<li>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_4">Jeiwan/tinybit/part_4</a></li>
+<li>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_3...part_4#files">part3&hellip;part4</a></li>
+<li><a href="https://en.bitcoin.it/wiki/Protocol_rules#.22tx.22_messages">&lsquo;tx&rsquo; verification rules</a></li>
+<li><a href="https://en.bitcoin.it/wiki/Protocol_rules#.22block.22_messages">&lsquo;block&rsquo; verification rules</a></li>
+<li><a href="https://bitcoin.org/en/developer-reference#target-nbits">&lsquo;Target nBits&rsquo; in Bitcoin Developer Reference</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  </body>
+</html>
+

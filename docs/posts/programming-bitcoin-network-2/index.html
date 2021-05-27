@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-bitcoin-network-2/">
+
+  <title>Programming Bitcoin Network, part 2 - Going the distance</title>
+  <meta property="og:title" content="Programming Bitcoin Network, part 2 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming Bitcoin Network, part 2</h1>
+      <time class="post-date" datetime="2019-11-17 15:29:48 &#43;07">17 Nov 2019</time>
+    </header>
+
+    <p>Previous part: <a href="https://jeiwan.net/posts/programming-bitcoin-network/">here</a></p>
+<blockquote>
+<p>DISCLAIMER. In these blog posts I describe only significant changes I made to the code
+since the last part. There are also insignificant refactorings and improvements I make
+along the way and don&rsquo;t explain them here for brevity. Please, check these links to
+see all the changes:</p>
+</blockquote>
+<blockquote>
+<p><em>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_2">Jeiwan/tinybit/part_2</a></em></p>
+</blockquote>
+<blockquote>
+<p><em>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_1...part_2#files">part1&hellip;part2</a></em></p>
+</blockquote>
+<h2 id="introduction">Introduction</h2>
+<p>So far, we built a very basic Bitcoin node that connects to the network and sends <code>version</code> message.
+Before adding new feature and messages, we need to ensure that messages serialization is solid and will work for any of the new messages we&rsquo;ll add soon.</p>
+<p>Also, to be able to process messages coming from other nodes in the network we need to implement messages deserialization.
+Deserialization is opposite to serialization: we receive byte sequences from other nodes and decode them to data structures.
+However, deserialization will be slightly different because bytes are sent over a TCP connection and TCP connections are stream.</p>
+<p>At the end of this post, we&rsquo;ll implement <code>verack</code> message to ensure everything works and adding new messages is as easy as creating a Golang structure.</p>
+<p>Let&rsquo;s begin!</p>
+<h2 id="improving-messages-serialization">Improving Messages Serialization</h2>
+<p>This is how we&rsquo;re serializing messages at this stage:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">Message</span>) <span style="color:#a6e22e">Serialize</span>() ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">buf</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Magic</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Command</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">LittleEndian</span>, <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Length</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Checksum</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Payload</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Bytes</span>(), <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>I.e. we&rsquo;re implementing serialization per each message.
+But the key point is that serialization is type-based, not message-based.
+It&rsquo;s types that has unique (identical for most of them though) serialization methods, not structures.</p>
+<p>Eventually, we&rsquo;ll have more messages than types, and since messages consist of types, it makes no sense implementing message-base serialization.
+Instead, we should implement a more general way of serialization, so every new message we&rsquo;ll add in the future is automatically supported and doesn&rsquo;t require a <code>Serialize</code> method
+(unless it contains types that we haven&rsquo;t implemented serialization for yet or unless it requires unique serialization method, like the IPv4 type).</p>
+<p>What do we want to have?</p>
+<p>Golang provides interfaces, functions, and method for common encoding/serialization algorithms.
+So, it makes pretty much sense to not invent a wheel and just follow these practices.</p>
+<p>The most known and used encoding library provided by Golang is <code>encoding/json</code>.
+It provides two ways of data encoding and decoding:</p>
+<ol>
+<li>Streaming one, which is implemented by a pair of <code>Decoder</code>/<code>Encoder</code> structs that implement <code>Decode</code>/<code>Ecode</code> methods, which allow to decode raw data from input stream and write encoded data to output stream.</li>
+<li>Non-streaming one, which is implemented by well-known <code>Marshaler</code>/<code>Unmarshaler</code> interfaces, <code>MarshalJSON</code>/<code>UnmarshalJSON</code> methods, and <code>Marshal</code>/<code>Unmarshal</code> functions.
+I&rsquo;m sure you&rsquo;re already familiar with them.</li>
+</ol>
+<p>This approach is clean and straightforward, so let&rsquo;s also use it.</p>
+<p>For serialization, we&rsquo;ll implement the non-streaming approach because, before starting serializing, we already have all the data we need.</p>
+<p>For deserialization, we&rsquo;ll implement the streaming approach because the node will be reading serialized messages from a TCP connection, which is a stream.</p>
+<h3 id="binarymarshal">binary.Marshal</h3>
+<p>Create <code>binary</code> subfolder and <code>marshaler.go</code> in it:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// binary/marshaler.go
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">v</span> <span style="color:#66d9ef">interface</span>{}) ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+    	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">buf</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
+</code></pre></div><ol>
+<li>We&rsquo;re using the same function signature as in <code>json.Marshal</code>.</li>
+<li><code>buf</code> will contain encoded data.</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">val</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">v</span>.(<span style="color:#66d9ef">type</span>) {
+	<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">uint8</span>, <span style="color:#66d9ef">int32</span>, <span style="color:#66d9ef">uint32</span>, <span style="color:#66d9ef">int64</span>, <span style="color:#66d9ef">uint64</span>, <span style="color:#66d9ef">bool</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">LittleEndian</span>, <span style="color:#a6e22e">val</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+</code></pre></div><p>Basically, the only thing the function does is checking the type of <code>v</code> and choosing appropriate encoding algorithm.
+Here, we&rsquo;re using <code>binary.Write</code> (from the standard <code>encoding/binary</code> package) to encoding integers and boolean types.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">uint16</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>, <span style="color:#a6e22e">val</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+</code></pre></div><p>Next, we&rsquo;re encoding port number.
+Port number is always stored as <code>uint16</code> type and is always encoded using big-endian bytes order (unlike the integers above).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#75715e">// const (
+</span><span style="color:#75715e"></span>	<span style="color:#75715e">//      commandLength          = 12
+</span><span style="color:#75715e"></span>	<span style="color:#75715e">//      magicAndChecksumLength = 4
+</span><span style="color:#75715e"></span>	<span style="color:#75715e">// )
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">case</span> [<span style="color:#a6e22e">magicAndChecksumLength</span>]<span style="color:#66d9ef">byte</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">val</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+
+	<span style="color:#66d9ef">case</span> [<span style="color:#a6e22e">commandLength</span>]<span style="color:#66d9ef">byte</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">val</span>[:]); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+
+	<span style="color:#66d9ef">case</span> []<span style="color:#66d9ef">byte</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">val</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+</code></pre></div><p>Next, we&rsquo;re encoding magic bytes, checksum, command, and bytes slice.
+All arrays and byte slices are serialized identically: bytes are written to the buffer directly, there&rsquo;s no need to encode them additionally.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">string</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>([]byte(<span style="color:#a6e22e">val</span>)); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+        }
+</code></pre></div><p>Strings are converted to bytes slices and are written to the buffer directly.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Marshaler</span>:
+		<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">val</span>.<span style="color:#a6e22e">MarshalBinary</span>()
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">b</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+        }
+</code></pre></div><p>Here&rsquo;s an interesting part: if the type implements <code>Marshaler</code> interface, call <code>MarshalBinary</code> method to serialize it.
+We discussed this earlier: we need custom serialization algorithms for some types.
+And <code>Marshaler</code> interface is as simple as:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Marshaler</span> <span style="color:#66d9ef">interface</span> {
+	<span style="color:#a6e22e">MarshalBinary</span>() ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>)
+}
+</code></pre></div><p>Final part of <code>Marshal</code> function:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">default</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">v</span>).<span style="color:#a6e22e">Kind</span>() <span style="color:#f92672">==</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Struct</span> {
+			<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">marshalStruct</span>(<span style="color:#a6e22e">v</span>)
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+				<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+			}
+
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">b</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+				<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+			}
+
+			<span style="color:#66d9ef">break</span>
+		}
+
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;unsupported type %s&#34;</span>, <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">TypeOf</span>(<span style="color:#a6e22e">v</span>).<span style="color:#a6e22e">String</span>())
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Bytes</span>(), <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Since <code>struct</code> is not a type, we need to use a more advanced way to checks if <code>v</code> is a structure.
+Standard <code>reflect</code> package really helps here.</p>
+<p>Ho do we serialize structs?
+Well, structures are collections of fields, so we need to iterate over all fields, serialize each of them separately, and concatenates the result.
+This can be done in a nice and small function:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">marshalStruct</span>(<span style="color:#a6e22e">v</span> <span style="color:#66d9ef">interface</span>{}) ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">buf</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>
+	<span style="color:#a6e22e">vv</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">v</span>)
+
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">vv</span>.<span style="color:#a6e22e">NumField</span>(); <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+		<span style="color:#a6e22e">s</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Indirect</span>(<span style="color:#a6e22e">vv</span>.<span style="color:#a6e22e">Field</span>(<span style="color:#a6e22e">i</span>)).<span style="color:#a6e22e">Interface</span>())
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">TypeOf</span>(<span style="color:#a6e22e">v</span>).<span style="color:#a6e22e">Field</span>(<span style="color:#a6e22e">i</span>).<span style="color:#a6e22e">Name</span>
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;failed to marshal field %s: %v&#34;</span>, <span style="color:#a6e22e">f</span>, <span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">s</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+		}
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Bytes</span>(), <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Again, we&rsquo;re using <code>reflect</code> package to get the number of fields in a struct and get each field separately.
+Passing a struct to <code>reflect.ValueOf</code> will return the struct itself but as a <code>reflect.Value</code> type, which we can reflect on. 😉</p>
+<p>That&rsquo;s it for serialization! Now, we don&rsquo;t need <code>Serialize</code> methods anymore on <code>Message</code> and <code>MsgVersion</code> types.
+They can be removed.
+Also, <code>ToIPv6</code> method of <code>IPv4</code> struct now should be changed to <code>MarshalBinary() ([]byte, error)</code> – this is now a custom implementation of <code>binary.Marshaler</code>.</p>
+<p>Now, we can use <code>binary.Marshal</code> to serialize messages:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewMessage</span>(<span style="color:#e6db74">&#34;version&#34;</span>, <span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">version</span>)
+<span style="color:#a6e22e">msgSerialized</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">msg</span>)
+</code></pre></div><h2 id="implementing-deserialization">Implementing Deserialization</h2>
+<p>Currently, our node can receive messages from other nodes but it cannot decode them.
+It just prints out raw bytes.
+But a real node has to know what messages it receives, validate them, and handle them.
+To achieve this we need to implement messages deserialization, i.e. reading of raw bytes from a TCP connection (already implemented) and converting them to message structures.</p>
+<p>Deserialization is opposite to serialization: we take a bytes sequence and convert it to a structure by:</p>
+<ol>
+<li>splitting it into pieces (one piece per struct field),</li>
+<li>decoding (where necessary),</li>
+<li>and assigning decoded values to struct fields.</li>
+</ol>
+<p>This implies that <strong>we must have full message</strong> before deserializing it.
+But there&rsquo;s a problem: <strong>TCP connections are streams</strong>.
+When reading from a TCP connection, there is just a continuous sequence of bytes, TCP doesn&rsquo;t support splitting of this sequence into separate messages.
+If a node sends us multiple messages at the same time, we&rsquo;ll receive them as one long sequence of bytes.
+But we need to get something complete and discrete before starting deserialization.</p>
+<p>This is where proper network protocol design comes into play.</p>
+<p>Let&rsquo;s take a look at <code>Message</code> struct:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Message</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Magic</span>    [<span style="color:#a6e22e">magicLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Command</span>  [<span style="color:#a6e22e">commandLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Length</span>   <span style="color:#66d9ef">uint32</span>
+	<span style="color:#a6e22e">Checksum</span> [<span style="color:#a6e22e">checksumLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Payload</span>  []<span style="color:#66d9ef">byte</span>
+}
+</code></pre></div><p>As you already know, this structure is used to wrap any message.
+So, basically, this structure is a message header that contains meta information about the message.</p>
+<blockquote>
+<p>Pretty much similar to &lt;head&gt; and &lt;body&gt; HTML tags.</p>
+</blockquote>
+<p>Also, as you can see, all the fields (besides <code>Payload</code>) have fixed size.
+This means, that when our node receives something from a TCP connection, <strong>we should expect a message header</strong>.
+If it&rsquo;s not a message header, then we don&rsquo;t know what it is and we don&rsquo;t support it.
+And since message header has fixed size, we can read exactly <code>MsgHeaderLength</code> bytes from a TCP connection!</p>
+<p>After our node has received, deserialized, and validated a message header, it knows:</p>
+<ol>
+<li>What network this message is for.</li>
+<li>What command it is.</li>
+<li>What&rsquo;s the length of the message payload.</li>
+</ol>
+<p>And since our node knows the length of message payload, it can start reading and decoding it!</p>
+<p>Let&rsquo;s implement this!</p>
+<h3 id="binarydecoder">binary.Decoder</h3>
+<p>First, let&rsquo;s define <code>Decoder</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Decoder</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">r</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">Reader</span>
+}
+</code></pre></div><p><code>Decoder</code> does only one thing: it reads and decodes data from a stream (<code>io.Reader</code>).
+It implements only one method: <code>Decode</code>, which is basically a function that:</p>
+<ol>
+<li>Takes a pointer to a value of any supported type.</li>
+<li>Checks the type of the pointer.</li>
+<li>Reads proper number of bytes from the stream.</li>
+<li>Properly decodes the bytes.</li>
+<li>Saves the decoded value at the passed pointer.</li>
+</ol>
+<p>Here&rsquo;s what it looks like:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#a6e22e">Decoder</span>) <span style="color:#a6e22e">Decode</span>(<span style="color:#a6e22e">v</span> <span style="color:#66d9ef">interface</span>{}) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">val</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">v</span>.(<span style="color:#66d9ef">type</span>) {
+	<span style="color:#66d9ef">case</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">bool</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">decodeBool</span>(<span style="color:#a6e22e">val</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+		}
+</code></pre></div><p>And <code>decodeBool</code> is:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#a6e22e">Decoder</span>) <span style="color:#a6e22e">decodeBool</span>(<span style="color:#a6e22e">out</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">bool</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">r</span>, <span style="color:#ae81ff">1</span>)
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">lr</span>, <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">LittleEndian</span>, <span style="color:#a6e22e">out</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>I use <code>io.LimitReader</code> here to read just a fixed amount of bytes from the connection.
+In this particular case, only one byte is read, because <code>bool</code> type occupies only one byte.
+Then, <code>binary.Read</code> (from the standard <code>encoding/binary</code> package) is used to read a byte, deserialize it, and put at the pointer passed as the function argument.</p>
+<p>The same approach is applied to all other integer types.
+There are only two differences:</p>
+<ol>
+<li>Amount of bytes read (1 for <code>uint8</code>, 2 for <code>uint16</code>, etc.).</li>
+<li>Order of bytes (big-endian of all integers except <code>uint16</code>, which uses little-endian order).</li>
+</ol>
+<p>Now, let&rsquo;s move to byte arrays:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">case</span> <span style="color:#f92672">*</span>[<span style="color:#a6e22e">magicAndChecksumLength</span>]<span style="color:#66d9ef">byte</span>:
+		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">decodeArray</span>(<span style="color:#a6e22e">magicAndChecksumLength</span>, <span style="color:#a6e22e">val</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+		}
+
+	<span style="color:#66d9ef">case</span> <span style="color:#f92672">*</span>[<span style="color:#a6e22e">commandLength</span>]<span style="color:#66d9ef">byte</span>:
+		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">decodeArray</span>(<span style="color:#a6e22e">commandLength</span>, <span style="color:#a6e22e">val</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+		}
+</code></pre></div><p>And:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#a6e22e">Decoder</span>) <span style="color:#a6e22e">decodeArray</span>(<span style="color:#a6e22e">len</span> <span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">out</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">r</span>, <span style="color:#a6e22e">len</span>).<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">out</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Decoding byte arrays is simple: we just need to read a bytes sequence of specific length and put it at the pointer.
+No need to decode them.</p>
+<p>Notice that we can deserialize arrays, but we cannot have a general way of deserialization of slices.
+There&rsquo;s no way to know the length of slice before getting the value of slice.
+The same goes for strings.</p>
+<p>But, as you remember, we&rsquo;re using a string to store user agent.
+Thus, we need a way to have custom deserialization algorithms.
+This can be done easily by use of <code>Unmarshaler</code> interface:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Unmarshaler</span> <span style="color:#66d9ef">interface</span> {
+	<span style="color:#a6e22e">UnmarshalBinary</span>(<span style="color:#a6e22e">r</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">Reader</span>) <span style="color:#66d9ef">error</span>
+}
+</code></pre></div><p>Similarly to <code>Marshaler</code>, it describes only one method, which does only one thing: deserializes a custom data type.
+Unlike <code>MarshalBinary()</code>, this method takes a stream as its only argument.</p>
+<p>Now we can decode <code>Unmarshaler</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Unmarshaler</span>:
+		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">val</span>.<span style="color:#a6e22e">UnmarshalBinary</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">r</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+		}
+</code></pre></div><p>Now, the final part: structs.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#66d9ef">default</span>:
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">v</span>).<span style="color:#a6e22e">Kind</span>() <span style="color:#f92672">==</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Ptr</span> <span style="color:#f92672">&amp;&amp;</span>
+			<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">v</span>).<span style="color:#a6e22e">Elem</span>().<span style="color:#a6e22e">Kind</span>() <span style="color:#f92672">==</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Struct</span> {
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">decodeStruct</span>(<span style="color:#a6e22e">v</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+				<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+			}
+			<span style="color:#66d9ef">break</span>
+		}
+
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;unsupported type %s&#34;</span>, <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">TypeOf</span>(<span style="color:#a6e22e">v</span>).<span style="color:#a6e22e">String</span>())
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Pretty similar to what we did in serialization.
+But here we&rsquo;re checking if this is a pointer to a struct, not simply a struct.
+This is because <code>Decode</code> method must always receive a pointer as its only argument.</p>
+<p><code>decodeStruct</code> also looks familiar:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#a6e22e">Decoder</span>) <span style="color:#a6e22e">decodeStruct</span>(<span style="color:#a6e22e">v</span> <span style="color:#66d9ef">interface</span>{}) <span style="color:#66d9ef">error</span> {
+	<span style="color:#a6e22e">val</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Indirect</span>(<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">v</span>))
+
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">val</span>.<span style="color:#a6e22e">NumField</span>(); <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">Decode</span>(<span style="color:#a6e22e">val</span>.<span style="color:#a6e22e">Field</span>(<span style="color:#a6e22e">i</span>).<span style="color:#a6e22e">Addr</span>().<span style="color:#a6e22e">Interface</span>()); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+		}
+
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>First, we need to get the value of the struct by its pointer.
+<code>ValueOf(v)</code> returns a pointer to the struct, and <code>reflect.Indirect()</code> returns the value that the pointer points to, which is the actual struct.
+Then, we iterate over struct&rsquo;s fields and decode each of them separately.
+And this time we&rsquo;re calling <code>Addr()</code> on the field to get a pointer to it.</p>
+<h3 id="handling-version-message">Handling &lsquo;version&rsquo; message</h3>
+<p>Alright, we have everything we need to start deserializing and handling messages.
+Let&rsquo;s review how our node processes messages:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">tmp</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">256</span>)
+
+<span style="color:#66d9ef">for</span> {
+	<span style="color:#a6e22e">n</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">tmp</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">EOF</span> {
+			<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Fatalln</span>(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#66d9ef">return</span>
+	}
+	<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;received: %x&#34;</span>, <span style="color:#a6e22e">tmp</span>[:<span style="color:#a6e22e">n</span>])
+}
+</code></pre></div><p>We use a buffer with the length of 256 bytes to read all incoming data to.
+The length is arbitrary, I chose the number so that &lsquo;version&rsquo; message fits.
+If we want to correctly receive, deserialize, and handle message, we have to use a different size since Bitcoin messages have dynamic length.
+Our node also must be able to correctly decode messages of any length.</p>
+<p>Luckily, we already have everything we need.</p>
+<p>First, the buffer length. As we already discussed, every message has a header of fixed size.
+If we want to read a message, we have to read its header first.
+This means, that the buffer size should be equal to the size of the message header!</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// MsgHeaderLength = magicLength + commandLength + checksumLength + 4
+</span><span style="color:#75715e">// 4 - payload length value
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">tmp</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgHeaderLength</span>)
+</code></pre></div><p>Now, after receiving a message header, we can try to deserialize it.
+Before doing this though, we have to split <code>Message</code> structure into two structures:</p>
+<ol>
+<li><code>MessageHeader</code>, which will include all the fields of <code>Message</code> except <code>Payload</code>.</li>
+<li><code>Message</code>, which will embed <code>MessageHeader</code> and include <code>Payload</code> field.</li>
+</ol>
+<p>Like so:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MessageHeader</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Magic</span>    [<span style="color:#a6e22e">magicLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Command</span>  [<span style="color:#a6e22e">commandLength</span>]<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Length</span>   <span style="color:#66d9ef">uint32</span>
+	<span style="color:#a6e22e">Checksum</span> [<span style="color:#a6e22e">checksumLength</span>]<span style="color:#66d9ef">byte</span>
+}
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Message</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">MessageHeader</span>
+	<span style="color:#a6e22e">Payload</span> []<span style="color:#66d9ef">byte</span>
+}
+</code></pre></div><p>Now, we can try to deserialize the header:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">msgHeader</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewReader</span>(<span style="color:#a6e22e">tmp</span>[:<span style="color:#a6e22e">n</span>])).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">msgHeader</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;invalid header: %+v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	<span style="color:#66d9ef">continue</span>
+}
+</code></pre></div><p>If header decoding fails, the node will just continue reading from the connection.</p>
+<p>After the header was decoded, we must validate it.
+As of now, we&rsquo;ll just validate magic and command:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">mh</span> <span style="color:#a6e22e">MessageHeader</span>) <span style="color:#a6e22e">Validate</span>() <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">mh</span>.<span style="color:#a6e22e">HasValidMagic</span>() {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;invalid magic: %x&#34;</span>, <span style="color:#a6e22e">mh</span>.<span style="color:#a6e22e">Magic</span>)
+	}
+
+	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">mh</span>.<span style="color:#a6e22e">HasValidCommand</span>() {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;invalid command: %+v&#34;</span>, <span style="color:#a6e22e">mh</span>.<span style="color:#a6e22e">CommandString</span>())
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+
+<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">mh</span> <span style="color:#a6e22e">MessageHeader</span>) <span style="color:#a6e22e">HasValidCommand</span>() <span style="color:#66d9ef">bool</span> {
+	<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">commands</span>[<span style="color:#a6e22e">mh</span>.<span style="color:#a6e22e">CommandString</span>()]
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ok</span>
+}
+
+<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">mh</span> <span style="color:#a6e22e">MessageHeader</span>) <span style="color:#a6e22e">HasValidMagic</span>() <span style="color:#66d9ef">bool</span> {
+	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">mh</span>.<span style="color:#a6e22e">Magic</span> {
+	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">MagicMainnet</span>, <span style="color:#a6e22e">MagicSimnet</span>:
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span>
+}
+</code></pre></div><p>If the header is correct, we can start handling the command:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">msgHeader</span>.<span style="color:#a6e22e">CommandString</span>() {
+<span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;version&#34;</span>:
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">handleVersion</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">msgHeader</span>, <span style="color:#a6e22e">conn</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;failed to handle &#39;version&#39;: %+v&#34;</span>, <span style="color:#a6e22e">err</span>)
+		<span style="color:#66d9ef">continue</span>
+	}
+}
+</code></pre></div><p>Different handlers will use different message structures to decode messages, that&rsquo;s why, at this stage, we&rsquo;re only decoding the header.</p>
+<p>As you remember, this whole procedure of versions exchanging is called &ldquo;version handshake&rdquo;.
+Its purpose is to let nodes know about each other and about their software and its version.
+After nodes have exchanged versions, they save each other to theirs peers lists.
+But as of now, we&rsquo;re not going to do this.
+Instead, we&rsquo;ll just send a &lsquo;verack` message, which confirms that our node has received &lsquo;version&rsquo; messages from the other node.</p>
+<p>First, our node has to decode message payload:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">handleVersion</span>(<span style="color:#a6e22e">header</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MessageHeader</span>, <span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadWriter</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">version</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">MsgVersion</span>
+
+	<span style="color:#a6e22e">lr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">LimitReader</span>(<span style="color:#a6e22e">conn</span>, int64(<span style="color:#a6e22e">header</span>.<span style="color:#a6e22e">Length</span>))
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">NewDecoder</span>(<span style="color:#a6e22e">lr</span>).<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">version</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+</code></pre></div><p>Here we&rsquo;re decoding payload, which has type <code>[]byte</code>, as you remember.
+And we do can decode it because the header has <code>Length</code> field, which specifies the amount of bytes we need to read.</p>
+<blockquote>
+<p>Here, we would also need to validate the payload and, if its correct, save the other node to our list of peers.
+But we won&rsquo;t do this for now (this blog post is already long enough 😉).</p>
+</blockquote>
+<p>Next, we&rsquo;ll send a &lsquo;verack&rsquo; message in reply:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">	<span style="color:#a6e22e">verack</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">protocol</span>.<span style="color:#a6e22e">NewVerackMsg</span>(<span style="color:#e6db74">&#34;simnet&#34;</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">verack</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">msg</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>&lsquo;verack&rsquo; is just a message with empty payload:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewVerackMsg</span>(<span style="color:#a6e22e">network</span> <span style="color:#66d9ef">string</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#a6e22e">magic</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Networks</span>[<span style="color:#a6e22e">network</span>]
+	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;unsupported network &#39;%s&#39;&#34;</span>, <span style="color:#a6e22e">network</span>)
+	}
+
+	<span style="color:#a6e22e">head</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">MessageHeader</span>{
+		<span style="color:#a6e22e">Magic</span>:    <span style="color:#a6e22e">magic</span>,
+		<span style="color:#a6e22e">Command</span>:  <span style="color:#a6e22e">newCommand</span>(<span style="color:#e6db74">&#34;verack&#34;</span>),
+		<span style="color:#a6e22e">Length</span>:   <span style="color:#ae81ff">0</span>,
+		<span style="color:#a6e22e">Checksum</span>: <span style="color:#a6e22e">checksum</span>([]<span style="color:#66d9ef">byte</span>{}),
+	}
+
+	<span style="color:#a6e22e">msg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Message</span>{
+		<span style="color:#a6e22e">MessageHeader</span>: <span style="color:#a6e22e">head</span>,
+		<span style="color:#a6e22e">Payload</span>:       []<span style="color:#66d9ef">byte</span>{},
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">msg</span>, <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><p>Let&rsquo;s see what&rsquo;s in the logs of the other node:</p>
+<pre><code>[DBG] PEER: Received verack from 127.0.0.1:63449 (inbound)
+[DBG] SRVR: New peer 127.0.0.1:63449 (inbound)
+</code></pre><p>Good!
+It has received our &lsquo;verack&rsquo; message and added as to its peers list!</p>
+<p>That&rsquo;s it for today!
+If you missed something, please check the full code <a href="https://github.com/Jeiwan/tinybit/tree/part_2">here</a>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Ooph!
+It took longer this time. But have layed out a solid foundation that&rsquo;ll let concentrate on messages handling without caring about messages encoding/decoding (there will be bugs – remember this tweet 😉).</p>
+<p>In the next part, we&rsquo;ll make a list of peers and start saving nodes in it.
+Also, we&rsquo;re already very close to start implementing blockchain synchronization.
+So maybe next time we&rsquo;ll manage to get blocks from the network and save them to a DB.</p>
+<p>See you!</p>
+<h3 id="links">Links</h3>
+<ol>
+<li>Full code of this part: <a href="https://github.com/Jeiwan/tinybit/tree/part_2">Jeiwan/tinybit/part_2</a></li>
+<li>Changes since the previous part: <a href="https://github.com/Jeiwan/tinybit/compare/part_1...part_2#files">part1&hellip;part2</a></li>
+</ol>
+<p><strong>If you have any ideas how to improve the code, please <a href="https://github.com/Jeiwan/tinybit/issues">submit an issue</a>!</strong></p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  <script src="/js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+  </body>
+</html>
+
