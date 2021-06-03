@@ -24,3 +24,7 @@ disqusShortname = ""
   [markup.highlight]
     noClasses=false
     style=""
+
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
