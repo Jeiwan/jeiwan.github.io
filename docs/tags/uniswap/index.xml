@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Uniswap on Going the distance</title>
+    <link>https://jeiwan.net/tags/uniswap/</link>
+    <description>Recent content in Uniswap on Going the distance</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 07 Jun 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/uniswap/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Programming Defi: Uniswap. Part 1</title>
+      <link>https://jeiwan.net/posts/programming-defi-uniswap-1/</link>
+      <pubDate>Mon, 07 Jun 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-defi-uniswap-1/</guid>
+      <description>Photo by Piret Ilver on Unsplash
+Introduction The best way to learn something is to teach others. Second best way to learn something is to do it yourself. I decided to combine the two ways and teach myself and you how to program DeFi services on Ethereum (and any other blockchains based on EVM – Ethereum Virtual Machine).
+Our main focus will be on how those services work, we&amp;rsquo;ll try to understand the economical mechanics that make them what they are (and they all based on economical mechanics).</description>
+    </item>
+    
+  </channel>
+</rss>

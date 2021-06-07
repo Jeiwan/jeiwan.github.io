@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-defi-uniswap-1/">
+
+  <title>Programming Defi: Uniswap. Part 1 - Going the distance</title>
+  <meta property="og:title" content="Programming Defi: Uniswap. Part 1 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" integrity="sha384-Um5gpz1odJg5Z4HAmzPtgZKdTBHZdw8S29IecapCSB31ligYPhHQZMIlWLYQGVoc" crossorigin="anonymous">
+  
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/js/charts.js"></script>
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming Defi: Uniswap. Part 1</h1>
+      <time class="post-date" datetime="2021-06-07 00:00:00 &#43;0000">07 Jun 2021</time>
+    </header>
+
+    <p><img src="/images/piret-ilver-98MbUldcDJY-unsplash.jpg" alt="Scale">
+Photo by
+<a href="https://unsplash.com/@saltsup?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Piret Ilver</a>
+on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p>The best way to learn something is to teach others.
+Second best way to learn something is to do it yourself.
+I decided to combine the two ways and teach myself and you how to program DeFi services on Ethereum (and any other blockchains based on EVM – Ethereum Virtual Machine).</p>
+<p>Our main focus will be on how those services work, we&rsquo;ll try to understand the economical mechanics that
+make them what they are (and they all based on economical mechanics).
+We&rsquo;ll find out, decompose, learn, and build their core mechanisms.</p>
+<p>However, we&rsquo;ll only work on smart contracts: building front-end for smart-contracts is also a big and interesting task, but it&rsquo;s out of the scope of this series.</p>
+<p>Let&rsquo;s begin our journey with Uniswap.</p>
+<blockquote>
+<p>You can find full source codes in this repo:<br>
+<a href="https://github.com/Jeiwan/zuniswap/tree/part_1">https://github.com/Jeiwan/zuniswap/tree/part_1</a></p>
+</blockquote>
+<h2 id="different-versions-of-uniswap">Different versions of Uniswap</h2>
+<p>As of June 2021, three versions of Uniswap have been launched.</p>
+<p>First version was launched in November 2018 and it allowed only swaps between ether and a token.
+Chained swaps were also possible to allow token-token swaps.</p>
+<p>V2 was launched in March 2020 and it was a huge improvement of V1 that allowed direct swaps between any ERC20 tokens, as well as chained swaps between any pairs.</p>
+<p>V3 was launched in May 2021 and it significantly improved capital efficiency, which allowed liquidity
+providers to remove a bigger portion of their liquidity from pools and still keep getting the same rewards
+(or squeeze the capital in smaller price ranges and get up to 4000x of profits).</p>
+<p>In this series, we&rsquo;ll dig into each of the versions and will try to build simplified copies of each of them from scratch.</p>
+<p><strong>This blog post specifically focuses on Uniswap V1</strong> to respect the chronological order and better
+understand how previous solutions were improved.</p>
+<h2 id="what-is-uniswap">What is Uniswap?</h2>
+<p>In simple terms, <a href="https://uniswap.org/">Uniswap</a> is a decentralized exchange (DEX) that aims to be an
+alternative to centralized exchanges.
+It&rsquo;s running on the Ethereum blockchain and it&rsquo;s fully automated: there are no admins, managers, or users with privileged access.</p>
+<p>On the lower lever, it&rsquo;s an algorithm that allows to make pools, or token pairs, and fill them with liquidity to let users exchange tokens using this liquidity.
+Such algorithm is called <em>automated market maker</em> or <em>automated liquidity provider</em>.</p>
+<p>Let&rsquo;s learn more about market makers.</p>
+<p>Market makers are entities that provide liquidity (trading assets) to markets.
+Liquidity is what makes trades possible: if you want to sell something but no one is buying it, there won&rsquo;t be a trade.
+Some trading pairs have high liquidity (e.g. BTC-USDT), but some have low or no liquidity at all (like some scammy or shady altcoins).</p>
+<p>A DEX must have enough (or a lot of) liquidity to function and serve as an alternative to centralized exchanges.
+One way to get that liquidity is for the developers of the DEX to put their own money (or money of their investors) in it and become market makers.
+However, this is not a realistic solution because they would need a lot of money to provide enough liquidity for all pairs, considering that DEXes allow exchanges between any tokens.
+Moreover, this would make the DEX centralized: as the only market makers, the developers would have a lot of power in their hands.</p>
+<p>A better solution is to allow <strong>anyone to be a market maker</strong>, and this is what makes Uniswap an automated market maker: any user can deposit their funds into a trading pair (and benefit from that).</p>
+<p>Another important role that Uniswap plays is <strong>price oracle</strong>.
+Price oracles are services that fetch token prices from centralized exchanges and provide them to smart
+contracts – such prices are usually hard to manipulate because volumes on centralized exchanges are often very big.
+However, while not having that big volumes, Uniswap can still serve as a price oracle.</p>
+<p>Uniswap acts as a secondary market that attracts arbitrageurs who make profit on differences in prices
+between Uniswap and centralized exchanges.
+This makes prices on Uniswap pools as close as possible to those on bigger exchanges.
+And that wouldn&rsquo;t have been possible without proper pricing and reserves balancing functions.</p>
+<h2 id="constant-product-market-maker">Constant product market maker</h2>
+<p>You probably have already heard this definition, let&rsquo;s see what it means.</p>
+<p>Automated market maker is a general term that embraces different decentralized market maker algorithms.
+The most popular ones (and those that gave birth to the term) are related to prediction markets - markets that allow to make profit on predictions.
+Uniswap and other on-chain exchanges are a continuation of those algorithms.</p>
+<p>At the core of Uniswap is the constant product function:
+$$x * y = k$$
+Where \(x\) is ether reserve, \(y\) is token reserve (or vice versa), and \(k\) is a constant.
+Uniswap requires that \(k\) remains the same no matter how much of reserves of \(x\) or \(y\) there are.
+When you trade ether for tokens you deposit your ethers into the contract and get some amount of tokens in return.
+Uniswap ensures that after each trade \(k\) remains the same (this is not really true, we&rsquo;ll see later why).</p>
+<p>This formula is also responsible for pricing calculations, and we&rsquo;ll soon see how.</p>
+<h2 id="smart-contracts-development">Smart contracts development</h2>
+<p>To really understand how Uniswap works we&rsquo;ll build a copy of it.
+We&rsquo;ll write smart contracts in <a href="https://soliditylang.org">Solidity</a> and will use <a href="https://hardhat.org">HardHat</a> as our development environment.
+HardHat is a really nice tool that greatly simplifies development, testing, and deployment of smart contracts.
+Highly recommended!</p>
+<p>If you&rsquo;re new to smart contracts development, I highly recommend you to finish <a href="https://cryptozombies.io/en/course/">this course</a> (at least the basic path) – that&rsquo;ll be a huge help to you!</p>
+<h3 id="setting-up-the-project">Setting up the project</h3>
+<p>First, create an empty directory (I called mine <code>zuniswap</code>), <code>cd</code> into it and install HardHat:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ mkdir zuniswap <span class="o">&amp;&amp;</span> <span class="nb">cd</span> <span class="nv">$_</span>
+$ yarn add -D hardhat
+</code></pre></div><p>We&rsquo;ll also need a token contract, let&rsquo;s use ERC20 contracts provided by <a href="https://openzeppelin.com/">OpenZeppelin</a>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ yarn add -D @openzeppelin/contracts
+</code></pre></div><p>Initialize a HardHat project and remove everything from <code>contract</code>, <code>script</code>, and <code>test</code> folders.</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$ yarn hardhat
+...follow the instructions...
+$ rm ...
+$ tree -a
+.
+├── .gitignore
+├── contracts
+├── hardhat.config.js
+├── scripts
+└── <span class="nb">test</span>
+</code></pre></div><p>Final touch: we&rsquo;ll use the latest version of Solidity, which is 0.8.4 at the time of writing .
+Open your <code>hardhat.config.js</code> and update Solidity version at the bottom of it.</p>
+<h3 id="token-contract">Token contract</h3>
+<p>Uniswap V1 supports only ether-token swaps.
+To make them possible we need an ERC20 token contract.
+Let&rsquo;s write it!</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// contracts/Token.sol
+</span><span class="c1"></span><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="s">&#34;@openzeppelin/contracts/token/ERC20/ERC20.sol&#34;</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">Token</span> <span class="kr">is</span> <span class="n">ERC20</span> <span class="p">{</span>
+  <span class="n">constructor</span><span class="p">(</span>
+    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">name</span><span class="p">,</span>
+    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">symbol</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">initialSupply</span>
+  <span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">symbol</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">initialSupply</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>This is all we need: we&rsquo;re extending the ERC20 contract provided by OpenZeppelin and defining our own constructor
+that allows us to set token name, symbol, and initial supply.
+The constructor also mints <code>initialSupply</code> of tokens and sends them to token creator&rsquo;s address.</p>
+<p>Now, the most interesting part begins!</p>
+<h3 id="exchange-contract">Exchange contract</h3>
+<p>Uniswap V1 has only two contracts: Factory and Exchange.</p>
+<p>Factory is a registry contract that allows to create exchanges and keeps track of all deployed exchanges, allowing to find exchange address by token address and vice versa.
+Exchange contract actually defines exchanging logic.
+Each pair (eth-token) is deployed as an exchange contract and allows to exchange ether to/from only one token.</p>
+<p>We&rsquo;ll build Exchange contract and leave Factory to a later blog post.</p>
+<p>Let&rsquo;s create a new blank contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// contracts/Exchange.sol
+</span><span class="c1"></span><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">Exchange</span> <span class="p">{}</span>
+
+</code></pre></div><p>Since every exchange allows swaps with only one token, we need to connect Exchange with a token address:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Exchange</span> <span class="p">{</span>
+  <span class="kt">address</span> <span class="kr">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
+
+  <span class="n">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
+
+    <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Token address is a state variable which makes it accessible from any other contract function.
+Making it public allows users and developers to read it and to find out what token this exchange is linked to.
+In the constructor, we&rsquo;re checking that provided token is valid (not the zero address) and save it to the state variable.</p>
+<h3 id="providing-liquidity">Providing liquidity</h3>
+<p>As we have already learned, liquidity makes trades possible. Thus, we need a way to add liquidity to the exchange contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kn">import</span> <span class="s">&#34;@openzeppelin/contracts/token/ERC20/IERC20.sol&#34;</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">Exchange</span> <span class="p">{</span>
+    <span class="p">...</span>
+
+    <span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+        <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+        <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>By default, contracts cannot receive ethers, which can be fixed via the <code>payable</code> modifier that enables ethers receiving in a function:
+any ethers sent along with a function call are added to contract&rsquo;s balance.</p>
+<p>Depositing tokens is a different thing: since token balances are stored on token contracts, we have to use <code>transferFrom</code> function
+(as defined by the ERC20 standard) to transfer tokens from transaction sender&rsquo;s address to the contract.
+Also, transaction sender would have to call <code>approve</code> function on the token contract to allow our exchange contract to get their tokens.</p>
+<blockquote>
+<p>This implementation of <code>addLiquidity</code> is not complete.
+I intentionally made it so to focus more on pricing functions.
+We&rsquo;ll fill the gap in a later part.</p>
+</blockquote>
+<p>Let&rsquo;s also add a helper function that returns token balance of an exchange:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getReserve</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+<span class="p">}</span>
+
+</code></pre></div><p>And we can now test <code>addLiquidity</code> to ensure everything&rsquo;s correct:</p>
+<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;addLiquidity&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;adds liquidity&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="kr">await</span> <span class="nx">token</span><span class="p">.</span><span class="nx">approve</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">));</span>
+    <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="p">});</span>
+
+    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">getBalance</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getReserve</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">));</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div><p>First, we let the exchange contract spend 200 of our tokens by calling <code>approve</code>.
+Then, we call <code>addLiquidity</code> to deposit 200 tokens (the exchange contract calls <code>transferFrom</code> to get them)
+and 100 ethers, which are sent along with the function call.
+We then ensure that the exchange did in fact receive them.</p>
+<blockquote>
+<p>I&rsquo;ve omitted a lot of boilerplate code in tests for brevity. Please check <a href="https://github.com/Jeiwan/zuniswap/tree/part_1">full source code</a> if something is not clear.</p>
+</blockquote>
+<h3 id="pricing-function">Pricing function</h3>
+<p>Now, lets think about how we would calculate exchange prices.</p>
+<p>It might be tempting to think that price is simply a relation of reserves, e.g.:
+$$P_X=\frac y x, P_Y=\frac x y$$</p>
+<p>And this makes sense: exchange contracts don&rsquo;t interact with centralized exchanges or any other external price oracle,
+so they cannot know the right price.
+In fact, exchange contract is a price oracle.
+Everything they know is ether and token reserves, and this is the only information we have to calculate prices.</p>
+<p>Let&rsquo;s stick to this idea and build a pricing function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getPrice</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">outputReserve</span><span class="p">)</span>
+  <span class="kr">public</span>
+  <span class="kr">pure</span>
+  <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">inputReserve</span> <span class="o">/</span> <span class="n">outputReserve</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div><p>And let&rsquo;s test it:</p>
+<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getPrice&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct prices&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="kr">await</span> <span class="nx">token</span><span class="p">.</span><span class="nx">approve</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">));</span>
+    <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="p">});</span>
+
+    <span class="kr">const</span> <span class="nx">tokenReserve</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getReserve</span><span class="p">();</span>
+    <span class="kr">const</span> <span class="nx">etherReserve</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">getBalance</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
+
+    <span class="c1">// ETH per token
+</span><span class="c1"></span>    <span class="nx">expect</span><span class="p">(</span>
+      <span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">etherReserve</span><span class="p">,</span> <span class="nx">tokenReserve</span><span class="p">)).</span><span class="nx">toString</span><span class="p">()</span>
+    <span class="p">).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0.5&#34;</span><span class="p">);</span>
+
+    <span class="c1">// token per ETH
+</span><span class="c1"></span>    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">tokenReserve</span><span class="p">,</span> <span class="nx">etherReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div><p>We deposited 2000 tokens and 1000 ethers and we&rsquo;re expecting the price of token to be 0.5 ethers and the price of ether to be 2 tokens.
+However, the test fails: it says we&rsquo;re getting 0 ethers in exchange for our tokens.
+Why is that?</p>
+<p>The reason is that Solidity supports integer division with only floor rounding. The price of 0.5 gets rounded to 0!
+Let&rsquo;s fix that by increasing the precision:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getPrice</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">outputReserve</span><span class="p">)</span>
+  <span class="kr">public</span>
+  <span class="kr">pure</span>
+  <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="p">...</span>
+
+  <span class="k">return</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">outputReserve</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div><p>After updating the test, it&rsquo;ll pass:</p>
+<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="c1">// ETH per token
+</span><span class="c1"></span><span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">etherReserve</span><span class="p">,</span> <span class="nx">tokenReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">500</span><span class="p">);</span>
+
+<span class="c1">// token per ETH
+</span><span class="c1"></span><span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">tokenReserve</span><span class="p">,</span> <span class="nx">etherReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">2000</span><span class="p">);</span>
+</code></pre></div><p>So, now 1 token equals to 0.5 ethers and 1 ether equals to 2 tokens.</p>
+<p>Everything looks correct but what will happen if we swap 2000 tokens for ether?
+We&rsquo;ll get 1000 ethers and this is everything we have on the contract!
+<strong>The exchange would be drained!</strong></p>
+<p>Apparently, something is wrong with the pricing function: it allows to drain an exchange, and this is not something we want to happen.</p>
+<p>The reason of that is that the pricing function belongs to a constant <strong>sum</strong> formula, which defines \(k\) as a constant sum of \(x\) and \(y\).
+The function of this constant sum formula is a straight line:</p>
+<div class="chart-wrapper"><canvas id="line-chart"></canvas></div>
+<script>
+drawLineChart("line-chart", [0, 1, 2, 3, 4, 5, 6], function(x) { return (-x+6)/2; }, 0, 7)
+</script>
+<p>It crosses \(x\) and \(y\) axes, which means it allows 0 in any of them!
+We definitely don&rsquo;t want that.</p>
+<h3 id="correct-pricing-function">Correct pricing function</h3>
+<p>Let&rsquo;s recall that Uniswap is a constant product market maker, which means it&rsquo;s based on a constant product formula:
+$$x * y = k$$</p>
+<p>Does this formula produce a better pricing function? Let&rsquo;s see.</p>
+<p>The formula states that \(k\) remains constant no matter what reserves (\(x\) and \(y\)) are.
+Every trade increases a reserve of either ether or token and decreases a reserve of either token or ether – let&rsquo;s put that logic in a formula:</p>
+<p>$$(x + \Delta x) (y - \Delta y) = x y$$</p>
+<p>Where \(\Delta x\) is the amount of ethers or tokens we&rsquo;re trading for \(\Delta y\), amount of tokens or ethers we&rsquo;re getting in exchange.
+Having this formula we can now find \(\Delta y\):
+$$\Delta y = \frac{y \Delta x}{x + \Delta x}$$</p>
+<p>This looks interesting: the function now respects input amount.
+Let&rsquo;s try to program it, but note that we&rsquo;re now dealing with amounts, not prices.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmount</span><span class="p">(</span>
+  <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
+  <span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span>
+  <span class="kt">uint256</span> <span class="n">outputReserve</span>
+<span class="p">)</span> <span class="kr">private</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="p">(</span><span class="n">inputAmount</span> <span class="o">*</span> <span class="n">outputReserve</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">+</span> <span class="n">inputAmount</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>This is a low-level function, so let it be private.
+Let&rsquo;s make two high-level wrapper functions to simplify calculations:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getTokenAmount</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_ethSold</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">_ethSold</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;ethSold is too small&#34;</span><span class="p">);</span>
+
+  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="n">getAmount</span><span class="p">(</span><span class="n">_ethSold</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="n">getEthAmount</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenSold</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">_tokenSold</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;tokenSold is too small&#34;</span><span class="p">);</span>
+
+  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="n">getAmount</span><span class="p">(</span><span class="n">_tokenSold</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>And test them:</p>
+<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getTokenAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct token amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+
+    <span class="kd">let</span> <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1.998001998001998001&#34;</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+
+<span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getEthAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct eth amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+
+    <span class="kd">let</span> <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;0.999000999000999&#34;</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div><p>So, now we&rsquo;re getting 1.998 tokens for 1 ether and 0.999 ether for 2 tokens.
+Those amounts are very close to the ones produced by the previous pricing function.
+However, they&rsquo;re slightly smaller.
+Why is that?</p>
+<p>The constant product formula we based our prices calculations on is, in fact, a hyperbola:</p>
+<div class="chart-wrapper"><canvas id="hyperbola-chart"></canvas></div>
+<script>
+drawLineChart("hyperbola-chart", [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 1.7, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10], function(x) { return 5/x; }, 0, 10)
+</script>
+<p>Hyperbola never crosses \(x\) or \(y\), thus neither of the reserves is ever 0. <strong>This makes reserves infinite!</strong></p>
+<p>And there&rsquo;s another interesting implication: the price function causes price slippage.
+The bigger the amount of tokens traded in relative to reserves, the lower the price would be.</p>
+<p>This is what we saw in the tests: we got slightly less than we expected.
+This might be seemed as a drawback of constant product market makers (since every trade has a slippage), however this is the same mechanism that protects pools from being drained.
+This also aligns with the law of supply and demand: the higher the demand (the bigger output amount you
+want to get) relative to the supply (the reserves), the higher the price (the less you get).</p>
+<p>Let' improve our tests to see how slippage affects prices:</p>
+<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getTokenAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct token amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+
+    <span class="kd">let</span> <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1.998001998001998001&#34;</span><span class="p">);</span>
+
+    <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;181.818181818181818181&#34;</span><span class="p">);</span>
+
+    <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1000.0&#34;</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+
+<span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getEthAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct ether amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+
+    <span class="kd">let</span> <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;0.999000999000999&#34;</span><span class="p">);</span>
+
+    <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;47.619047619047619047&#34;</span><span class="p">);</span>
+
+    <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">));</span>
+    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;500.0&#34;</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div><p>As you can see, when we&rsquo;re trying to drain the pool, we&rsquo;re getting only a half of what we&rsquo;d expect.</p>
+<p>A final thing to note here: our initial, reserves ratio based, pricing function wasn&rsquo;t wrong.
+In fact, it&rsquo;s correct when the amount of tokens we&rsquo;re trading in is very small compared to reserves.
+But to make an AMM we need something more sophisticated.</p>
+<h3 id="swapping-functions">Swapping functions</h3>
+<p>Now, we&rsquo;re ready to implement swapping.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">ethToTokenSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+  <span class="kt">uint256</span> <span class="n">tokensBought</span> <span class="o">=</span>
+    <span class="n">getAmount</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">);</span>
+
+  <span class="nb">require</span><span class="p">(</span><span class="n">tokensBought</span> <span class="o">&gt;=</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
+
+  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokensBought</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Swapping ethers for tokens means sending some amount of ethers (stored in <code>msg.value</code> variable) to a payable contract function and getting tokens in return.
+Note that we need to subtract <code>msg.value</code> from contract&rsquo;s balance because by the time the function is called the ethers sent have already been added to its balance.</p>
+<p>Another important variable here is <code>__minTokens</code> – this is a minimal amount of tokens the user wants to get in exchange for their ethers.
+This amount is calculated in UI and always includes slippage tolerance; user agrees to get at least that much but not less.
+This is a very important mechanism that protects users from front-running bots that try to intercept their transactions and modify pool balances to for their profit.</p>
+<p>Finally, the last piece of code for today:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">tokenToEthSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokensSold</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_minEth</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+  <span class="kt">uint256</span> <span class="n">ethBought</span> <span class="o">=</span>
+    <span class="n">getAmount</span><span class="p">(</span><span class="n">_tokensSold</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
+
+  <span class="nb">require</span><span class="p">(</span><span class="n">ethBought</span> <span class="o">&gt;=</span> <span class="n">_minEth</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
+
+  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokensSold</span><span class="p">);</span>
+  <span class="kr">payable</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">ethBought</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>The function basically transfers <code>_tokensSold</code> of tokens from user&rsquo;s balance and sends them <code>ethBought</code> of ethers in exchange.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>That&rsquo;s it for today! We&rsquo;re not done yet, but we did a lot.
+Our Exchange contract can accept liquidity from users, calculate prices in a way that protects from
+draining, and allows users to swap eth for tokens and back.
+This is a lot, but some important pieces are still missing:</p>
+<ol>
+<li>Adding new liquidity can cause huge price changes.</li>
+<li>Liquidity providers are not rewarded; all swaps are free.</li>
+<li>There&rsquo;s no way to remove liquidity.</li>
+<li>No way to swap ERC20 tokens (chained swaps).</li>
+<li>Factory is still not implemented.</li>
+</ol>
+<p>We&rsquo;ll do these in a future part!</p>
+<h2 id="useful-links">Useful links</h2>
+<ol>
+<li><a href="https://docs.soliditylang.org/en/latest/introduction-to-smart-contracts.html">Introduction to Smart Contracts</a> a lot of fundamental information about smart contracts, blockchains, and EVM, to learn before beginning developing smart contracts.</li>
+<li><a href="https://www.reddit.com/r/ethereum/comments/55m04x/lets_run_onchain_decentralized_exchanges_the_way/">Let&rsquo;s run on-chain decentralized exchanges the way we run prediction markets</a>, a post on Reddit from Vitalik Buterin where he proposed to use the mechanics of prediction markets to build decentralized exchanges.
+This gave an idea to use a constant product formula.</li>
+<li><a href="https://uniswap.org/docs/v1/">Uniswap V1 Documentation</a></li>
+<li><a href="https://hackmd.io/@HaydenAdams/HJ9jLsfTz">Uniswap V1 Whitepaper</a></li>
+<li><a href="https://medium.com/bollinger-investment-group/constant-function-market-makers-defis-zero-to-one-innovation-968f77022159">Constant Function Market Makers: DeFi’s “Zero to One” Innovation</a></li>
+<li><a href="http://reports-archive.adm.cs.cmu.edu/anon/2012/CMU-CS-12-123.pdf">Automated Market Making: Theory and Practice</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js" integrity="sha384-YNHdsYkH6gMx9y3mRkmcJ2mFUjTd0qNQQvY9VYZgQd7DcN7env35GzlmFaZ23JGp" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js" integrity="sha384-vZTG03m+2yp6N6BNi5iM4rW4oIwk5DfcNdFfxkk9ZWpDriOkXX8voJBFrAO7MpVl" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+

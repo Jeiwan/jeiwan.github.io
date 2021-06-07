@@ -2,25 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://jeiwan.net/tags/bitcoin/</loc>
-    <lastmod>2020-01-22T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>https://jeiwan.net/tags/blockchain/</loc>
-    <lastmod>2020-01-22T00:00:00+00:00</lastmod>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/tags/ethereum/</loc>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://jeiwan.net/</loc>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/posts/</loc>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/posts/programming-defi-uniswap-1/</loc>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/tags/</loc>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/tags/uniswap/</loc>
+    <lastmod>2021-06-07T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/tags/bitcoin/</loc>
     <lastmod>2020-01-22T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://jeiwan.net/tags/golang/</loc>
     <lastmod>2020-01-22T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>https://jeiwan.net/posts/</loc>
-    <lastmod>2020-01-22T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>https://jeiwan.net/posts/programming-bitcoin-network-4/</loc>
-    <lastmod>2020-01-22T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://jeiwan.net/tags/</loc>
     <lastmod>2020-01-22T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://jeiwan.net/posts/programming-bitcoin-network-3/</loc>
