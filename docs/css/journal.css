@@ -216,7 +216,10 @@ h6 {
   list-style: none;
 }
 .posts li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+.posts section {
+  margin-bottom: 4rem;
 }
 @media screen and (min-width: 800px) {
   .posts li {
