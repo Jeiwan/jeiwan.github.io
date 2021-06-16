@@ -10,8 +10,8 @@
   <meta name="author" content="Ivan Kuznetsov">
   <meta property="og:url" content="https://jeiwan.net/posts/programming-defi-uniswap-1/">
 
-  <title>Programming Defi: Uniswap. Part 1 - Going the distance</title>
-  <meta property="og:title" content="Programming Defi: Uniswap. Part 1 - Going the distance">
+  <title>Programming DeFi: Uniswap. Part 1 - Going the distance</title>
+  <meta property="og:title" content="Programming DeFi: Uniswap. Part 1 - Going the distance">
   <meta property="og:type" content="article">
   <meta name="description" content="A blog about blockhains and smart contracts development">
   <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
@@ -42,7 +42,7 @@
 
   <article class="post">
     <header class="post-header">
-      <h1 class="post-title">Programming Defi: Uniswap. Part 1</h1>
+      <h1 class="post-title">Programming DeFi: Uniswap. Part 1</h1>
       <time class="post-date" datetime="2021-06-07 00:00:00 &#43;0000">07 Jun 2021</time>
     </header>
 
@@ -411,8 +411,11 @@ But to make an AMM we need something more sophisticated.</p>
 <p>Now, we&rsquo;re ready to implement swapping.</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">ethToTokenSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
   <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-  <span class="kt">uint256</span> <span class="n">tokensBought</span> <span class="o">=</span>
-    <span class="n">getAmount</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">);</span>
+  <span class="kt">uint256</span> <span class="n">tokensBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
+    <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
+    <span class="n">tokenReserve</span>
+  <span class="p">);</span>
 
   <span class="nb">require</span><span class="p">(</span><span class="n">tokensBought</span> <span class="o">&gt;=</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
 
@@ -427,8 +430,11 @@ This is a very important mechanism that protects users from front-running bots t
 <p>Finally, the last piece of code for today:</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">tokenToEthSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokensSold</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_minEth</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
   <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-  <span class="kt">uint256</span> <span class="n">ethBought</span> <span class="o">=</span>
-    <span class="n">getAmount</span><span class="p">(</span><span class="n">_tokensSold</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
+  <span class="kt">uint256</span> <span class="n">ethBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
+    <span class="n">_tokensSold</span><span class="p">,</span>
+    <span class="n">tokenReserve</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
+  <span class="p">);</span>
 
   <span class="nb">require</span><span class="p">(</span><span class="n">ethBought</span> <span class="o">&gt;=</span> <span class="n">_minEth</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
 
