@@ -1,5 +1,5 @@
 ---
-title: "Programming Defi: Uniswap. Part 1"
+title: "Programming DeFi: Uniswap. Part 1"
 date: 2021-06-07T00:00:00+00:00
 katex: true
 charts: true
@@ -508,8 +508,11 @@ Now, we're ready to implement swapping.
 ```solidity
 function ethToTokenSwap(uint256 _minTokens) public payable {
   uint256 tokenReserve = getReserve();
-  uint256 tokensBought =
-    getAmount(msg.value, address(this).balance - msg.value, tokenReserve);
+  uint256 tokensBought = getAmount(
+    msg.value,
+    address(this).balance - msg.value,
+    tokenReserve
+  );
 
   require(tokensBought >= _minTokens, "insufficient output amount");
 
@@ -530,8 +533,11 @@ Finally, the last piece of code for today:
 ```solidity
 function tokenToEthSwap(uint256 _tokensSold, uint256 _minEth) public {
   uint256 tokenReserve = getReserve();
-  uint256 ethBought =
-    getAmount(_tokensSold, tokenReserve, address(this).balance);
+  uint256 ethBought = getAmount(
+    _tokensSold,
+    tokenReserve,
+    address(this).balance
+  );
 
   require(ethBought >= _minEth, "insufficient output amount");
 
