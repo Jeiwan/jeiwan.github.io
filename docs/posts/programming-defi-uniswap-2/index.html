@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-defi-uniswap-2/">
+
+  <title>Programming DeFi: Uniswap. Part 2 - Going the distance</title>
+  <meta property="og:title" content="Programming DeFi: Uniswap. Part 2 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" integrity="sha384-Um5gpz1odJg5Z4HAmzPtgZKdTBHZdw8S29IecapCSB31ligYPhHQZMIlWLYQGVoc" crossorigin="anonymous">
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming DeFi: Uniswap. Part 2</h1>
+      <time class="post-date" datetime="2021-06-16 00:00:00 &#43;0000">16 Jun 2021</time>
+    </header>
+
+    <p><img src="/images/susan-kuriakose-66qaQoudwdo-unsplash.jpg" alt="Asymmetry">
+Photo by
+<a href="https://unsplash.com/@susan_kuriakose?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Susan Kuriakose</a>
+on
+<a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p>This is part two of my series on programming DeFi smart contracts.
+<a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">In the previous part</a>, we learned about Uniswap and its core
+mechanics and started building an exchange contract.
+The contract can accept liquidity from users, calculate output amounts, and perform swaps.</p>
+<p>Today, we&rsquo;re going to finish Uniswap V1 implementation.
+While it won&rsquo;t be a full copy of Uniswap V1, it&rsquo;ll have all core features.</p>
+<p>This part is packed with new code, so let&rsquo;s get straight to it.</p>
+<blockquote>
+<p>To see changes since the previous part, <a href="https://github.com/Jeiwan/zuniswap/compare/part_1...part_2">click here</a>.<br>
+To see full code of the project so far, <a href="https://github.com/Jeiwan/zuniswap/tree/part_2">click here</a>.</p>
+</blockquote>
+<h2 id="adding-more-liquidity">Adding more liquidity</h2>
+<p>In the previous part, we discussed that our implementation of <code>addLiquidity</code> is not complete.
+There was a reason for that and today we&rsquo;re going to finish the function.</p>
+<p>So far, the function looks like that:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+  <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+  <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Can you identify the problem?</p>
+<p>The function allows to add arbitrary amounts of liquidity at any moment.</p>
+<p>As you remember, exchange rate is calculated as a ratio of reserves:
+$$P_X=\frac y x, P_Y=\frac x y$$
+Where \(P_X\) and \(P_Y\) are prices of ether and token; \(x\) and \(y\) are reserves of ether and token.</p>
+<p>We also learned that swapping tokens changes reserves in a non-linear way, which affects prices, and that arbitrageurs
+make profit by balancing prices so they match those of big central exchanges.</p>
+<p>The problem with our implementation is that it allows to significantly change prices at any point of time.
+Or, in other words, <strong>it doesn&rsquo;t enforce current reserves ratio on new liquidity</strong>.
+This is a problem because this allows price manipulations, and we want prices on decentralized exchanges to be as close
+to those on centralized exchanges. We want our exchange contracts to act as price oracles.</p>
+<p>So, we must ensure that additional liquidity is added in the same proportion that has already established in the pool.
+At the same time, we want to allow liquidity in an arbitrary proportion when reserves are empty, i.e. when a pool hasn&rsquo;t yet been
+initialized. And this is an important moment because <strong>this is when the price is set initially</strong>.</p>
+<p>Now, <code>addLiquidity</code> will have two branches:</p>
+<ol>
+<li>If this is a new exchange (no liquidity), allow an arbitrary liquidity proportion when pool is empty.</li>
+<li>Else, enforce established reserves proportion when there&rsquo;s some liquidity.</li>
+</ol>
+<p>The first branch remains unchanged:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+    <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
+</code></pre></div><p>The second branch is where the new code goes to:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="kt">uint256</span> <span class="n">ethReserve</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+    <span class="kt">uint256</span> <span class="n">tokenAmount</span> <span class="o">=</span> <span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">value</span> <span class="o">*</span> <span class="n">tokenReserve</span><span class="p">)</span> <span class="o">/</span> <span class="n">ethReserve</span><span class="p">;</span>
+    <span class="nb">require</span><span class="p">(</span><span class="n">_tokenAmount</span> <span class="o">&gt;=</span> <span class="n">tokenAmount</span><span class="p">,</span> <span class="s">&#34;insufficient token amount&#34;</span><span class="p">);</span>
+
+    <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+    <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">tokenAmount</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>The only difference is that we&rsquo;re not depositing all tokens provided by user but only an amount calculated based on current reserves ratio.
+To get the amount, we multiply the ratio (<code>tokenReserve / ethReserve</code>) by the amount of deposited ethers.
+Then, an error is thrown if user deposited less than this amount.</p>
+<p>This will preserve a price when liquidity is added to a pool.</p>
+<h2 id="lp-tokens">LP-tokens</h2>
+<p>We haven&rsquo;t discussed this concept but it&rsquo;s a crucial part of the Uniswap design.</p>
+<p>We need to have a way to reward liquidity providers for their tokens. If they&rsquo;re not incentivized, they won&rsquo;t
+provide liquidity because no one would put their tokens in a third-party contract for nothing. Moreover, that reward
+shouldn&rsquo;t be paid by us because we&rsquo;d have to get investments or issue an inflationary token to fund it.</p>
+<p>The only good solution is to collect a small fee on each token swap and distribute accumulated fees among liquidity
+providers. This also seems pretty much fair: users (traders) pay for services (liquidity) provided by other people.</p>
+<p>For rewards to be fair, we need to reward liquidity providers proportionally to their contribution, i.e. the amount of
+liquidity they provide. If someone has provided 50% of pool liquidity, they should get 50% of accumulated feels. This
+makes sense, right?</p>
+<p>Now, the task seems pretty complicated. However, there&rsquo;s an elegant solution: LP-tokens.</p>
+<p>LP-tokens are basically ERC20 tokens issued to liquidity providers in exchange for their liquidity. In fact, <strong>LP-tokens
+are shares</strong>:</p>
+<ol>
+<li>You get LP-tokens in exchange for your liquidity.</li>
+<li>The amount of tokens you get is proportional to the share of your liquidity in pool&rsquo;s reserves.</li>
+<li>Fees are distributed proportionally to the amount of tokens you hold.</li>
+<li>LP-tokens can be exchanged back for liquidity + accumulated fees.</li>
+</ol>
+<p>Ok, how will we calculate the amount of issued LP-tokens depending on the amount of provided liquidity? This is not so
+obvious because there a some requirements we need to meet:</p>
+<ol>
+<li>Every issued share must be always correct. When someone deposits or removes liquidity after me my share must remain correct.</li>
+<li>Write operations (e.g. storing new data or updating existing data in a contract) on Ethereum are very expensive.
+So we&rsquo;d want to reduce maintenance costs of LP-tokens (i.e. we don&rsquo;t want to run a scheduled job that regularly
+recalculates and updates shares).</li>
+</ol>
+<p>Imagine if we issue a lot of tokens (say, 1 billion) and distribute them among all liquidity providers. If we always
+distribute all the tokens (first liquidity provider gets 1 billion, second one gets a share of it, etc.) we are forced to
+recalculate issued shares, which is expensive. If we distribute only a portion of the tokens initially, then we&rsquo;re
+risking hitting the supply limit, which will eventually force use into redistributing existing shares.</p>
+<p>The only good solution seems to not have supply limit at all and mint new tokens when new liquidity is added. This
+allows infinite growth and, if we use a proper formula, all issued shares will remain correct (will scale
+proportionally) when liquidity is added or removed. Luckily, inflation doesn&rsquo;t reduce value of LP-tokens because
+they&rsquo;re always backed by some amount of liquidity that doesn&rsquo;t depend on the number of issued tokens.</p>
+<p>Now, the final piece in this puzzle: how to calculated the amount of minted LP-tokens when liquidity is deposited?</p>
+<p>The exchange contract stores reserves of ether and token, so we&rsquo;d want to calculate based on reserves of both&hellip; or
+only one of them? Or both? I don&rsquo;t know 😁 Uniswap V1 calculates the amount proportionally to the ether reserve, but
+Uniswap V2 allows only swaps between tokens (not between ether and token), so it&rsquo;s not clear how to choose between them.
+Let&rsquo;s stick to what Uniswap V1 does and later we&rsquo;ll see how to solve this problem when there are two ERC20 tokens.</p>
+<p>This equation shows how the amount of new LP-tokens is calculated depending on the amount of ethers deposited:</p>
+<p>$$amountMinted = totalAmount * \frac{ethDeposited}{ethReserve}$$</p>
+<p>Every liquidity depositing issues LP-tokens proportionally to the share of deposited ethers in ether reserve.
+This is tricky, try putting different numbers in this equation and see how total amount changes. For example,
+what <code>amountMinted</code> and <code>totalAmount</code> would be when someone deposits <code>etherReserve</code> amount of ethers? Are issued shares
+still valid after that?</p>
+<p>Let&rsquo;s get to the code.</p>
+<p>Before modifying <code>addLiquidity</code>, we need to make our Exchange contract an ERC20 contract and change its constructor:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Exchange</span> <span class="kr">is</span> <span class="n">ERC20</span> <span class="p">{</span>
+    <span class="kt">address</span> <span class="kr">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
+
+    <span class="n">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="s">&#34;Zuniswap-V1&#34;</span><span class="p">,</span> <span class="s">&#34;ZUNI-V1&#34;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
+
+        <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
+    <span class="p">}</span>
+</code></pre></div><p>Our LP-tokens will have a constant name and a symbol, this is how Uniswap does it. Feel free to improve this by taking
+the underlaying token&rsquo;s name and symbol.</p>
+<p>Now, let&rsquo;s update <code>addLiquidity</code>: when adding initial liquidity, the amount of LP-tokens issued equals to the amount
+of ethers deposited.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span>
+    <span class="kr">public</span>
+    <span class="kr">payable</span>
+    <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+
+        <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">;</span>
+        <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+
+        <span class="k">return</span> <span class="n">liquidity</span><span class="p">;</span>
+
+</code></pre></div><p>Additional liquidity mints LP-tokens proportionally to the amount of ethers deposited:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="p">...</span>
+
+        <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="p">(</span><span class="n">totalSupply</span><span class="p">()</span> <span class="o">*</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">)</span> <span class="o">/</span> <span class="n">ethReserve</span><span class="p">;</span>
+        <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+
+        <span class="k">return</span> <span class="n">liquidity</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Just a few lines and we now have LP-tokens!</p>
+<h2 id="fees">Fees</h2>
+<p>We&rsquo;re now ready to collect fees on swaps. Before that, we need to answer a couple of questions:</p>
+<ol>
+<li>Do we want to take fees in ether or tokens? Do we want to pay rewards to liquidity providers in ether or tokens?</li>
+<li>How to collect a small fixed fee from each swap?</li>
+<li>How to distribute accumulated fees to liquidity providers proportionnaly to their contribution?</li>
+</ol>
+<p>Again, this might be seemed as a difficult task but we already have everything to solve it.</p>
+<p>Let&rsquo;s think about the last two questions. We might introduce an extra payment that&rsquo;s sent along with a swap
+transaction. Such payments then get accumulated in a fund from which any liquidity provider can withdraw an amount
+proportional to their share. This sounds like a reasonable idea and, surprisingly, it&rsquo;s almost done:</p>
+<ol>
+<li>Traders already send ethers/tokens to the exchange contract. Instead of asking for a fee we can simply subtract it
+from ethers/tokens that are sent to the contract.</li>
+<li>We already have the fund – it&rsquo;s the exchange reserves! The reserves can be used to accumulated fees. This also
+means that <strong>reserves will grow over time</strong>, so the constant product formula is not that constant! However, this doesn&rsquo;t
+invalidate it: the fee is small compared to reserves and there&rsquo;s no way to manipulate it to try to significantly change reserves.</li>
+<li>And now we have an answer to the first question: fees are paid in the currency of the traded in asset. Liquidity providers
+get a balanced amount of ethers and tokens plus a share of accumulated fees proportional to the share of their LP-tokens.</li>
+</ol>
+<p>That&rsquo;s it! Let&rsquo;s get to the code.</p>
+<p>Uniswap takes 0.03% in fees from each swap. We&rsquo;ll take 1% just so that it&rsquo;s easier to see the difference in tests.
+Adding fees to the contract is as easy as adding a couple of multipliers to <code>getAmount</code> function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmount</span><span class="p">(</span>
+  <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
+  <span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span>
+  <span class="kt">uint256</span> <span class="n">outputReserve</span>
+<span class="p">)</span> <span class="kr">private</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
+
+  <span class="kt">uint256</span> <span class="n">inputAmountWithFee</span> <span class="o">=</span> <span class="n">inputAmount</span> <span class="o">*</span> <span class="mi">99</span><span class="p">;</span>
+  <span class="kt">uint256</span> <span class="n">numerator</span> <span class="o">=</span> <span class="n">inputAmountWithFee</span> <span class="o">*</span> <span class="n">outputReserve</span><span class="p">;</span>
+  <span class="kt">uint256</span> <span class="n">denominator</span> <span class="o">=</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="n">inputAmountWithFee</span><span class="p">;</span>
+
+  <span class="k">return</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">;</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Since Solidity doesn&rsquo;t support floating point division, we have to use a trick: both numerator and denominator are
+multiplied by a power of 10, and fee is subtracted from the multiplier in the numerator. Normally, we would calculate it
+like that:
+$$amountWithFee = amount * \frac{100 - fee}{100}$$</p>
+<p>In Solidity, we have to do it like that:</p>
+<p>$$amountWithFee = \frac{(amount * (100 - fee))}{100}$$</p>
+<p>But it&rsquo;s still the same thing.</p>
+<h2 id="removing-liquidity">Removing liquidity</h2>
+<p>Finally, last function on our list: <code>removeLiquidity</code>.</p>
+<p>To remove liquidity we can again use LP-tokens: we don&rsquo;t need to remember amounts deposited by each liquidity provider
+and can calculate the amount of removed liquidity based on an LP-tokens share.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">removeLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">,</span> <span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">_amount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid amount&#34;</span><span class="p">);</span>
+
+  <span class="kt">uint256</span> <span class="n">ethAmount</span> <span class="o">=</span> <span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">*</span> <span class="n">_amount</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">();</span>
+  <span class="kt">uint256</span> <span class="n">tokenAmount</span> <span class="o">=</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">*</span> <span class="n">_amount</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">();</span>
+
+  <span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">_amount</span><span class="p">);</span>
+  <span class="kr">payable</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">ethAmount</span><span class="p">);</span>
+  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokenAmount</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="p">(</span><span class="n">ethAmount</span><span class="p">,</span> <span class="n">tokenAmount</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>When liquidity is removed, it&rsquo;s returned in both ethers and tokens and their amounts are, of course, balanced. This is
+the moment that causes <a href="https://pintail.medium.com/uniswap-a-good-deal-for-liquidity-providers-104c0b6816f2">impermanent loss</a>:
+the ratio of reserves changes over time following changes in their prices in USD. When liquidity is removed the balance
+can be different from what it was when liquidity was deposited. This means that you would get different amounts of
+ethers and tokens and their total price might be lower than if you have just held them in a wallet.</p>
+<p>To calculate the amounts we multiply reserves by the share of LP-tokens:</p>
+<p>$$removedAmount = reserve * \frac{amountLP}{totalAmountLP}$$</p>
+<p>Notice that LP-tokens are burnt each time liquidity is removed. LP-tokens are only backed by deposited liquidity.</p>
+<h2 id="lp-reward-and-impermanent-loss-demonstration">LP reward and impermanent loss demonstration</h2>
+<p>Let&rsquo;s write a test that reproduces the full cycle of adding liquidity, swapping tokens, accumulating fees, and removing
+liquidity:</p>
+<ol>
+<li>
+<p>First, liquidity provider deposits 100 ethers and 200 tokens. This makes 1 token being equal to 0.5 ethers and 1
+ether being equal to 2 tokens.</p>
+<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="p">});</span>
+</code></pre></div></li>
+<li>
+<p>A user swaps 10 ethers and expects to get at least 18 tokens. In fact, they got 18.0164 tokens. It includes slippage
+(traded amounts are relatively big) and the 1% fee.</p>
+<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">exchange</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">user</span><span class="p">).</span><span class="nx">ethToTokenSwap</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">18</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="p">});</span>
+</code></pre></div></li>
+<li>
+<p>Liquidity provider then removes their liquidity:</p>
+<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">exchange</span><span class="p">.</span><span class="nx">removeLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+</code></pre></div></li>
+<li>
+<p>Liquidity provider got 109.9 ethers (transaction fees included) and 181.9836 tokens.
+As you can see, these numbers are different from those that were deposited: we got the 10 ethers traded in by the
+user but had to give 18.0164 tokens in exchange. However, that amount includes the 1% fee the user has paid to us.
+Since the liquidity provider has provided all the liquidity, they got all the fees.</p>
+</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>That was a big post!
+Hopefully LP-tokens are not a mystery for you anymore and Uniswap is easy as pie (not cake 😉).</p>
+<p>However, we&rsquo;re not done yet: Exchange contract is now finished, but we also need to implement Factory contract, which serves
+as a registry of exchanges and a bridge that connects multiple exchanges and makes token-to-token swaps possible.
+We&rsquo;ll implement it in the next part!</p>
+<h2 id="useful-links">Useful links</h2>
+<ol>
+<li><a href="https://github.com/Jeiwan/zuniswap/tree/part_2">Full code of this part</a></li>
+<li><a href="https://hackmd.io/@HaydenAdams/HJ9jLsfTz">Uniswap V1 Whitepaper</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js" integrity="sha384-YNHdsYkH6gMx9y3mRkmcJ2mFUjTd0qNQQvY9VYZgQd7DcN7env35GzlmFaZ23JGp" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js" integrity="sha384-vZTG03m+2yp6N6BNi5iM4rW4oIwk5DfcNdFfxkk9ZWpDriOkXX8voJBFrAO7MpVl" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+
