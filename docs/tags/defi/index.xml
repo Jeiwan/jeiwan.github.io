@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DeFi on Going the distance</title>
+    <link>https://jeiwan.net/tags/defi/</link>
+    <description>Recent content in DeFi on Going the distance</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 20 Jun 2021 18:29:26 +0700</lastBuildDate><atom:link href="https://jeiwan.net/tags/defi/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Analysis of the TITAN fall</title>
+      <link>https://jeiwan.net/posts/analisys-titan-fall/</link>
+      <pubDate>Sun, 20 Jun 2021 18:29:26 +0700</pubDate>
+      
+      <guid>https://jeiwan.net/posts/analisys-titan-fall/</guid>
+      <description>Photo by Sigmund on Unsplash
+Introduction This is an analysis of an incident that happened to Iron.Finance on June 16, 2021. As a result of the incident, the price of TITAN token has collapsed to 0 and the IRON stablecoin has lost its peg to USD and hasn&amp;rsquo;t regained it yet.
+There are already multple reports on the incident ( one, two, three ). While these are good attempts, they didn&amp;rsquo;t answer the only question that inerested me: what part of the design has failed?</description>
+    </item>
+    
+  </channel>
+</rss>
