@@ -1,0 +1,162 @@
+---
+title: "Analysis of the TITAN fall"
+date: 2021-06-20T18:29:26+07:00
+katex: true
+tags: [analysis, iron-finance, DeFi, design]
+---
+
+![Game over](/images/sigmund-By-tZImt0Ms-unsplash.jpg)
+Photo by
+[Sigmund](https://unsplash.com/@sigmund?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+on
+[Unsplash](https://unsplash.com/s/photos/error?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+
+## Introduction
+
+This is an analysis of an incident that happened to [Iron.Finance](https://iron.finance) on June 16, 2021.
+As a result of the incident, the price of TITAN token has collapsed to 0 and the IRON stablecoin has lost
+its peg to USD and hasn't regained it yet.
+
+There are already multple reports on the incident (
+[one](https://thedefiant.io/iron-finance-implodes-after-bank-run/),
+[two](https://stablerates.substack.com/p/looking-at-iron-finances-failure),
+[three](https://www.reddit.com/r/IronFinance/comments/o1ys3e/what_actually_happened/)
+).
+While these are good attempts, they didn't answer the only question that inerested me:
+**what part of the design has failed?**
+And if it wasn't a deisgn flaw, then why was it possible?
+
+[An official post-portem](https://ironfinance.medium.com/iron-finance-post-mortem-17-june-2021-6a4e9ccf23f5)
+was published by Iron.Finance. While it gave some overview of what was happening on the market, it didn't assume there
+were any problems in the design of the service. The team has called an unexpected bank-run the only culprit of the
+collapse:
+
+> We never thought it would happen, but it just did. We just experienced the world’s first large-scale crypto bank run.
+
+I managed to collect some on-chain data and get a better picture of what has happened. Here's my analysis and
+conclusions.
+
+> **TL;DR** This was a design flaw. Iron.Finance was designed for growth only, the stabilizing mechanism couldn't work
+> when TITAN was falling. TITAN prices provided by a price oracle were delayed and the gap between these prices and
+> real-time prices made arbitraging unprofitable.
+
+## A brief introduction into Iron.Finance
+
+Iron.Finance introduced a new type of stablecoins: a partially collateralized token, soft pegged to USD. On the Polygon
+network, the token was named IRON and it was partially collateralized by USDC; the other part was collateralized by
+TITAN, another token created by Iron.Finance. TITAN's only utility was to be used as a collateral when minting IRON,
+it had no other uses and it **had an infinite supply**: there were no supply cap or minting rate limiting.
+
+Any user can issue IRON baked by their USDC and TITAN (which they bought from the market). The amount of issued IRONs
+was calculated as:
+
+$$IRON_{amt} = (USDC_{amt} * USDC_{price}) + (TITAN_{amt} * TITAN_{price})$$
+
+So, we can say that IRON was backed by a basket of USDC+TITAN and every issued IRON equaled to $1 worth of USDC+TITAN.
+Their proportion in the basket was determined by:
+
+$$IRON_{value} = USDC_{value} * TCR + TITAN_{value} * (1 - TCR) $$
+
+Where values are amounts multiplied by prices and \\(TCR\\) is Target Collateral Ratio. This ratio determined how much
+of USDC and TITAN you need to deposit to get IRON. On the day of the incident it was 70%, which meant you needed to
+provide 70 cents of USDC and 30 cents of TITAN to mint 1 IRON.
+
+Burning IRON is also an option, it was called redeeming: you burn some amount of IRON in exchange for
+USDC+TITAN. This time, however, a different ratio was used to determine how much of USDC and TITAN you get: Effective
+Collateral Ratio (ECR), which was calculated as:
+$$ECR=\frac{totalValueUSDC}{totalSupplyIRON}$$
+Where \\(totalValueUSDC\\) is the total value of USDC deposited in exchange for IRON tokens during minting and
+\\(totalSupplyIRON\\) is the total number of issued IRONs. ECR determines what percentage of issued IRON tokens is backed
+by USDC. On the day of the incident ECR was 75%.
+
+To sum it up, both TCR and ECR determine ratios of USDC+TITAN when minting or redeeming IRON.
+TCR is used when minting, ECR is used when redeeming.
+
+## IRON stabilization mechanism
+
+It's not uncommon for a stablecoin to lose its peg. This usually happens when there's a selling or buying pressure on the
+market. Thus, every stablecoin needs a mechanism of protection from such fluctuations. And IRON had one such mechanism.
+
+Arbitrageurs were expected to stabilize the price of IRON because there was an incentive. If price
+goes down, they can buy cheap IRON from the market, redeem it for USDC+TITAN (1 IRON produces $1 worth of USDC+TITAN
+when redeeming) and sell TITAN for some profit. Such buying from the market would eventually rise the price of IRON.
+
+On the other hand, if price goes up, they would mint new IRON (1 IRON requires $1 worth of USDC+TITAN when minting) and sell them on the market to get the difference as a profit. Selling would eventually drop the price of IRON.
+
+This stabilization mechanism worked. And it worked (once) on the day when the incident happened.
+
+## Incident timeline
+
+This is the on-chain data that I collected and that helped to find the flaw:
+
+![Timeline](/images/iron-finance-timeline-small.png)
+[Click to see a bigger version](/images/iron-finance-timeline.png)
+
+Columns are:
+
+1. **(index)** - block numbers.
+1. **Date**, when the block was produced.
+1. **IRON price** - IRON prices obtained from a price oracle. **These prices weren't delayed by TWAP.**
+1. **TITAN price** – TITAN prices obtained from a price oracle. **These prices were delayed by a 60-minute TWAP** (Time
+   Weighted Average Price). TWAP was used here to protect from price manipulations caused by flash loan attacks.
+1. **TITAN price, AMM** – TITAN prices obtained from an Automated Market Maker (Sushi Swap). These are real-time prices,
+   they go 'before' the prices in the **TITAN price** column.
+1. **Arb profit** – the profit arbitrageurs would get from trying to bump the price of IRON, i.e. buying IRON on the
+   market, redeeming USDC+TITAN, and selling redeemed TITAN on the market. Fees are not included. Values in this column
+   are only calculated when IRON price is below $1.
+   This is the most important column.
+1. **TCR**, **ECR** – TCR and ECR respectively. ECR is used in the arbitraging scheme explained above.
+
+Everything looked good until around 7:14 AM: at this time, TITAN reached its peak price but IRON has gone a little below
+$1.
+
+At around 10:46 AM, TITAN has reached its local bottom at $31.82. Before this moment, _Arb profit_ stayed negative, which
+means there was no incentive for arbitrageurs to stabilize the price of IRON and it remained below $1.
+
+At around 12:49 PM, IRON has returned to $1, which was caused the few positive arbitraging profits preceding this moment.
+
+By around 1:48 PM, TITAN has bounced and reached its local top; IRON was also slightly above $1. What has happened from
+7:14 AM until this moment looked like a big selling pressure which dropped the price of TITAN and caused IRON to lose its
+peg. Luckily, both TITAN and IRON seemed to recover after the sell-off. The stabilization mechanism has worked. However,
+those negative arbitraging profits looked worrisome.
+
+What happened next was a catastrophe.
+
+After 2 PM, TITAN was failing and eventually reached 0. IRON lost its peg and landed
+at around $0.94, which is a huge drop for a stablecoin. The Iron.Finance team had to pause minting and redeeming.
+
+**What happened to the stabilization mechanism?** It had worked earlier on that day but somehow failed to save the
+tokens from collapsing during a new sell-off.
+
+If you look at the _Arb profit_ column, you will know the answer: **the were no incentive for arbitrageurs to stabilize
+the price**. Their profit was negative during the massive sell-off. The main reason why it was so is the delayed TITAN
+price oracle: because of the delay, TITAN prices obtained from the oracle and used to calculate the amount of TITAN
+tokens redeemed for IRON, were higher than those on AMM (real-time prices). **That price gap made arbitraging
+unprofitable**.
+
+## Conclusion
+
+While many called Iron.Finance a scam project, it doesn't look like that to me. The timeline I built based on on-chain
+data has shown that the stabilization algorithm they built had worked – it managed to stabilize the price of IRON during
+the first sell-off. However, it failed during the second sell-off due to a design flaw: there were no incentive for
+arbitrageurs when TITAN token price was falling rapidly. I'd like to emphasize this: **it wasn't a code bug, it was a
+design flaw**. The stabilization mechanism based on arbitraging
+[they described on their website](https://docs.iron.finance/price-stability)
+and implemented in smart contracts has failed because it couldn't handle rapid price dropping of TITAN.
+
+Was this an attack that abused the stabilization mechanism? To me, it doesn't look so. There was no sole beneficiary
+from the incident besides those who sold TITAN on its all-time-high price. Price speculations are the nature of the
+markets and for DeFi project to be sustainable to speculations they have to design and implement solid mechanism, which
+wasn't a case for Iron.Finance.
+
+## Related links
+
+Huge thanks to [Moralis](https://moralis.io/), the analysis wouldn't have been possible without them. It was hard to
+believe, but they provide access to Polygon archive nodes **for free**!
+
+1. [The script](https://github.com/Jeiwan/titan-finance-analysis) I used to collect data and build the table
+1. [Iron.Finance Documentation](https://docs.iron.finance/)
+1. [Iron.Finance Smart Contracts](https://github.com/IronFinance/iron-polygon-contracts/tree/master/contracts)
+1. [Iron Finance Implodes After ‘Bank Run’](https://thedefiant.io/iron-finance-implodes-after-bank-run/)
+1. [Looking at Iron Finance's Failure](https://stablerates.substack.com/p/looking-at-iron-finances-failure)
+1. [What Actually Happened](https://www.reddit.com/r/IronFinance/comments/o1ys3e/what_actually_happened/)
