@@ -47,6 +47,9 @@ network, the token was named IRON and it was partially collateralized by USDC; t
 TITAN, another token created by Iron.Finance. TITAN's only utility was to be used as a collateral when minting IRON,
 it had no other uses and it **had an infinite supply**: there were no supply cap or minting rate limiting.
 
+> It's worth noting that Iron Finance didn't invent that new type of stablecoins. It was invented by [Frax Finance](https://frax.finance/).
+> Iron Finance simply copied their smart contracts and modified them according to their vision.
+
 Any user can issue IRON baked by their USDC and TITAN (which they bought from the market). The amount of issued IRONs
 was calculated as:
 
@@ -133,6 +136,28 @@ the price**. Their profit was negative during the massive sell-off. The main rea
 price oracle: because of the delay, TITAN prices obtained from the oracle and used to calculate the amount of TITAN
 tokens redeemed for IRON, were higher than those on AMM (real-time prices). **That price gap made arbitraging
 unprofitable**.
+
+## How arbitraging could save it
+
+When IRON price goes below $1 there's an incentive to buy it from the market. Remember minting and redeeming? They can
+be seen as an internal market. On this market, the price of IRON is always $1 and it can be bought only by a combination
+of USDC and TITAN.
+
+Buying IRON from this internal market is minting: you deposit $1 worth of USDC+TITAN to get 1 IRON
+(which is always $1 in the internal market). Selling IRON to the internal market is redeeming: you burn some amount
+of IRON to get $1 worth of USDC+TITAN for every IRON burnt. When there are two markets with different prices, there are
+arbitraging opportunities. And there were, in fact, two markets: that internal one and an external one, which was an
+automated market maker (IRON was traded to WMATIC on SushiSwap).
+
+So, it was expected that when IRON price goes below $1 on the external market, it would be profitable to buy it on
+it (because it's cheaper there) and redeem it on the internal market (because it's more expensive there).
+The profit would come from selling TITAN. And this expectation had played out during the first sell-off on that day.
+
+However, it couldn't kick-start during the second sell-off. There was not enough buying pressure on IRON to bump the
+price. And we now know the cause: arbitraging wasn't profitable. Since TITAN was falling for a longer period and oracle
+prices was delayed, the actual value of TITAN tokens redeemed for IRON was lower than expected. Or in other words, the
+value of USDC+TITAN redeemed for IRON was lower than $1 and even lower than the price of IRON at that moment (with fees
+it was even lower than that).
 
 ## Conclusion
 
