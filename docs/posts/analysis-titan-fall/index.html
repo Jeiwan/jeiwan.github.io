@@ -48,6 +48,15 @@ Photo by
 <a href="https://unsplash.com/@sigmund?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Sigmund</a>
 on
 <a href="https://unsplash.com/s/photos/error?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<blockquote>
+<p><strong>Updated on June 21:</strong></p>
+<ol>
+<li>Added low ECR as another cause of the incident.</li>
+<li>Added a reference to Frax Finance.</li>
+<li>Added an explanation of arbitraging.</li>
+<li>Fixed a bug in arbitraging profits calculations, which caused lower values.</li>
+</ol>
+</blockquote>
 <h2 id="introduction">Introduction</h2>
 <p>This is an analysis of an incident that happened to <a href="https://iron.finance">Iron.Finance</a> on June 16, 2021.
 As a result of the incident, the price of TITAN token has collapsed to 0 and the IRON stablecoin has lost
@@ -111,8 +120,11 @@ when redeeming) and sell TITAN for some profit. Such buying from the market woul
 <p>This stabilization mechanism worked. And it worked (once) on the day when the incident happened.</p>
 <h2 id="incident-timeline">Incident timeline</h2>
 <p>This is the on-chain data that I collected and that helped to find the flaw:</p>
-<p><img src="/images/iron-finance-timeline-small.png" alt="Timeline">
+<p><img src="/images/iron-finance-timeline.png" alt="Timeline">
 <a href="/images/iron-finance-timeline.png">Click to see a bigger version</a></p>
+<blockquote>
+<p><strong>Update, June 21</strong>: first version of the table contained a bug that resulted in lower arbitraging profits.</p>
+</blockquote>
 <p>Columns are:</p>
 <ol>
 <li><strong>(index)</strong> - block numbers.</li>
@@ -126,7 +138,7 @@ they go &lsquo;before&rsquo; the prices in the <strong>TITAN price</strong> colu
 market, redeeming USDC+TITAN, and selling redeemed TITAN on the market. Fees are not included. Values in this column
 are only calculated when IRON price is below $1.
 This is the most important column.</li>
-<li><strong>TCR</strong>, <strong>ECR</strong> – TCR and ECR respectively. ECR is used in the arbitraging scheme explained above.</li>
+<li><strong>ECR</strong> – ECR is used in the arbitraging scheme explained above.</li>
 </ol>
 <p>Everything looked good until around 7:14 AM: at this time, TITAN reached its peak price but IRON has gone a little below
 $1.</p>
@@ -142,11 +154,22 @@ those negative arbitraging profits looked worrisome.</p>
 at around $0.94, which is a huge drop for a stablecoin. The Iron.Finance team had to pause minting and redeeming.</p>
 <p><strong>What happened to the stabilization mechanism?</strong> It had worked earlier on that day but somehow failed to save the
 tokens from collapsing during a new sell-off.</p>
-<p>If you look at the <em>Arb profit</em> column, you will know the answer: <strong>the were no incentive for arbitrageurs to stabilize
-the price</strong>. Their profit was negative during the massive sell-off. The main reason why it was so is the delayed TITAN
-price oracle: because of the delay, TITAN prices obtained from the oracle and used to calculate the amount of TITAN
-tokens redeemed for IRON, were higher than those on AMM (real-time prices). <strong>That price gap made arbitraging
-unprofitable</strong>.</p>
+<p>If you look at the <em>Arb profit</em> column, you will know the answer: <strong>arbitraging couldn&rsquo;t provide profit consistently</strong>.
+Even though the price stayed below $1, profit wasn&rsquo;t consistent during the sell-off. This means that arbitraging, which
+is a part of the stabiliziation mechanism, wasn&rsquo;t always possible. As a result, there was not enough of buying pressure
+to bump the price.</p>
+<p>There were two reasons why this happened.</p>
+<p>The first reason is the delayed TITAN price oracle: because of the delay, TITAN prices obtained from the
+oracle and used to calculate the amount of TITAN tokens redeemed for IRON, were higher than those on AMM (real-time
+prices). <strong>That price gap made arbitraging unprofitable</strong>.</p>
+<p>The other reason is low ECR. ECR is used in redeeming to determine the portion of TITAN you get. During the
+second sell-off, it equaled to 74%, which means 1 IRON was redeemed for 74 cents worth of USDC and 26 cents worth of
+TITAN. And this portion of TITAN was too big due to the price gap (the more TITAN you get the more money you lose
+selling it on the external market).</p>
+<p>I ran a simulation which showed that an ECR increased by 15% would&rsquo;ve made arbitraging profitable:</p>
+<p><img src="/images/iron-finance-timeline-simulation.png" alt="Simulation: ECR increased by 15%">
+<a href="/images/iron-finance-timeline-simulation.png">Click to see a bigger version</a></p>
+<p>However, ECR is not designed to react to market changes, it only reflects the percentage of IRON tokens backed by USDC.</p>
 <h2 id="how-arbitraging-could-save-it">How arbitraging could save it</h2>
 <p>When IRON price goes below $1 there&rsquo;s an incentive to buy it from the market. Remember minting and redeeming? They can
 be seen as an internal market. On this market, the price of IRON is always $1 and it can be bought only by a combination
@@ -162,8 +185,7 @@ The profit would come from selling TITAN. And this expectation had played out du
 <p>However, it couldn&rsquo;t kick-start during the second sell-off. There was not enough buying pressure on IRON to bump the
 price. And we now know the cause: arbitraging wasn&rsquo;t profitable. Since TITAN was falling for a longer period and oracle
 prices was delayed, the actual value of TITAN tokens redeemed for IRON was lower than expected. Or in other words, the
-value of USDC+TITAN redeemed for IRON was lower than $1 and even lower than the price of IRON at that moment (with fees
-it was even lower than that).</p>
+value of USDC+TITAN redeemed for IRON was lower than $1 (with fees it was even lower).</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>While many called Iron.Finance a scam project, it doesn&rsquo;t look like that to me. The timeline I built based on on-chain
 data has shown that the stabilization algorithm they built had worked – it managed to stabilize the price of IRON during
