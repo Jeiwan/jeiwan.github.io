@@ -11,6 +11,13 @@ Photo by
 on
 [Unsplash](https://unsplash.com/s/photos/error?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
 
+> **Updated on June 21:**
+>
+> 1. Added low ECR as another cause of the incident.
+> 1. Added a reference to Frax Finance.
+> 1. Added an explanation of arbitraging.
+> 1. Fixed a bug in arbitraging profits calculations, which caused lower values.
+
 ## Introduction
 
 This is an analysis of an incident that happened to [Iron.Finance](https://iron.finance) on June 16, 2021.
@@ -92,8 +99,10 @@ This stabilization mechanism worked. And it worked (once) on the day when the in
 
 This is the on-chain data that I collected and that helped to find the flaw:
 
-![Timeline](/images/iron-finance-timeline-small.png)
+![Timeline](/images/iron-finance-timeline.png)
 [Click to see a bigger version](/images/iron-finance-timeline.png)
+
+> **Update, June 21**: first version of the table contained a bug that resulted in lower arbitraging profits.
 
 Columns are:
 
@@ -108,7 +117,7 @@ Columns are:
    market, redeeming USDC+TITAN, and selling redeemed TITAN on the market. Fees are not included. Values in this column
    are only calculated when IRON price is below $1.
    This is the most important column.
-1. **TCR**, **ECR** – TCR and ECR respectively. ECR is used in the arbitraging scheme explained above.
+1. **ECR** – ECR is used in the arbitraging scheme explained above.
 
 Everything looked good until around 7:14 AM: at this time, TITAN reached its peak price but IRON has gone a little below
 $1.
@@ -131,11 +140,28 @@ at around $0.94, which is a huge drop for a stablecoin. The Iron.Finance team ha
 **What happened to the stabilization mechanism?** It had worked earlier on that day but somehow failed to save the
 tokens from collapsing during a new sell-off.
 
-If you look at the _Arb profit_ column, you will know the answer: **the were no incentive for arbitrageurs to stabilize
-the price**. Their profit was negative during the massive sell-off. The main reason why it was so is the delayed TITAN
-price oracle: because of the delay, TITAN prices obtained from the oracle and used to calculate the amount of TITAN
-tokens redeemed for IRON, were higher than those on AMM (real-time prices). **That price gap made arbitraging
-unprofitable**.
+If you look at the _Arb profit_ column, you will know the answer: **arbitraging couldn't provide profit consistently**.
+Even though the price stayed below $1, profit wasn't consistent during the sell-off. This means that arbitraging, which
+is a part of the stabiliziation mechanism, wasn't always possible. As a result, there was not enough of buying pressure
+to bump the price.
+
+There were two reasons why this happened.
+
+The first reason is the delayed TITAN price oracle: because of the delay, TITAN prices obtained from the
+oracle and used to calculate the amount of TITAN tokens redeemed for IRON, were higher than those on AMM (real-time
+prices). **That price gap made arbitraging unprofitable**.
+
+The other reason is low ECR. ECR is used in redeeming to determine the portion of TITAN you get. During the
+second sell-off, it equaled to 74%, which means 1 IRON was redeemed for 74 cents worth of USDC and 26 cents worth of
+TITAN. And this portion of TITAN was too big due to the price gap (the more TITAN you get the more money you lose
+selling it on the external market).
+
+I ran a simulation which showed that an ECR increased by 15% would've made arbitraging profitable:
+
+![Simulation: ECR increased by 15%](/images/iron-finance-timeline-simulation.png)
+[Click to see a bigger version](/images/iron-finance-timeline-simulation.png)
+
+However, ECR is not designed to react to market changes, it only reflects the percentage of IRON tokens backed by USDC.
 
 ## How arbitraging could save it
 
@@ -156,8 +182,7 @@ The profit would come from selling TITAN. And this expectation had played out du
 However, it couldn't kick-start during the second sell-off. There was not enough buying pressure on IRON to bump the
 price. And we now know the cause: arbitraging wasn't profitable. Since TITAN was falling for a longer period and oracle
 prices was delayed, the actual value of TITAN tokens redeemed for IRON was lower than expected. Or in other words, the
-value of USDC+TITAN redeemed for IRON was lower than $1 and even lower than the price of IRON at that moment (with fees
-it was even lower than that).
+value of USDC+TITAN redeemed for IRON was lower than $1 (with fees it was even lower).
 
 ## Conclusion
 
