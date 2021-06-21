@@ -79,6 +79,10 @@ real-time prices made arbitraging unprofitable.</p>
 network, the token was named IRON and it was partially collateralized by USDC; the other part was collateralized by
 TITAN, another token created by Iron.Finance. TITAN&rsquo;s only utility was to be used as a collateral when minting IRON,
 it had no other uses and it <strong>had an infinite supply</strong>: there were no supply cap or minting rate limiting.</p>
+<blockquote>
+<p>It&rsquo;s worth noting that Iron Finance didn&rsquo;t invent that new type of stablecoins. It was invented by <a href="https://frax.finance/">Frax Finance</a>.
+Iron Finance simply copied their smart contracts and modified them according to their vision.</p>
+</blockquote>
 <p>Any user can issue IRON baked by their USDC and TITAN (which they bought from the market). The amount of issued IRONs
 was calculated as:</p>
 <p>$$IRON_{amt} = (USDC_{amt} * USDC_{price}) + (TITAN_{amt} * TITAN_{price})$$</p>
@@ -143,6 +147,23 @@ the price</strong>. Their profit was negative during the massive sell-off. The m
 price oracle: because of the delay, TITAN prices obtained from the oracle and used to calculate the amount of TITAN
 tokens redeemed for IRON, were higher than those on AMM (real-time prices). <strong>That price gap made arbitraging
 unprofitable</strong>.</p>
+<h2 id="how-arbitraging-could-save-it">How arbitraging could save it</h2>
+<p>When IRON price goes below $1 there&rsquo;s an incentive to buy it from the market. Remember minting and redeeming? They can
+be seen as an internal market. On this market, the price of IRON is always $1 and it can be bought only by a combination
+of USDC and TITAN.</p>
+<p>Buying IRON from this internal market is minting: you deposit $1 worth of USDC+TITAN to get 1 IRON
+(which is always $1 in the internal market). Selling IRON to the internal market is redeeming: you burn some amount
+of IRON to get $1 worth of USDC+TITAN for every IRON burnt. When there are two markets with different prices, there are
+arbitraging opportunities. And there were, in fact, two markets: that internal one and an external one, which was an
+automated market maker (IRON was traded to WMATIC on SushiSwap).</p>
+<p>So, it was expected that when IRON price goes below $1 on the external market, it would be profitable to buy it on
+it (because it&rsquo;s cheaper there) and redeem it on the internal market (because it&rsquo;s more expensive there).
+The profit would come from selling TITAN. And this expectation had played out during the first sell-off on that day.</p>
+<p>However, it couldn&rsquo;t kick-start during the second sell-off. There was not enough buying pressure on IRON to bump the
+price. And we now know the cause: arbitraging wasn&rsquo;t profitable. Since TITAN was falling for a longer period and oracle
+prices was delayed, the actual value of TITAN tokens redeemed for IRON was lower than expected. Or in other words, the
+value of USDC+TITAN redeemed for IRON was lower than $1 and even lower than the price of IRON at that moment (with fees
+it was even lower than that).</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>While many called Iron.Finance a scam project, it doesn&rsquo;t look like that to me. The timeline I built based on on-chain
 data has shown that the stabilization algorithm they built had worked – it managed to stabilize the price of IRON during
