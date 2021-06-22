@@ -18,6 +18,8 @@ on
 > 1. Added an explanation of arbitraging.
 > 1. Fixed a bug in arbitraging profits calculations, which caused lower values.
 
+> **Updated on June 22:** Added 'The full picture' section. The analysis is now complete.
+
 ## Introduction
 
 This is an analysis of an incident that happened to [Iron.Finance](https://iron.finance) on June 16, 2021.
@@ -183,6 +185,48 @@ However, it couldn't kick-start during the second sell-off. There was not enough
 price. And we now know the cause: arbitraging wasn't profitable. Since TITAN was falling for a longer period and oracle
 prices was delayed, the actual value of TITAN tokens redeemed for IRON was lower than expected. Or in other words, the
 value of USDC+TITAN redeemed for IRON was lower than $1 (with fees it was even lower).
+
+## The full picture
+
+I've managed to reconstruct the full picture of the incident. Here are historical values of some key metrics collected
+since the launch of IRON and until the collapse:
+
+![Full timeline of Iron Finance](/images/iron-finance-collapse-small.png)
+[Click to see a bigger version](/images/iron-finance-collapse.png)
+
+Key patterns on this graph are:
+
+1. ECR and TCR were close to 100 when the project had launched.
+1. Both ECR and TCR were lowering during the lifetime of the project.
+1. IRON price had almost always been above $1 (green dots at the bottom).
+
+As I explained earlier, by the time TITAN started falling on June 16, ECR was too low for arbitraging to be profitable.
+On top of that, a price gap caused by delayed oracle prices made it even less profitable. ECR is TCR averaged over
+time or minting events: ECR reflects accumulated amount of USDC, which is deposited in amounts defined by TCR. So, ECR
+followed TCR.
+
+TCR, in its turn, is tied to IRON prices: if IRON costs more than $1 on the market, TCR lowers, reducing the amount of
+USDC required to mint IRON. And the opposite: if IRON costs less than $1, TCR grows increasing the amount of USDC
+required to mint IRON. The meaning of such connection is that when the demand for IRON rises (its price is growing) it
+should become less collateralized, which eventually reduces its price. On the other hand, when the demand for IRON lowers
+(its price is falling), it should have more collateral to have higher value.
+
+Now, as you can see, IRON prices was almost constantly above $1 and TCR was almost always lowering. Why did it happen?
+
+Remember how TWAP caused a price gap: while TITAN was falling, oracle prices were higher? Well, it turns out it works in
+the opposite direction as well: when TITAN is rising, oracle prices are lower than market ones. What this means is that
+**when TITAN is growing, redeeming becomes profitable even if IRON costs more than $1**. Since oracle prices are lower
+than market ones, redeeming results in a slightly bigger amount of TITAN tokens, which can be sold on the markets for
+profit.
+
+So, this is what happened:
+
+1. TWAP and rising TITAN prices caused a prices gap: oracle prices were lower than market ones.
+1. Arbitraging bots were buying IRON from the market (for $1 or slightly more), redeeming it for TITAN, and selling
+   TITAN for profit.
+1. TITAN price kept rising, bots kept arbitraging, IRON price stayed at or above $1.
+1. TCR was lowering and ECR was following it.
+1. Eventually, ECR got too low to make arbitraging profitable when TITAN started dropping and IRON went below $1.
 
 ## Conclusion
 
