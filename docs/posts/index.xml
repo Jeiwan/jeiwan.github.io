@@ -15,7 +15,8 @@
       <guid>https://jeiwan.net/posts/analysis-titan-fall/</guid>
       <description>Photo by Sigmund on Unsplash
  Updated on June 21:
- Added low ECR as another cause of the incident. Added a reference to Frax Finance. Added an explanation of arbitraging. Fixed a bug in arbitraging profits calculations, which caused lower values.   Introduction This is an analysis of an incident that happened to Iron.Finance on June 16, 2021. As a result of the incident, the price of TITAN token has collapsed to 0 and the IRON stablecoin has lost its peg to USD and hasn&amp;rsquo;t regained it yet.</description>
+ Added low ECR as another cause of the incident. Added a reference to Frax Finance. Added an explanation of arbitraging. Fixed a bug in arbitraging profits calculations, which caused lower values.    Updated on June 22: Added &amp;lsquo;The full picture&amp;rsquo; section. The analysis is now complete.
+ Introduction This is an analysis of an incident that happened to Iron.</description>
     </item>
     
     <item>
