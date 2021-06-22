@@ -1,7 +1,6 @@
 ---
 title: "Programming DeFi: Uniswap. Part 3"
 date: 2021-06-22T00:00:00+00:00
-draft: true
 tags: ["Uniswap", "Ethereum", "Blockchain", "Smart contracts"]
 ---
 

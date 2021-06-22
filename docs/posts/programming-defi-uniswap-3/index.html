@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-defi-uniswap-3/">
+
+  <title>Programming DeFi: Uniswap. Part 3 - Going the distance</title>
+  <meta property="og:title" content="Programming DeFi: Uniswap. Part 3 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming DeFi: Uniswap. Part 3</h1>
+      <time class="post-date" datetime="2021-06-22 00:00:00 &#43;0000">22 Jun 2021</time>
+    </header>
+
+    <p><img src="/images/carlos-aranda-QMjCzOGeglA-unsplash.jpg" alt="Factory">
+Photo by
+<a href="https://unsplash.com/@carlosaranda?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">carlos aranda</a>
+on
+<a href="https://unsplash.com/s/photos/factory?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p>Here we are again building a clone of Uniswap V1! Our implementation is almost ready: we&rsquo;ve implemented all core
+mechanics of Exchange contract, including pricing functions, swapping, LP-tokens, and fees. It looks like our clone
+is complete, however there&rsquo;s a missing piece: Factory contract. Today, we&rsquo;ll implement it and our Uniswap V1 clone will
+be done. However, this is not the end: in the next part we&rsquo;ll be building Uniswap V2 and it&rsquo;ll be not less interesting
+than V1!</p>
+<blockquote>
+<p>To see changes since the previous part, <a href="https://github.com/Jeiwan/zuniswap/compare/part_2...part_3">click here</a>.<br>
+To see full code of the project so far, <a href="https://github.com/Jeiwan/zuniswap/tree/part_3">click here</a>.</p>
+</blockquote>
+<h2 id="what-factory-is-for">What Factory is for</h2>
+<p>Factory contract serves as a registry of exchanges: every new deployed Exchange contract is registered with a Factory.
+And this an important mechanic: any exchange can be found by querying the registry. By having such registry exchanges can
+find other exchanges when user tries to swap a token for another token (and not ether).</p>
+<p>Another handy utility provided by Factory contract is ability to deploy an exchange without dealing with code, nodes,
+deploying scripts, and any other development tools. Factory implements a function that allows users to create and deploy
+an exchange by simply calling this function. So, <strong>today we&rsquo;ll also learn how a contract can deploy another contract</strong>.</p>
+<p>Uniswap has only one Factory contract, thus there&rsquo;s only one registry of Uniswap pairs. However, nothing prevents
+other users from deploying their own Factories or even Exchange contract that are not registered with the official
+Factory. While this is possible, such exchanges won&rsquo;t be recognized by Uniswap and there would be no way to use them
+to swap tokens via the official web-site.</p>
+<p>That&rsquo;s basically it. Let&rsquo;s get to the code!</p>
+<h2 id="factory-implementation">Factory implementation</h2>
+<p>Factory is a registry so we need a data structure to store exchanges, and that will be a mapping of addresses to
+addresses – it will allow to find exchanges by their tokens (1 exchange can swap only 1 token, remember?).</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="s">&#34;./Exchange.sol&#34;</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">Factory</span> <span class="p">{</span>
+    <span class="kd">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kt">address</span><span class="p">)</span> <span class="kr">public</span> <span class="n">tokenToExchange</span><span class="p">;</span>
+
+    <span class="p">...</span>
+</code></pre></div><p>Next, is the <code>createExchange</code> functions that allows to create and deploy an exchange by simply taking a token address:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">createExchange</span><span class="p">(</span><span class="kt">address</span> <span class="n">_tokenAddress</span><span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nb">require</span><span class="p">(</span><span class="n">_tokenAddress</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
+  <span class="nb">require</span><span class="p">(</span>
+    <span class="n">tokenToExchange</span><span class="p">[</span><span class="n">_tokenAddress</span><span class="p">]</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+    <span class="s">&#34;exchange already exists&#34;</span>
+  <span class="p">);</span>
+
+  <span class="n">Exchange</span> <span class="n">exchange</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Exchange</span><span class="p">(</span><span class="n">_tokenAddress</span><span class="p">);</span>
+  <span class="n">tokenToExchange</span><span class="p">[</span><span class="n">_tokenAddress</span><span class="p">]</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="n">exchange</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="kt">address</span><span class="p">(</span><span class="n">exchange</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>There are two checks:</p>
+<ol>
+<li>The first ensures the token address is not the zero address (<code>0x0000000000000000000000000000000000000000</code>).</li>
+<li>Next one ensures that the token hasn&rsquo;t already been added to the registry (default address value is the zero
+address). The idea is that we don&rsquo;t want to have different exchanges for the same token because we don&rsquo;t want
+liquidity to be scattered across multiple exchanges. It should better be concentrated on one exchange to reduce
+slippage and provide better exchange rates.</li>
+</ol>
+<p>Next, we instantiate Exchange with the provided token address, this is why we needed to import &ldquo;Exchange.sol&rdquo; earlier.
+This instantiation is similar to instantiation of classes in OOP languages, however, in Solidity, the <code>new</code> operator will
+in fact deploy a contract. The returned values has the type of the contract (Exchange) and every contract can be
+converted to an address – this is what we&rsquo;re doing on the next line to get the address of the new exchange and save it
+to the registry.</p>
+<p>To finish the contract, we need to implement only one more function – <code>getExchange</code>, which will allow us to query the
+registry via an interface from another contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getExchange</span><span class="p">(</span><span class="kt">address</span> <span class="n">_tokenAddress</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="n">tokenToExchange</span><span class="p">[</span><span class="n">_tokenAddress</span><span class="p">];</span>
+<span class="p">}</span>
+
+</code></pre></div><p>That&rsquo;s it for the factory! It&rsquo;s really simple.</p>
+<p>Next, we need to improve the exchange contract so it could use the factory to perform token-to-token swaps.</p>
+<h2 id="linking-exchange-to-factory">Linking Exchange to Factory</h2>
+<p>First, we need to link Exchange to Factory because every exchange needs to know the address of the Factory and we don&rsquo;t
+want to hard-code so the contract is more flexible. To link Exchange to Factory, we need to add a new state variable
+that will store factory address and we&rsquo;ll need update the constructor:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Exchange</span> <span class="kr">is</span> <span class="n">ERC20</span> <span class="p">{</span>
+    <span class="kt">address</span> <span class="kr">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="kr">public</span> <span class="n">factoryAddress</span><span class="p">;</span> <span class="c1">// &lt;--- new line
+</span><span class="c1"></span>
+    <span class="n">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="s">&#34;Zuniswap-V1&#34;</span><span class="p">,</span> <span class="s">&#34;ZUNI-V1&#34;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
+
+        <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
+        <span class="n">factoryAddress</span> <span class="o">=</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">;</span>  <span class="c1">// &lt;--- new line
+</span><span class="c1"></span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div><p>And that&rsquo;s it. It&rsquo;s now ready to do token-to-token swap. Let&rsquo;s implement that.</p>
+<h2 id="token-to-token-swaps">Token-to-token swaps</h2>
+<p>How do we swap a token for token when we have two exchanges linked by a registry? Maybe like that:</p>
+<ol>
+<li>Begin the standard token-to-ether swap.</li>
+<li>Instead of sending ethers to user, find an exchange for the token address provided by user.</li>
+<li>If the exchange exists, send the ethers to the exchange to swap them to tokens.</li>
+<li>Return swapped tokens to user.</li>
+</ol>
+<p>Looks good, doesn&rsquo;t it? Let&rsquo;s try building that.</p>
+<p>We&rsquo;ll this function <code>tokenToTokenSwap</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// Exchange.sol
+</span><span class="c1"></span>
+<span class="kd">function</span> <span class="n">tokenToTokenSwap</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">_tokensSold</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">_minTokensBought</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">_tokenAddress</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="p">...</span>
+</code></pre></div><p>The function takes three arguments: the amount of tokens to be sold, minimal amount of tokens to get in exchange, the
+address of the token to exchange sold tokens for.</p>
+<p>We first check if there&rsquo;s an exchange for the token address provided by user. If there&rsquo;s none, it&rsquo;ll throw an error.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">address</span> <span class="n">exchangeAddress</span> <span class="o">=</span> <span class="n">IFactory</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">).</span><span class="n">getExchange</span><span class="p">(</span>
+    <span class="n">_tokenAddress</span>
+<span class="p">);</span>
+<span class="nb">require</span><span class="p">(</span>
+    <span class="n">exchangeAddress</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">exchangeAddress</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+    <span class="s">&#34;invalid exchange address&#34;</span>
+<span class="p">);</span>
+
+</code></pre></div><p>We&rsquo;re using <code>IFactory</code> which is an interface for the Factory contract. It&rsquo;s a good practice to use interfaces when
+interacting with other contracts (or classes in OOP). However, interfaces don&rsquo;t allow to access state variables and this
+is why we&rsquo;ve implemented the <code>getExchange</code> function in the Factory contract – so we can use the contract via an
+interface.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">interface</span> <span class="n">IFactory</span> <span class="p">{</span>
+  <span class="kd">function</span> <span class="n">getExchange</span><span class="p">(</span><span class="kt">address</span> <span class="n">_tokenAddress</span><span class="p">)</span> <span class="kr">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Next, we&rsquo;re using the current exchange to swap tokens for ethers and transfer user&rsquo;s tokens to the exchange. This is the
+standard procedure of ether-to-tokens swapping:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+<span class="kt">uint256</span> <span class="n">ethBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
+    <span class="n">_tokensSold</span><span class="p">,</span>
+    <span class="n">tokenReserve</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
+<span class="p">);</span>
+
+<span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">transferFrom</span><span class="p">(</span>
+    <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+    <span class="n">_tokensSold</span>
+<span class="p">);</span>
+
+
+</code></pre></div><p>Final step of the function is using the other exchange to swap ethers to tokens:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">IExchange</span><span class="p">(</span><span class="n">exchangeAddress</span><span class="p">).</span><span class="n">ethToTokenSwap</span><span class="p">{</span><span class="nb">value</span><span class="o">:</span> <span class="n">ethBought</span><span class="p">}(</span>
+    <span class="n">_minTokensBought</span>
+<span class="p">);</span>
+
+</code></pre></div><p>And we&rsquo;re done!</p>
+<p>Not really, actually. Can you see a problem? Let&rsquo;s looks at the last line of <code>etherToTokenSwap</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokensBought</span><span class="p">);</span>
+</code></pre></div><p>A-ha! It sends bought tokens to <code>msg.sender</code>. In Solidity, <code>msg.sender</code> is dynamic, not static, and it points at the one
+who (or what, in the case of a contract) initiated the current call. When user calls a contract function, it would point
+to user&rsquo;s address. But when a contract calls another contract, <code>msg.sender</code> is the address of the calling contract!</p>
+<p>Thus, <code>tokenToTokenSwap</code> would send tokens to the address of the first exchange! This is not a problem though because we
+can call <code>ERC20(_tokenAddress).transfer(...)</code> to send those tokens to the user. However, there&rsquo;s a getter solution: let&rsquo;s
+save some gas and send tokens directly to the user. For this, we&rsquo;ll need to split the <code>etherToTokenSwap</code> function into
+two functions:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">ethToToken</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="kt">address</span> <span class="n">recipient</span><span class="p">)</span> <span class="kr">private</span> <span class="p">{</span>
+  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+  <span class="kt">uint256</span> <span class="n">tokensBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
+    <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
+    <span class="n">tokenReserve</span>
+  <span class="p">);</span>
+
+  <span class="nb">require</span><span class="p">(</span><span class="n">tokensBought</span> <span class="o">&gt;=</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
+
+  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">recipient</span><span class="p">,</span> <span class="n">tokensBought</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="n">ethToTokenSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+  <span class="n">ethToToken</span><span class="p">(</span><span class="n">_minTokens</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p><code>ethToToken</code> is private function that everything <code>ethToTokenSwap</code> is used to do with only one difference: it takes a
+tokens recipient address, which gives us the flexibility of choosing who we want to send tokens to. <code>ethToTokenSwap</code>,
+in its turn, is now simply a wrapper for <code>ethToToken</code> that always passes <code>msg.sender</code> as a recipient.</p>
+<p>Now, we need another function to send tokens to a custom recipient. We could&rsquo;ve used <code>ethToToken</code> for that but let&rsquo;s
+leave it private and non-payable.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">ethToTokenTransfer</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="kt">address</span> <span class="n">_recipient</span><span class="p">)</span>
+  <span class="kr">public</span>
+  <span class="kr">payable</span>
+<span class="p">{</span>
+  <span class="n">ethToToken</span><span class="p">(</span><span class="n">_minTokens</span><span class="p">,</span> <span class="n">_recipient</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>This is simply a copy of <code>ethToTokenSwap</code> that allows to send tokens to a custom recipient. We can now use it in the
+<code>tokenToTokenSwap</code> function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="p">...</span>
+
+    <span class="n">IExchange</span><span class="p">(</span><span class="n">exchangeAddress</span><span class="p">).</span><span class="n">ethToTokenTransfer</span><span class="p">{</span><span class="nb">value</span><span class="o">:</span> <span class="n">ethBought</span><span class="p">}(</span>
+        <span class="n">_minTokensBought</span><span class="p">,</span>
+        <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>We&rsquo;re sending tokens tokens to whoever initiated the swap.</p>
+<p>And now, we&rsquo;re done!</p>
+<h3 id="conclusion">Conclusion</h3>
+<p>Our copy of Uniswap V1 is now finished. If you have any ideas about how to improve it, give them a try! For example,
+there can a function in Exchange to calculate the output amount of tokens in token-to-token swap.
+If you have any problems understanding how something works, feel free to check
+<a href="https://github.com/Jeiwan/zuniswap/tree/part_3/test">the tests</a>. I have covered all the functions, including
+<code>tokenToTokenSwap</code>.</p>
+<p>Next time, we&rsquo;ll start learning Uniswap V2. While it&rsquo;s mostly the same thing, the same set or core principles, it
+provides some new powerful features.</p>
+<p>Until next time!</p>
+<h2 id="useful-links">Useful links</h2>
+<ol>
+<li><a href="https://github.com/Jeiwan/zuniswap/tree/part_3">Full code of this part</a></li>
+<li><a href="https://hackmd.io/@HaydenAdams/HJ9jLsfTz">Uniswap V1 Whitepaper</a></li>
+<li><a href="https://github.com/Uniswap/uniswap-v1">Original Uniswap V1 source code</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GH</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">TW</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">TG</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+

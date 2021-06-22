@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 20 Jun 2021 18:29:26 +0700</lastBuildDate><atom:link href="https://jeiwan.net/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 22 Jun 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Programming DeFi: Uniswap. Part 3</title>
+      <link>https://jeiwan.net/posts/programming-defi-uniswap-3/</link>
+      <pubDate>Tue, 22 Jun 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-defi-uniswap-3/</guid>
+      <description>Photo by carlos aranda on Unsplash
+Introduction Here we are again building a clone of Uniswap V1! Our implementation is almost ready: we&amp;rsquo;ve implemented all core mechanics of Exchange contract, including pricing functions, swapping, LP-tokens, and fees. It looks like our clone is complete, however there&amp;rsquo;s a missing piece: Factory contract. Today, we&amp;rsquo;ll implement it and our Uniswap V1 clone will be done. However, this is not the end: in the next part we&amp;rsquo;ll be building Uniswap V2 and it&amp;rsquo;ll be not less interesting than V1!</description>
+    </item>
+    
     <item>
       <title>Analysis of the TITAN fall</title>
       <link>https://jeiwan.net/posts/analysis-titan-fall/</link>
