@@ -276,7 +276,7 @@ We're sending tokens tokens to whoever initiated the swap.
 
 And now, we're done!
 
-### Conclusion
+## Conclusion
 
 Our copy of Uniswap V1 is now finished. If you have any ideas about how to improve it, give them a try! For example,
 there can a function in Exchange to calculate the output amount of tokens in token-to-token swap.
