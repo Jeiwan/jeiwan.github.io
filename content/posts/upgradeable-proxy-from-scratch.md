@@ -201,6 +201,10 @@ Let's break it down because it looks too complicated:
 1. Finally, we're checking if the relayed call was successful and returning; otherwise, we're reverting.
    Notice that we're using the data returned by the relayed call in both of the cases: we want to return what was returned by the call and we want to revert with the same message if the call has reverted.
 
+> In fact, Solidity also has `delegatecall` function, but we're not using it here for a reason: we want the Proxy contract
+> to return whatever was returned from the callee and we don't know return data type in advance. Since Solidity is a statically-typed language,
+> it requires us to define function return type before compilation.
+
 Let's see if this works! We'll do that by testing.
 
 First, let's set up our tests: we need to deploy both contracts:
