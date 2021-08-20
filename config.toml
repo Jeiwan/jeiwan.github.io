@@ -13,6 +13,7 @@ disqusShortname = ""
   tagline = "A blog about blockhains and smart contracts development"
   bio = "Web Development - DevOps - Blockchain"
 
+  authorEmail = "me@jeiwan.ru"
   githubUsername = "jeiwan"
   telegramUsername = "jeiwan"
   twitterUsername = "jeiwan7"
