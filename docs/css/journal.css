@@ -265,3 +265,8 @@ h6 {
 .highlight code {
   font-size: 0.9em;
 }
+
+img[src$="#center"] {
+  display: block;
+  margin: 0 auto;
+}
