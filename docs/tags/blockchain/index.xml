@@ -6,7 +6,18 @@
     <description>Recent content in Blockchain on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 22 Jun 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/blockchain/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 25 Aug 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/blockchain/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Upgradeable proxy contract from scratch</title>
+      <link>https://jeiwan.net/posts/upgradeable-proxy-from-scratch/</link>
+      <pubDate>Wed, 25 Aug 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/upgradeable-proxy-from-scratch/</guid>
+      <description>Photo by Rafał Naczyński on Unsplash
+Immutability gives Ethereum a big benefit: once a smart contract is deployed, there&amp;rsquo;s no way to change it. This means that smart contract logic won&amp;rsquo;t change over time and it&amp;rsquo;ll remain as reliable as it was from the beginning, e.g. you won&amp;rsquo;t suddenly see a contract doing something no one thought it could do.
+However, immutability comes with drawbacks that can be significant in some cases.</description>
+    </item>
+    
     <item>
       <title>Programming DeFi: Uniswap. Part 3</title>
       <link>https://jeiwan.net/posts/programming-defi-uniswap-3/</link>
