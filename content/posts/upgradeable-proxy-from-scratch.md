@@ -1,7 +1,6 @@
 ---
 title: "Upgradeable proxy contract from scratch"
-date: 2021-08-15T00:00:00+00:00
-draft: true
+date: 2021-08-25T00:00:00+00:00
 tags: ["Ethereum", "Blockchain", "Solidity"]
 ---
 
