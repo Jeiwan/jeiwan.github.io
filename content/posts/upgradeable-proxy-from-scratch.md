@@ -261,8 +261,8 @@ Let's run the test:
 
 ```plain
 1) Proxy
-       proxies calls to implementation contract:
-     AssertionError: Expected "912823093544680850579175995568783282090442467040" to be equal 0x42
+proxies calls to implementation contract:
+AssertionError: Expected "912823093544680850579175995568783282090442467040" to be equal 0x42
 ```
 
 Uh-oh! This is not something we expected.
@@ -274,7 +274,7 @@ The time has come to learn about the trickiness of `delegatecall`.
 Every program consists of two components:
 
 1. State, which is the data that's stored in memory, or in a persistent storage, and that's used by the program.
-1. Logic, which is the funcitonality of the program.
+1. Logic, which is the functionality of the program.
 
 Likewise, smart contracts also have state and logic.
 Smart contract's persistent state is stored on blockchain and is accessible via state variables.
@@ -290,9 +290,9 @@ state**:
 We could've used `call` instead of `delegatecall` but that'd have broken the upgradeability!
 
 Imagine that we're running a smart contract for long time and there's a lot of data stored on chain but then we decide to upgrade the contract
-and deploy a differnet implementation.
+and deploy a different implementation.
 That would mean that we would have to migrate all the data from the smart contract to the new implementation!
-That can be quite pricey depending on network congesion.
+That can be quite pricey depending on network congestion.
 With `delegatecall`, we're storing state in the proxy contract, which allows us to swap implementations **without the need of migrating data**!
 
 Now, let's return to the error in tests.
@@ -335,7 +335,7 @@ variable `magicNumber` points at the same memory slot as variable `implementatio
 Since both of them have the same index 0.
 And that big number that we saw in the failed test is the implementation contract address (in the decimal system)!
 
-To better understan the idea, try changing the proxy contract like that and run the tests:
+To better understand the idea, try changing the proxy contract like that and run the tests:
 
 ```solidity
 contract Proxy {
@@ -347,7 +347,7 @@ contract Proxy {
 
 ```
 
-> You can learn more about the layout of state variabels [here](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html).
+> You can learn more about the layout of state variables [here](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html).
 
 ## Resolving the state collision
 
@@ -413,7 +413,7 @@ contract Proxy {
 ```
 
 Notice that this is a constant so it won't occupy a memory slot – the compiler will replace all its occurrences with
-its value. Also, notice that the `implementaiton` state variable has gone now – we won't use it!
+its value. Also, notice that the `implementation` state variable has gone now – we won't use it!
 
 Next, rewrite the setter and getter functions:
 
@@ -456,8 +456,8 @@ That's it for the proxy contract! However, if you run the tests you'll see this:
 
 ```plain
 1) Proxy
-       proxies calls to implementation contract:
-     AssertionError: Expected "0" to be equal 0x42
+proxies calls to implementation contract:
+AssertionError: Expected "0" to be equal 0x42
 ```
 
 Why do we get zero?
@@ -487,7 +487,7 @@ contract Logic {
 }
 ```
 
-This function must be called after an implementaion contract was set in the proxy contract.
+This function must be called after an implementation contract was set in the proxy contract.
 In our tests, it'll look like that:
 
 ```js
