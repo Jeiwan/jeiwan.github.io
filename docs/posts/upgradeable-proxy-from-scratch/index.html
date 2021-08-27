@@ -245,15 +245,15 @@ We want to call our proxy logic using ABI from the implementation contract.
 That&rsquo;s why we need to create a different contract instance, using the address of the proxy contract and the ABI of the implementation contract.</p>
 <p>Let&rsquo;s run the test:</p>
 <div class="highlight"><pre class="chroma"><code class="language-plain" data-lang="plain">1) Proxy
-       proxies calls to implementation contract:
-     AssertionError: Expected &#34;912823093544680850579175995568783282090442467040&#34; to be equal 0x42
+proxies calls to implementation contract:
+AssertionError: Expected &#34;912823093544680850579175995568783282090442467040&#34; to be equal 0x42
 </code></pre></div><p>Uh-oh! This is not something we expected.</p>
 <p>The time has come to learn about the trickiness of <code>delegatecall</code>.</p>
 <h2 id="call-vs-delegatecall">CALL vs DELEGATECALL</h2>
 <p>Every program consists of two components:</p>
 <ol>
 <li>State, which is the data that&rsquo;s stored in memory, or in a persistent storage, and that&rsquo;s used by the program.</li>
-<li>Logic, which is the funcitonality of the program.</li>
+<li>Logic, which is the functionality of the program.</li>
 </ol>
 <p>Likewise, smart contracts also have state and logic.
 Smart contract&rsquo;s persistent state is stored on blockchain and is accessible via state variables.
@@ -267,9 +267,9 @@ That&rsquo;s it: the contract you&rsquo;re calling with <code>delegatecall</code
 </ol>
 <p>We could&rsquo;ve used <code>call</code> instead of <code>delegatecall</code> but that&rsquo;d have broken the upgradeability!</p>
 <p>Imagine that we&rsquo;re running a smart contract for long time and there&rsquo;s a lot of data stored on chain but then we decide to upgrade the contract
-and deploy a differnet implementation.
+and deploy a different implementation.
 That would mean that we would have to migrate all the data from the smart contract to the new implementation!
-That can be quite pricey depending on network congesion.
+That can be quite pricey depending on network congestion.
 With <code>delegatecall</code>, we&rsquo;re storing state in the proxy contract, which allows us to swap implementations <strong>without the need of migrating data</strong>!</p>
 <p>Now, let&rsquo;s return to the error in tests.</p>
 <p>What has happened? Let&rsquo;s look at state variables of our contracts:</p>
@@ -305,7 +305,7 @@ third one – 2, and so on.</li>
 variable <code>magicNumber</code> points at the same memory slot as variable <code>implementation</code> in Proxy contract!
 Since both of them have the same index 0.
 And that big number that we saw in the failed test is the implementation contract address (in the decimal system)!</p>
-<p>To better understan the idea, try changing the proxy contract like that and run the tests:</p>
+<p>To better understand the idea, try changing the proxy contract like that and run the tests:</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Proxy</span> <span class="p">{</span>
     <span class="kt">uint256</span> <span class="kr">public</span> <span class="n">woot</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
     <span class="kt">address</span> <span class="kr">public</span> <span class="n">implementation</span><span class="p">;</span>
@@ -314,7 +314,7 @@ And that big number that we saw in the failed test is the implementation contrac
 <span class="p">}</span>
 
 </code></pre></div><blockquote>
-<p>You can learn more about the layout of state variabels <a href="https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html">here</a>.</p>
+<p>You can learn more about the layout of state variables <a href="https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html">here</a>.</p>
 </blockquote>
 <h2 id="resolving-the-state-collision">Resolving the state collision</h2>
 <p>The collision we saw earlier happened because the <code>implementation</code> state variable in Proxy has the same slot index (and, thus, address) as the <code>magicNumber</code> state variable.
@@ -359,7 +359,7 @@ that&rsquo;s basically it, the library is simple and has only two functions:</p>
 <span class="p">}</span>
 
 </code></pre></div><p>Notice that this is a constant so it won&rsquo;t occupy a memory slot – the compiler will replace all its occurrences with
-its value. Also, notice that the <code>implementaiton</code> state variable has gone now – we won&rsquo;t use it!</p>
+its value. Also, notice that the <code>implementation</code> state variable has gone now – we won&rsquo;t use it!</p>
 <p>Next, rewrite the setter and getter functions:</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">setImplementation</span><span class="p">(</span><span class="kt">address</span> <span class="n">implementation_</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
   <span class="n">StorageSlot</span><span class="p">.</span><span class="n">setAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">,</span> <span class="n">implementation_</span><span class="p">);</span>
@@ -387,8 +387,8 @@ in one function:</p>
 <span class="p">}</span>
 </code></pre></div><p>That&rsquo;s it for the proxy contract! However, if you run the tests you&rsquo;ll see this:</p>
 <div class="highlight"><pre class="chroma"><code class="language-plain" data-lang="plain">1) Proxy
-       proxies calls to implementation contract:
-     AssertionError: Expected &#34;0&#34; to be equal 0x42
+proxies calls to implementation contract:
+AssertionError: Expected &#34;0&#34; to be equal 0x42
 </code></pre></div><p>Why do we get zero?</p>
 <h2 id="callee-contract-initialization">Callee contract initialization</h2>
 <p>We forgot one thing: <strong>we cannot use constructor to initialize callee contract when it&rsquo;s used via a Proxy</strong>.
@@ -409,7 +409,7 @@ It looks like that:</p>
 
     <span class="p">...</span>
 <span class="p">}</span>
-</code></pre></div><p>This function must be called after an implementaion contract was set in the proxy contract.
+</code></pre></div><p>This function must be called after an implementation contract was set in the proxy contract.
 In our tests, it&rsquo;ll look like that:</p>
 <div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">beforeEach</span><span class="p">(</span><span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
   <span class="p">...</span>
