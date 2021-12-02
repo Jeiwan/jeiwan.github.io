@@ -1,7 +1,6 @@
 ---
 title: "Ethernaut tips and solutions"
-date: 2021-08-20T00:00:00+00:00
-draft: true
+date: 2021-12-02T00:00:00+00:00
 tags: ["Ethereum", "Solidity", "Blockchain"]
 ---
 

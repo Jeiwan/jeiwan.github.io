@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/ethernaut-tips-and-solutions/">
+
+  <title>Ethernaut tips and solutions - Going the distance</title>
+  <meta property="og:title" content="Ethernaut tips and solutions - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Ethernaut tips and solutions</h1>
+      <time class="post-date" datetime="2021-12-02 00:00:00 &#43;0000">02 Dec 2021</time>
+    </header>
+
+    <p><img src="/images/jukan-tateisi-bJhT_8nbUA0-unsplash.jpg" alt="First steps">
+Photo by
+<a href="https://unsplash.com/@tateisimikito?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Jukan Tateisi</a>
+on
+<a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p><a href="https://ethernaut.openzeppelin.com/">Ethernaut</a> is an (awesome) browser game that let&rsquo;s you practice Web3 and Solidity
+whilte solving different tasks. The game consists of 23 levels (as of August 2021) and each level is focused on some
+Solidity feature or bug, smart contract design flaw, or unexpected behaviour of a contract. Your goals in each level is
+to hack it: to find a way of becoming a contract owner, to transfer all tokens to your own address, or abuse a feature
+of Solidity that wasn&rsquo;t taken into consideration by a smart contract developer.</p>
+<p>This is game a rare opportunity to get some real practical skills if you already know some basics of Web3 and Solidity.
+This is also a good opportunity to deepen your knowledge of Solidity because some levels are very hardcore – you won&rsquo;t
+solve them without diving into the internals of Solidity and EVM.</p>
+<p>In this blog post, I&rsquo;ll tell you about my experience solving the game and will give you some hints for each of the
+levels.
+If want to see complete solutions, you can find them <a href="https://github.com/Jeiwan/ethernaut-solutions">on GitHub</a>.
+Just remember: <strong>there&rsquo;s more than one way of solving the levels</strong>, finding your own solutions might be more benefitial
+to you than simply solving the game.</p>
+<p>Let&rsquo;s begin!</p>
+<h3 id="prerequisites">Prerequisites</h3>
+<p>To play Ethernaut, you&rsquo;ll have to have some basic skils, like:</p>
+<ol>
+<li><strong>JavaScript</strong>. Being able to write basic scripts in JavaScript is enough but you&rsquo;ll also need to learn about
+<code>async</code>/<code>await</code> or how to get results from <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promises</a>.</li>
+<li><strong>Solidity</strong>. You need to know Solditiy syntax and have experience writing simple contracts.
+A good way to get the basics is <a href="https://cryptozombies.io/">CryptoZombies</a> and <a href="https://docs.soliditylang.org/en/v0.8.7/introduction-to-smart-contracts.html">the official documentation</a>.</li>
+<li><strong>Web3.js</strong>. This is a library that has became the standard way of interacting with Ethereum in JavaScript.
+So, the better you know it, the easier it&rsquo;ll be for you to solve the levels.
+<a href="https://web3js.readthedocs.io">The official documentation</a> will be a good helper if you forgot or didn&rsquo;t know
+something.</li>
+</ol>
+<p>Nevertheless, don&rsquo;t set the bar too high! Give it a try and learn while playing! This is what the game was created for.</p>
+<h3 id="tools">Tools</h3>
+<p>Even though Ethernaut is a browser game, you&rsquo;ll want to reproduce levels on your computer to better understand them,
+test ideas, and quickly iterate with solutions. That&rsquo;s why you&rsquo;ll need a tool to make smart contracts development
+as easy and comfortable as possible.</p>
+<p><a href="https://hardhat.org/">Hardhat</a> is the best Solidity development tool at the moment.
+It comes with a template to set up a Solidity project and frees you from the need to run and manage a local
+Ethereum network. It just works! Also, Hardhat has a configured and transparent testing environment, which allows you
+to iterate super fast compared to other development environments.</p>
+<p>One extremely useful feature of Hardhat is <code>hardhat/console.sol</code> contract that allows you print to the console from
+smart contracts! It provides <code>console.log()</code> function in your Solditiy code, as well as other functions to print
+different data types (e.g. <code>console.logBytes32()</code>). With this function, it&rsquo;ll be much easier for you to understand
+what happens in a contract and find out if something goes wrong.</p>
+<p><a href="https://remix.ethereum.org/">Remix IDE</a> is a browser IDE for writing and deploying smart contracts. The fact that it
+runs in browser and that it&rsquo;s connected to MetaMask allows you to deploy contracts in a couple of clicks. Everyone uses
+Remix. Spend some time to get comfortable with it, this will pay back.</p>
+<h3 id="general-recommendations">General recommendations</h3>
+<p>Whenever you see Solidity code:</p>
+<ol>
+<li>Read it.</li>
+<li>Ensure that you understand <strong>every line</strong>.</li>
+<li>Re-read it.</li>
+<li>Try to see the whole picture.</li>
+<li>Try to see if there&rsquo;s something wrong.</li>
+</ol>
+<h2 id="hints">Hints</h2>
+<h3 id="0-hello-ethernaut">0. Hello Ethernaut</h3>
+<p>This is an introductory level, it&rsquo;s goal is to teach you how to use MetaMask to connect to a test network and how to
+interact with Ethernaut contracts using your browser&rsquo;s developer console.</p>
+<p><strong>My solution:</strong> follow the instructions.</p>
+<h3 id="1-fallback">1. Fallback</h3>
+<p>The smart contract has a logical flaw that allows anyone to become an owner and withdraw all funds.
+Find it.</p>
+<ol>
+<li>Learn about <a href="https://docs.soliditylang.org/en/latest/contracts.html#receive-ether-function">the <code>receive()</code> function</a></li>
+<li>While this is not relevant to this level, learn about <a href="https://docs.soliditylang.org/en/latest/contracts.html#fallback-function">the <code>fallback()</code> function</a> as well.
+This will help in the future.</li>
+<li>Learn <a href="https://docs.soliditylang.org/en/latest/contracts.html#receive-ether-function">how to call contracts with Web3.js</a>
+and how to send ether allon with contract calls.</li>
+</ol>
+<p><strong>My solution:</strong> call <code>contribute()</code> and send some ethers to become a contributor, send some ethers to the contract
+to become an owner, call <code>withdraw()</code> to withdraw all funds.</p>
+<h3 id="2-fallout">2. Fallout</h3>
+<p>There&rsquo;s a typo in the code, find it and use it to become an owner.</p>
+<p><strong>My solution:</strong> a single transaction sent via Web3.js.</p>
+<h3 id="3-coin-flip">3. Coin Flip</h3>
+<p>This is where things are getting nastier. 😈</p>
+<ol>
+<li>Read the code.</li>
+<li>Learn about the maximum value of <code>uint256</code>.</li>
+<li>Try to understand the idea behind using that big number.</li>
+<li>Realize that you always know current block number and hash.</li>
+</ol>
+<p><strong>My solution:</strong> I first tried soliving it via Web3.js but that was dull because there&rsquo;s no guarantee that my
+tx gets into the next block. Then I&rsquo;ve deployed it as a Solidity contract (there&rsquo;s no code, sorry) and it was also dull
+but more reliable.</p>
+<h3 id="4-telephone">4. Telephone</h3>
+<p>Learn the difference between <code>tx.origin</code> and <code>msg.sender</code>.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/TelephoneAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/TelephoneAttack.test.js">test</a></p>
+<h3 id="5-token">5. Token</h3>
+<p>Learn about <a href="https://www.acunetix.com/blog/web-security-zone/what-is-integer-overflow/">integer overflow and underflow</a>
+and see if the contract is vulnerable.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/Token.test.js">Web3.js</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/Token.test.js">test</a></p>
+<h3 id="6-delegation">6. Delegation</h3>
+<p>Learn how contracts are called from other contracts and the difference between <a href="https://docs.soliditylang.org/en/v0.8.7/introduction-to-smart-contracts.html#delegatecall-callcode-and-libraries"><code>call</code> and <code>delegatecall</code></a>.
+Also, remember that <code>delegatecall</code> is always a red flag.</p>
+<p>If you&rsquo;re doing this via Web3.js, you&rsquo;ll need to know <a href="https://web3js.readthedocs.io/en/v1.4.0/web3-eth-contract.html#new-contract">how to use custom ABI</a> to call contract methods that are
+not defined in the contract&rsquo;s ABI. Another way of achieving the same goals is by using the low level <a href="https://web3js.readthedocs.io/en/v1.4.0/web3-eth.html#call">call</a> function, but it&rsquo;ll be harder.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/Delegation.test.js">Web3.js</a></p>
+<h3 id="7-force">7. Force</h3>
+<p>You need to send ethers to a contract that doesn&rsquo;t allow to do that.
+Here&rsquo;s a hint: learn about <a href="https://docs.soliditylang.org/en/v0.8.7/introduction-to-smart-contracts.html#deactivate-and-self-destruct">selfdestruct</a>.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/ForceAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/ForceAttack.test.js">test</a></p>
+<h3 id="8-vault">8. Vault</h3>
+<p>Everything on blockchain is public even if it&rsquo;s marked as <code>private</code> in Solidity. Ethereum JSON-RPC and Web3.js provide
+a way to read any value stored in a contract: <a href="https://web3js.readthedocs.io/en/v1.4.0/web3-eth.html#getstorageat">getStorageAt</a>.</p>
+<p><strong>My solution:</strong> a single call to <code>getStorageAt</code> via Web3.js.</p>
+<h3 id="9-king">9. King</h3>
+<p>This level requires deploying a contract. The goal is to break the contract so it cannot be used after you. You&rsquo;ve
+probably already learned about the fallback function and what happenes when you send ethers to a contract that
+doesn&rsquo;t implement it.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/KingAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/KingAttack.test.js">test</a></p>
+<h3 id="10-re-entrancy">10. Re-entrancy</h3>
+<p>Re-entrancy attacks are probably the most common ones. Here are some useful links to learn about them:</p>
+<ol>
+<li><a href="https://docs.soliditylang.org/en/v0.8.6/security-considerations.html#re-entrancy">Re-entrancy</a> from the official
+Solidity documentation.</li>
+<li><a href="https://solidity-by-example.org/hacks/re-entrancy/">Re-entrancy by example</a></li>
+<li><a href="https://fravoll.github.io/solidity-patterns/checks_effects_interactions.html">Checks-effects-interactions</a>, a pattern
+to prevent re-entrancy attacks.</li>
+</ol>
+<p>After studying these resources you&rsquo;ll be able to spot the vulnerability.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/ReentrancyAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/ReentrancyAttack.test.js">test</a></p>
+<h3 id="11-elevator">11. Elevator</h3>
+<p>You need to implement a contract that returns different results when its function is called with the same argument.
+The easiest way of achieving that is via some internel state.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/ElevatorAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/ElevatorAttack.test.js">test</a></p>
+<h3 id="12-privacy">12. Privacy</h3>
+<p>This is an advanced version of the <code>Vault</code> level where you need to read an element of a private array that&rsquo;s not the
+first state variable of a contract.
+These links will help you:</p>
+<ol>
+<li><a href="https://docs.soliditylang.org/en/v0.8.7/internals/layout_in_storage.html">Layout of State Variables in Storage</a></li>
+<li><a href="https://docs.soliditylang.org/en/v0.8.7/types.html#explicit-conversions">Explicit Conversions</a></li>
+</ol>
+<p><strong>My solution:</strong> a single call to <code>getStorageAt</code> via Web3.js.</p>
+<h3 id="13-gatekeeper-one">13. Gatekeeper One</h3>
+<p>To solve this level you need to solve three sub-tasks:</p>
+<ol>
+<li><code>gateOne</code> requires you to use a contract to solve this level.</li>
+<li><code>gateTwo</code> requires the amount of gas left in the transaction to satisfy a condition. This is the trickiest part.
+To solve it, <a href="https://docs.soliditylang.org/en/v0.8.7/control-structures.html?highlight=gas%3A#external-function-calls">learn about the way of limiting gas in contract calls</a>.</li>
+<li><code>gateThree</code> requires a key that satisfies three conditions. This is not hard as soon as you <a href="https://docs.soliditylang.org/en/v0.8.7/types.html#conversions-between-elementary-types">learn about type conversions</a>.</li>
+</ol>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/GatekeeperOneAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/GatekeeperOneAttack.test.js">test</a></p>
+<blockquote>
+<p>Notice that my solution will work only in the Hardhat environment because the gate key is derived from the address
+you&rsquo;re sending the transaction from.</p>
+</blockquote>
+<h3 id="14-gatekeeper-two">14. Gatekeeper Two</h3>
+<p>This levels is the same as the previous one but it&rsquo;s a little bit trickier.
+Similarly to Gatekeeper One, <code>gateOne</code> requires the call to be made from a contract.
+But, <code>gateTwo</code> now requires the caller to have no code, which kind of contradicts to <code>gateOne</code>.
+You need to find out <a href="https://docs.soliditylang.org/en/v0.8.7/contracts.html#creating-contracts">if and when</a> Solidity
+smart contract has no code.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/GatekeeperTwoAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/GatekeeperTwoAttack.test.js">test</a></p>
+<h3 id="15-naught-coin">15. Naught Coin</h3>
+<p>This is a simple level where you need to transfer tokens to a different address when <code>transfer</code> method is not available.
+To solve it, you need to read through <a href="https://eips.ethereum.org/EIPS/eip-20">the ERC-20 EIP</a> and see if transferring is
+still possible.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/NaughtCoinAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/NaughtCoinAttack.test.js">test</a></p>
+<h3 id="16-preservation">16. Preservation</h3>
+<p>This is my favorite level and it&rsquo;s mind blowing. I highly recommend you solving this level by yourself.
+For that, you&rsquo;ll need to learn about:</p>
+<ol>
+<li><a href="https://docs.soliditylang.org/en/v0.8.7/introduction-to-smart-contracts.html#delegatecall-callcode-and-libraries">delegatecall</a></li>
+<li><a href="https://docs.soliditylang.org/en/v0.8.7/internals/layout_in_storage.html">Layout of State Variables in Storage</a></li>
+</ol>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/PreservationAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/PreservationAttack.test.js">test</a></p>
+<h3 id="17-recovery">17. Recovery</h3>
+<p>The correct way of solving this level is to <a href="https://docs.soliditylang.org/en/v0.8.7/introduction-to-smart-contracts.html#accounts">learn how contract address is generated when contract is deployed</a>
+, use Etherscan to find the nonce, and to reconstruct the address.</p>
+<p><strong>My solution:</strong>
+This is the only level where I cheated.
+I used <a href="https://etherscan.io/">Etherscan</a> to find the transaction where the level was deployed and the token contract
+was created. I then extracted the token contract address from that transaction. 🤷‍♂️</p>
+<h3 id="18-magicnumber">18. MagicNumber</h3>
+<p>This is one of the most interesting levels because you have to go beyond Solidity to solve it.
+While level description says you need to write EVM bytecode, there&rsquo;s in fact an easier way – <a href="https://docs.soliditylang.org/en/v0.8.7/yul.html">Yul</a>.</p>
+<ol>
+<li>Refer to <a href="https://docs.soliditylang.org/en/v0.8.7/yul.html#complete-erc20-example">the ERC-20 example</a> to figure out
+the minimal structure of the contract and notice that you&rsquo;ll need the deploying part in your tiny contract.</li>
+<li>Use <a href="https://github.com/crytic/solc-select">solc-select</a> to install and switch between different versions of Solidity
+compiler.</li>
+<li>I used this to compile my contract:
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ solc --strict-assembly --optimize contracts/MagicNumber.yul
+</code></pre></div></li>
+<li>Use <a href="https://web3js.readthedocs.io/en/v1.4.0/web3-eth.html#sendtransaction">sendTransaction</a> to deploy bytecode.</li>
+</ol>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/MagicNumber.yul">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/MagicNumber.test.js">test</a></p>
+<h3 id="19-alien-codex">19. Alien Codex</h3>
+<p>In my opinion, this is the most controversial level because you need to abuse a bug in an older Solidity version.
+This level is a pain in the ass. It really hurts. But it&rsquo;s worth it.</p>
+<p>In an older version of Solidity (this level uses Solidity 0.5.0) there was a bug that allowed to <strong>change the length
+of an array without adding or removing elements</strong>. It literary looked liked <code>array.length--</code> or <code>array.length++</code>.
+The idea of this level is to abuse this bug to overwrite a private state variable (<code>owner</code>) that has no public setter.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/AlienCodexAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/AlienCodexAttack.test.js">test</a></p>
+<h3 id="20-denial">20. Denial</h3>
+<p>This levels teaches you how to break some functionality of a contract that makes external calls.
+You need to build a contract that, when called, causes a transaction to fail.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/DenialAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/DenialAttack.test.js">test</a></p>
+<h3 id="21-shop">21. Shop</h3>
+<p>This is a tricker version of Elevator. The difference is that the external function that&rsquo;s called has <code>view</code> modifier,
+which doesn&rsquo;t allow your contract to modify internal state. Also, this levels sets a tight limit of gas available to
+you contract.
+However, the solution is much more straightforward.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/ShopAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/ShopAttack.test.js">test</a></p>
+<h3 id="22-dex">22. Dex</h3>
+<p>The goal is to hack a decentralized exchange and withdraw its liquidity to your address.
+It&rsquo;ll help a lot to learn about the basics of DEXes, for example by <a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">studying how Uniswap works</a>.
+After that, it won&rsquo;t be a problem to spot an implementation flaw in the contract.</p>
+<p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/DexAttack.sol">smart contract</a>,
+<a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/test/DexAttack.test.js">test</a></p>
+<h2 id="conclusions">Conclusions</h2>
+<p>And that&rsquo;s it! I hope this writeup was helpful and you learned a lot from this game!</p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+
+          Author:
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          Get in touch:
+
+          <a itemprop="sameAs" href="mailto:me@jeiwan.ru" target="_blank">E-mail</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">Telegram</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">Twitter</a>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GitHub</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+

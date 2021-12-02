@@ -6,7 +6,17 @@
     <description>Recent content on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 25 Aug 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 02 Dec 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Ethernaut tips and solutions</title>
+      <link>https://jeiwan.net/posts/ethernaut-tips-and-solutions/</link>
+      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/ethernaut-tips-and-solutions/</guid>
+      <description>Photo by Jukan Tateisi on Unsplash
+Introduction Ethernaut is an (awesome) browser game that let&amp;rsquo;s you practice Web3 and Solidity whilte solving different tasks. The game consists of 23 levels (as of August 2021) and each level is focused on some Solidity feature or bug, smart contract design flaw, or unexpected behaviour of a contract. Your goals in each level is to hack it: to find a way of becoming a contract owner, to transfer all tokens to your own address, or abuse a feature of Solidity that wasn&amp;rsquo;t taken into consideration by a smart contract developer.</description>
+    </item>
+    
     <item>
       <title>Upgradeable proxy contract from scratch</title>
       <link>https://jeiwan.net/posts/upgradeable-proxy-from-scratch/</link>
