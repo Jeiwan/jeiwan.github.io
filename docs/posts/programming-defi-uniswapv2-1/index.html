@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-defi-uniswapv2-1/">
+
+  <title>Programming DeFi: Uniswap V2. Part 1 - Going the distance</title>
+  <meta property="og:title" content="Programming DeFi: Uniswap V2. Part 1 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" integrity="sha384-Um5gpz1odJg5Z4HAmzPtgZKdTBHZdw8S29IecapCSB31ligYPhHQZMIlWLYQGVoc" crossorigin="anonymous">
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming DeFi: Uniswap V2. Part 1</h1>
+      <time class="post-date" datetime="2022-01-11 00:00:00 &#43;0000">11 Jan 2022</time>
+    </header>
+
+    <p><img src="/images/evangelos-mpikakis-ZokntvGY4WU-unsplash.jpg" alt="Reservoir">
+Photo by
+<a href="https://unsplash.com/@mpikman?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Evangelos Mpikakis</a>
+on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p>Uniswap is a decenralized exchange running on the Ethereum blockchain. It&rsquo;s fully automated, not managed, and decentralized.
+It has come through multiple iterations of development: first version was launched in November 2018; second version–in May 2020;
+and final, third, version was launched in March 2021.</p>
+<p><a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">In my previous series on Uniswap V1</a>, I showed how to build it from scratch and
+explained its core mechanics. This blog post begins a series of posts devoted to Uniswap V2: likewise, we&rsquo;ll build its copy
+from scratch and will learn the core principles of a decentralized exchange. Unlike the previous series, I won&rsquo;t go into much
+details on the constant product formula and related core mathematics of Uniswap–if you want to learn about that, please read
+the V1 series.</p>
+<h2 id="tooling">Tooling</h2>
+<p>In this series, I&rsquo;ll be using <a href="https://github.com/gakonst/foundry/">Foundry</a> for contracts developing and testing. Foundry
+is a modern Ethereum toolkit written in Rust by <a href="https://twitter.com/gakonst">Georgios Konstantopoulos</a>. It&rsquo;s much faster
+than Hardhat and, what&rsquo;s specifically useful to us, it allows to write tests in Solidity. Yes, we&rsquo;ll use Solidity for both
+writing contracts and testing them and you&rsquo;ll see that this is much cleaner and handier than writing tests in JS.</p>
+<p>I&rsquo;ll also use <a href="https://github.com/Rari-Capital/solmate">solmate</a> for ERC20 implementation instead of OpenZeppelin because
+the latter has got somewhat bloated and opinionated. One specific reason of not using OpenZeppelin&rsquo;s ERC20 implementation in
+this project is that it doesn&rsquo;t allow to transfers tokens to the zero address. Solmate, in its turn, is a collection of
+gas-optimized contracts, and it&rsquo;s not that limiting.</p>
+<p>It&rsquo;s also worth noting that many things have changes since 2020, when Uniswap V2 was launched. For example, <code>SafeMath</code>
+library has become obsolete since the release of Solidity 0.8, which introduced native overflow checks. So, we&rsquo;re
+building a modern version of Uniswap, so to say.</p>
+<blockquote>
+<p>Please see <a href="https://github.com/Jeiwan/zuniswapv2">the README</a> for instructions on how to set up Foundry for our project.</p>
+</blockquote>
+<h2 id="architecture-of-uniswap-v2">Architecture of Uniswap V2</h2>
+<p>The core architectural idea of Uniswap V2 is pooling: liquidity providers are available to stake their liquidity in a
+contract; that staked liquidity allows anyone else to trade in a decentralized way. Similarly to Uniswap V1, traders
+pay a small fee, which gets accumulated in a contract and then gets shared by all liquidity providers.</p>
+<p>The core contract of Uniswap V2 is <a href="https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol">UniswapV2Pair</a>.
+&ldquo;Pair&rdquo; and &ldquo;Pool&rdquo; are interchangeable terms, they mean the same thing–<code>UniswapV2Pair</code> contract. That contract&rsquo;s main
+purpose is to accept tokens from users and use accumulated reserves of tokens to perform swaps. This is why it&rsquo;s a pooling
+contract. Every <code>UniswapV2Pair</code> contract can pool only one pair of tokens and allows to perform swaps only between these
+two tokens–this is why it&rsquo;s called &ldquo;pair&rdquo;.</p>
+<p>The codebase of Uniswap V2 contracts is split into two repositories:</p>
+<ol>
+<li><a href="https://github.com/Uniswap/v2-core">core</a>, and</li>
+<li><a href="https://github.com/Uniswap/v2-periphery">periphery</a>.</li>
+</ol>
+<p>The core repository stores these contracts:</p>
+<ol>
+<li><code>UniswapV2ERC20</code> – an extended ERC20 implementation that&rsquo;s used for LP-tokens. It additionally implements
+<a href="https://eips.ethereum.org/EIPS/eip-2612">EIP-2612</a> to support off-chain approval of transfers.</li>
+<li><code>UniswapV2Factory</code> – similarly to V1, this is a factory contract that creates pair contracts and serves as a registry
+for them. The registry uses <code>create2</code> to generate pair addresses–we&rsquo;ll see how it works in details.</li>
+<li><code>UniswapV2Pair</code> – the main contract that&rsquo;s responsible for the core logic. It&rsquo;s worth noting that the factory allows to
+create only unique pairs to not dilute liquidity.</li>
+</ol>
+<p>The periphery repository contains multiple contracts that make it easier to use Uniswap. Among them is <code>UniswapV2Router</code>,
+which is the main entrypoint for the Uniswap UI and other web and decentralized applications working on top of Uniswap.
+This contracts has an interface that&rsquo;s very close to that of the exchange contract in Uniswap V1.</p>
+<p>Another important contract in the periphery repository is <code>UniswapV2Library</code>, which is a collection of helper functions
+that implement important calculations. We&rsquo;ll implement both of these contracts.</p>
+<p>We&rsquo;ll start our journey with the core contracts to focus on the most important mechanics first. We&rsquo;ll see that these contracts
+are very general and their functions require preparatory steps–this low-level structure reduces the attack surfaces and makes
+the whole architecture more granular.</p>
+<p>Alright, let&rsquo;s begin!</p>
+<h2 id="pooling-liquidity">Pooling liquidity</h2>
+<p>No trades are possible without liquidity. Thus, the first feature we need to implement is liquidity pooling. How does it
+work?</p>
+<p>Liquidity pools are simply contracts that store token liquidity and allow to perform swaps that use this liquidity. So,
+&ldquo;pooling liquidity&rdquo; means sending tokens to a smart-contract and storing them there for some time.</p>
+<p>As you probably already know, every contract has its own storage, and the same is true for ERC20 tokens–each of them
+has a <code>mapping</code> that connects addresses and their balances. And our pools will have their own balances in ERC20 contracts.
+Is this enough to pool liquidity? As it turns out, no.</p>
+<p>The main reason is that relying only on ERC20 balances would make price
+manipulations possible: imaging someone sending a big amount of tokens to a pool, makes profitable swaps, and cashes out
+in the end. To avoid such situations, <strong>we need to track pool reserves on our side</strong>, and we also need to control when they&rsquo;re
+updated.</p>
+<p>We&rsquo;ll use <code>reserve0</code> and <code>reserve1</code> variable to track reserves in pools:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2Pair</span> <span class="kr">is</span> <span class="n">ERC20</span><span class="p">,</span> <span class="n">Math</span> <span class="p">{</span>
+  <span class="p">...</span>
+
+  <span class="kt">uint256</span> <span class="kr">private</span> <span class="n">reserve0</span><span class="p">;</span>
+  <span class="kt">uint256</span> <span class="kr">private</span> <span class="n">reserve1</span><span class="p">;</span>
+
+  <span class="p">...</span>
+<span class="p">}</span>
+
+</code></pre></div><blockquote>
+<p>I omit a lot of code for brevity. <a href="https://github.com/Jeiwan/zuniswapv2/tree/part_1">Check the GitHub repo</a> for full code.</p>
+</blockquote>
+<p>If you followed my <a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">UniswapV1 series</a>, you probably remember that
+we implemented <code>addLiquidity</code> function that counted new liquidity and issued LP-tokens. Uniswap V2 implements an identical
+function in periphery contract <code>UniswapV2Router</code>, and, in the pair contract, this functionality is implemented at a
+lower level: liquidity management is simply viewed as LP-tokens management. When you add liquidity to a pair, the contract
+mints LP-tokens; when you remove liquidity, LP-tokens get burned. As I explained earlier, core contracts are lower-level
+contracts that perform only core operations.</p>
+<p>So, here&rsquo;s the low-level function for depositing new liquidity:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">mint</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+   <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+   <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+   <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">-</span> <span class="n">reserve0</span><span class="p">;</span>
+   <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">-</span> <span class="n">reserve1</span><span class="p">;</span>
+
+   <span class="kt">uint256</span> <span class="n">liquidity</span><span class="p">;</span>
+
+   <span class="k">if</span> <span class="p">(</span><span class="n">totalSupply</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">liquidity</span> <span class="o">=</span> <span class="o">???</span>
+      <span class="n">_mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">);</span>
+   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n">liquidity</span> <span class="o">=</span> <span class="o">???</span>
+   <span class="p">}</span>
+
+   <span class="k">if</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidityMinted</span><span class="p">();</span>
+
+   <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+
+   <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">);</span>
+
+   <span class="n">emit</span> <span class="n">Mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>First, we need to calculate newly deposited amounts that haven&rsquo;t yet been counted (saved in reserves). Then, we calculate
+the amount of LP-tokens that must be issued as a reward for provided liquidity. Then, we issue the tokens and update
+reserves (function <code>_update</code> simply saves balances to the reserve variables). The function is quite minimal, isn&rsquo;t it?</p>
+<p>As you can see from the code, liquidity is calculated differently when initially deposited into pool (the <code>totalSupply == 0</code> branch).
+Think about this: how many LP-token do we need to issue when there&rsquo;s no liquidity in the pool? Uniswap V1 used the amount
+of deposited ethers, which made the initial amount of LP-tokens dependent on the ratio at which liquidity was deposited. But
+nothing forces users to deposit at the correct ratio that reflects actual prices at that moment. Moreover, Uniswap V2 now
+supports arbitrary ERC20 token pairs, which means there might be no prices valued in ETH at all.</p>
+<p>For initial LP-amount, Uniswap V2 ended up using geometric mean of deposited amounts:
+$$Liquidity_{minted} = \sqrt{Amount_0*Amount_1}$$
+The main benefit of this decision is that such formula ensures that the initial liquidity ratio doesn&rsquo;t affect the value
+of a pool share.</p>
+<p>Now, let&rsquo;s calculate LP-tokens issued when there&rsquo;s already some liquidity. The main requirement here is that the amount
+is:</p>
+<ol>
+<li>proportional to the deposited amount,</li>
+<li>proportional to the total issued amount of LP-tokens.</li>
+</ol>
+<p>Recall this formula from the V1 series:</p>
+<p>$$Liquidity_{minted} = TotalSupply_{LP} * \frac{Amount_{deposited}}{Reserve}$$
+New amount of LP-tokens, that&rsquo;s proportional to the deposited amount of tokens, gets minted. But, in V2, there are two
+underlying tokens–which of them should we use in the formula?</p>
+<p>We can choose either of them, but there&rsquo;s interesting pattern: the closer the ratio of deposited amounts to the ratio of
+reserves, the smaller the difference. Consequently, if the ratio of deposited amounts is different, LP amounts will also
+be different, and one of them will be bigger than the other. If we choose the bigger one, then we&rsquo;ll incentivize price
+changing via liquidity provision and this leads to price manipulation. If we choose the smaller one, we&rsquo;ll punish for
+depositing of unbalanced liquidity (liquidity providers would get fewer LP-tokens). It&rsquo;s clear that choosing smaller number
+is more benefitial, and this is what Uniswap is doing. Let&rsquo;s fill the gaps in the above code:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">totalSupply</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+   <span class="n">liquidity</span> <span class="o">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">amount0</span> <span class="o">*</span> <span class="n">amount1</span><span class="p">)</span> <span class="o">-</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">;</span>
+   <span class="n">_mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+   <span class="n">liquidity</span> <span class="o">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">min</span><span class="p">(</span>
+      <span class="p">(</span><span class="n">amount0</span> <span class="o">*</span> <span class="n">totalSupply</span><span class="p">)</span> <span class="o">/</span> <span class="n">_reserve0</span><span class="p">,</span>
+      <span class="p">(</span><span class="n">amount1</span> <span class="o">*</span> <span class="n">totalSupply</span><span class="p">)</span> <span class="o">/</span> <span class="n">_reserve1</span>
+   <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>In the first branch, we&rsquo;re subtracting <code>MINIMUM_LIQUIDITY</code> (which is a constant 1000, or 1e-15) when initial liquidity is
+provided. This protect against one liquidity pool token share (1e-18) becoming too expensive, which would turn
+away small liquidity providers. Simply subtracting 1000 from initial liquidity makes the price of one liquidity share
+1000 times cheaper.</p>
+<p>To solidify our understanding of minting, let&rsquo;s write tests.</p>
+<h2 id="writing-tests-in-solidity">Writing tests in Solidity</h2>
+<p>As I said above, I&rsquo;ll be using Foundry to test our smart contracts–this will allow us to quickly set up our tests and
+not have any business with JavaScript. Our smart contracts tests will simply be other smart contracts. That&rsquo;s it: <strong>smart
+contracts that test smart contracts</strong>.</p>
+<p>This is all we need to set up testing of the pair contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2PairTest</span> <span class="kr">is</span> <span class="n">DSTest</span> <span class="p">{</span>
+  <span class="n">ERC20Mintable</span> <span class="n">token0</span><span class="p">;</span>
+  <span class="n">ERC20Mintable</span> <span class="n">token1</span><span class="p">;</span>
+  <span class="n">ZuniswapV2Pair</span> <span class="n">pair</span><span class="p">;</span>
+
+  <span class="kd">function</span> <span class="n">setUp</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="n">token0</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ERC20Mintable</span><span class="p">(</span><span class="s">&#34;Token A&#34;</span><span class="p">,</span> <span class="s">&#34;TKNA&#34;</span><span class="p">);</span>
+    <span class="n">token1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ERC20Mintable</span><span class="p">(</span><span class="s">&#34;Token B&#34;</span><span class="p">,</span> <span class="s">&#34;TKNB&#34;</span><span class="p">);</span>
+    <span class="n">pair</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ZuniswapV2Pair</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span> <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">));</span>
+
+    <span class="n">token0</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
+    <span class="n">token1</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Any function starting with &#34;test&#34; is a test case.
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>Let&rsquo;s add a test for pair bootstrapping (providing initial liquidity):</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testMintBootstrap</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
+
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>1 ether of <code>token0</code> and 1 ether of <code>token1</code> are added to the test pool. As a result, 1 ether of LP-tokens is issued and we
+get 1 ether - 1000 (minus the minimal liquidity). Pool reserves and total supply get changed accordingly.</p>
+<p>What happens when balanced liquidity is provided to a pool that already has some liquidity? Let&rsquo;s see:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testMintWhenTheresLiquidity</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span><span class="c1"></span>
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 2 LP
+</span><span class="c1"></span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">3</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">3</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">3</span> <span class="kc">ether</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>Everything looks correct here. Let&rsquo;s see what happens when unbalanced liquidity is provided:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testMintUnbalanced</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span><span class="c1"></span>  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span><span class="c1"></span>  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">2</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>This is what we talked about: even though user provided more <code>token0</code> liquidity than <code>token1</code> liquidity,
+they still got only 1 LP-token.</p>
+<p>Alright, liquidity provision looks good. Let&rsquo;s now move to liquidity removal.</p>
+<h2 id="removing-liquidity">Removing liquidity</h2>
+<p>Liquidity removal is opposite to provision. Likewise, burning is opposite to minting. Removing liquidity from pool means
+burning of LP-tokens in exchange for proportional amount of underlying tokens. The amount of tokens returned to liquidity
+provided is calculated like that:</p>
+<p>$$Amount_{token}=Reserve_{token} * \frac{Balance_{LP}}{TotalSupply_{LP}}$$
+In plain English: the amount of tokens returned is proportional to the amount of LP-tokens held over total supply of LP
+tokens. The bigger your share of LP-tokens, the bigger share of reserve you get after burning.</p>
+<p>And this is all we need to know to implement <code>burn</code> function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">burn</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+  <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+  <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="n">balanceOf</span><span class="p">[</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">];</span>
+
+  <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">*</span> <span class="n">balance0</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">;</span>
+  <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">*</span> <span class="n">balance1</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">amount0</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">amount1</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidityBurned</span><span class="p">();</span>
+
+  <span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+
+  <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">);</span>
+  <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
+
+  <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+  <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+
+  <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">);</span>
+
+  <span class="n">emit</span> <span class="n">Burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>As you can see, UniswapV2 doesn&rsquo;t support partial removal of liquidity.</p>
+<p>Let&rsquo;s test it:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurn</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
+  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>We see that the pool returns to its uninitialized state except the minimum liquidity that was sent to the zero address–
+it cannot be claimed.</p>
+<p>Now, let&rsquo;s see what happens when we burn after providing unbalanced liquidity:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurnUnbalanced</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
+
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span><span class="c1"></span>
+  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1500</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>What we see here is that we have lost 500 wei of <code>token0</code>! This is the punishment for price manipulation we talked
+above. But the amount is ridiculously small, it doesn&rsquo;t seem significant at all. This so because our current user (the
+test contract) is the only liquidity provider. What if we provide unbalanced liquidity to a pool that was initialized
+by another user? Let&rsquo;s see:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurnUnbalancedDifferentUsers</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+  <span class="n">testUser</span><span class="p">.</span><span class="n">provideLiquidity</span><span class="p">(</span>
+    <span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span>
+    <span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span>
+    <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">),</span>
+    <span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span>
+    <span class="mi">1</span> <span class="kc">ether</span>
+  <span class="p">);</span>
+
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">testUser</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span><span class="c1"></span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span><span class="p">);</span>
+
+  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">5</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">0</span><span class="p">.</span><span class="mi">5</span> <span class="kc">ether</span><span class="p">);</span>
+  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
+<span class="p">}</span>
+
+</code></pre></div><p>This looks completely different! We&rsquo;ve now lost 0.5 ether of <code>token0</code>, which is 1/4 of what we deposited. Now that&rsquo;s
+a significant amount!</p>
+<p>Try to figure out who eventually gets that 0.5 ether: the pair or the test user? 😉</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Well, enough for today. Feel free experimenting with the code and, for example, choosing the bigger amount of LP-tokens
+when adding liquidity to a pool.</p>
+<h2 id="links">Links</h2>
+<ol>
+<li><a href="https://github.com/Jeiwan/zuniswapv2/tree/part_1">Source code of part 1</a></li>
+<li><a href="https://uniswap.org/whitepaper.pdf">UniswapV2 Whitepaper</a> – worth reading and re-reading.</li>
+<li><a href="https://github.com/gakonst/foundry">Foundry GitHub repo</a></li>
+<li><a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">Programming DeFi: Uniswap V1</a></li>
+</ol>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+
+          Author:
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          Get in touch:
+
+          <a itemprop="sameAs" href="mailto:me@jeiwan.ru" target="_blank">E-mail</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">Telegram</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">Twitter</a>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GitHub</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js" integrity="sha384-YNHdsYkH6gMx9y3mRkmcJ2mFUjTd0qNQQvY9VYZgQd7DcN7env35GzlmFaZ23JGp" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js" integrity="sha384-vZTG03m+2yp6N6BNi5iM4rW4oIwk5DfcNdFfxkk9ZWpDriOkXX8voJBFrAO7MpVl" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+

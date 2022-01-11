@@ -6,7 +6,18 @@
     <description>Recent content on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 02 Dec 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 11 Jan 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Programming DeFi: Uniswap V2. Part 1</title>
+      <link>https://jeiwan.net/posts/programming-defi-uniswapv2-1/</link>
+      <pubDate>Tue, 11 Jan 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-defi-uniswapv2-1/</guid>
+      <description>Photo by Evangelos Mpikakis on Unsplash
+Introduction Uniswap is a decenralized exchange running on the Ethereum blockchain. It&amp;rsquo;s fully automated, not managed, and decentralized. It has come through multiple iterations of development: first version was launched in November 2018; second version–in May 2020; and final, third, version was launched in March 2021.
+In my previous series on Uniswap V1, I showed how to build it from scratch and explained its core mechanics.</description>
+    </item>
+    
     <item>
       <title>Ethernaut tips and solutions</title>
       <link>https://jeiwan.net/posts/ethernaut-tips-and-solutions/</link>
