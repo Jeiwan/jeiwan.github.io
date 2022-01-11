@@ -8,9 +8,9 @@ disqusShortname = ""
 
 [params]
   name = "Ivan Kuznetsov"
-  description = "A blog about blockhains and smart contracts development"
+  description = "A blog about blockchains and smart contracts development"
   keywords = "bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper"
-  tagline = "A blog about blockhains and smart contracts development"
+  tagline = "A blog about blockchains and smart contracts development"
   bio = "Web Development - DevOps - Blockchain"
 
   authorEmail = "me@jeiwan.ru"
