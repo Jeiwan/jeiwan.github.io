@@ -6,7 +6,17 @@
     <description>Recent content in Uniswap on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 11 Jan 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/uniswap/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 31 Jan 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/uniswap/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Programming DeFi: Uniswap V2. Part 2</title>
+      <link>https://jeiwan.net/posts/programming-defi-uniswapv2-2/</link>
+      <pubDate>Mon, 31 Jan 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-defi-uniswapv2-2/</guid>
+      <description>Photo by Jon Cellier on Unsplash
+Introduction Welcome back! Today we&amp;rsquo;ll add the core functionality to our clone of Uniswap V2–swapping. Decentralized tokens exchanging is what Uniswap was created for, and today we&amp;rsquo;ll see how it&amp;rsquo;s done. We&amp;rsquo;re still working on the core pair contract, which means that our implementation will be very low-level and minimal. There&amp;rsquo;s no convenient interface and we won&amp;rsquo;t even have price calculation at this point!</description>
+    </item>
+    
     <item>
       <title>Programming DeFi: Uniswap V2. Part 1</title>
       <link>https://jeiwan.net/posts/programming-defi-uniswapv2-1/</link>
