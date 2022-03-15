@@ -6,7 +6,19 @@
     <description>Recent content in DeFi on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 31 Jan 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/defi/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 15 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/defi/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Programming DeFi: Uniswap V2. Part 3</title>
+      <link>https://jeiwan.net/posts/programming-defi-uniswapv2-3/</link>
+      <pubDate>Tue, 15 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-defi-uniswapv2-3/</guid>
+      <description>Photo by C Dustin on Unsplash
+Introduction Another month, another blog post! 🙈
+So far, our UniswapV2 implementation had the most crucial part done–the pair contract. We haven&amp;rsquo;t yet implemented protocol fees (the fee Uniswap takes from each liquidity deposit) but we&amp;rsquo;ll do this a little bit later since this is not a critical part of the exchange.
+Today, we&amp;rsquo;ll move forward and implement the factory contract, which serves as a registry of all deployed pair contracts.</description>
+    </item>
+    
     <item>
       <title>Programming DeFi: Uniswap V2. Part 2</title>
       <link>https://jeiwan.net/posts/programming-defi-uniswapv2-2/</link>

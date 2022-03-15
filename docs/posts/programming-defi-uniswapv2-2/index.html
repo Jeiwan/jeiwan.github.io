@@ -13,7 +13,7 @@
   <title>Programming DeFi: Uniswap V2. Part 2 - Going the distance</title>
   <meta property="og:title" content="Programming DeFi: Uniswap V2. Part 2 - Going the distance">
   <meta property="og:type" content="article">
-  <meta name="description" content="A blog about blockhains and smart contracts development">
+  <meta name="description" content="A blog about blockchains and smart contracts development">
   <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
@@ -57,6 +57,9 @@ with only a few lines.</p>
 <p>Additionally, I&rsquo;ll explain some details and ideas behind the pair contract implementation, on which I didn&rsquo;t focus enough
 in the previous part.</p>
 <p>Let&rsquo;s begin!</p>
+<blockquote>
+<p>You can find full source code of this part here: <a href="https://github.com/Jeiwan/zuniswapv2/tree/part_2">source code, part 2</a>.</p>
+</blockquote>
 <h2 id="tokens-swapping">Tokens swapping</h2>
 <p>At this point, we have everything we need to perform actual tokens exchanging. Let&rsquo;s think how we will implement it.</p>
 <p>Exchanging means giving away some amount of Token A in exchange for Token B. But we need some kind of a mediator that:</p>
@@ -79,7 +82,7 @@ address. The other party would have to call <code>transferFrom</code> to get you
 amount; the other party pays for the actual transfer.</li>
 </ol>
 <p>The approval pattern is very common in Ethereum applications: dapps ask users to approve spending of the maximum amount
-so users don&rsquo;t need to call <code>approve</code> again and again (which costs gas). This improces user experience. And this is
+so users don&rsquo;t need to call <code>approve</code> again and again (which costs gas). This improves user experience. And this is
 not what we&rsquo;re looking for at this moment. So we&rsquo;ll go with the manual transferring to the pair contract.</p>
 <p>Let&rsquo;s get to code!</p>
 <p>The function takes two output amounts, one for each token. These are the amounts that caller wants to get in exchange
