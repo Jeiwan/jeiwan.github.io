@@ -25,6 +25,8 @@ in the previous part.
 
 Let's begin!
 
+> You can find full source code of this part here: [source code, part 2](https://github.com/Jeiwan/zuniswapv2/tree/part_2).
+
 ## Tokens swapping
 
 At this point, we have everything we need to perform actual tokens exchanging. Let's think how we will implement it.
@@ -50,7 +52,7 @@ as possible. This also affects how we send tokens to the contract. There a two w
    amount; the other party pays for the actual transfer.
 
 The approval pattern is very common in Ethereum applications: dapps ask users to approve spending of the maximum amount
-so users don't need to call `approve` again and again (which costs gas). This improces user experience. And this is
+so users don't need to call `approve` again and again (which costs gas). This improves user experience. And this is
 not what we're looking for at this moment. So we'll go with the manual transferring to the pair contract.
 
 Let's get to code!
