@@ -1,6 +1,6 @@
 ---
 title: "Evaluating DeFi Strategies Using Foundry"
-date: 2022-04-11:00:00+00:00
+date: 2022-04-11T00:00:00+00:00
 tags: ["Blockchain", "Ethereum", "DeFi", "Solidity", "Foundry"]
 ---
 
@@ -354,4 +354,4 @@ The fork mode is a great emulation environment that allows to interact with the 
 paying for gas.
 
 That's it! I hope you learned something new. Next time I'll show how to run such strategy without writing and
-deploying a strategy contract. Stay tuned!.
+deploying a strategy contract. Stay tuned!
