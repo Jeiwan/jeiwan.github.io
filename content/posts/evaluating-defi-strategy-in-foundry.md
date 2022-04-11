@@ -26,6 +26,8 @@ strategy.
 
 Let's begin!
 
+> You'll find full source code [here](https://github.com/Jeiwan/defi-strategy-eth-staking).
+
 ## Case study
 In the strategy that we're going to implement, we'll try to earn passive income on staking ETH. Moreover, we'll try to
 maximize our profit by taking a flash loan.
