@@ -61,5 +61,16 @@ Immutability gives Ethereum a big benefit: once a smart contract is deployed, th
 However, immutability comes with drawbacks that can be significant in some cases.</description>
     </item>
     
+    <item>
+      <title>Evaluating DeFi Strategies Using Foundry</title>
+      <link>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</guid>
+      <description>Photo by Brett Jordan on Unsplash
+Introduction Nowadays, the ecosystem of Ethereum is quite rich and complex. There are multitudes of DeFi applications: decentralized exchanges, staking protocols, money markets, yield farming vaults, derivatives, leverages, etc. As DeFi protocol evolve, they become more and more intertwined, allowing for new complex strategies.
+In this article, I&amp;rsquo;ll show you how to program a custom DeFi strategy that interacts with several DeFi platforms to produce a leveraged position that earns passive income.</description>
+    </item>
+    
   </channel>
 </rss>

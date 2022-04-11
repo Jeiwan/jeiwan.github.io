@@ -220,5 +220,16 @@ Introduction This blog starts a series of posts dedicated to programming of the 
  Introduction Blockchain is one of the most revolutionary technologies of the 21st century, which is still maturing and which potential is not fully realized yet. In its essence, blockchain is just a distributed database of records. But what makes it unique is that it&amp;rsquo;s not a private database, but a public one, i.e. everyone who uses it has a full or partial copy of it.</description>
     </item>
     
+    <item>
+      <title>Evaluating DeFi Strategies Using Foundry</title>
+      <link>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</guid>
+      <description>Photo by Brett Jordan on Unsplash
+Introduction Nowadays, the ecosystem of Ethereum is quite rich and complex. There are multitudes of DeFi applications: decentralized exchanges, staking protocols, money markets, yield farming vaults, derivatives, leverages, etc. As DeFi protocol evolve, they become more and more intertwined, allowing for new complex strategies.
+In this article, I&amp;rsquo;ll show you how to program a custom DeFi strategy that interacts with several DeFi platforms to produce a leveraged position that earns passive income.</description>
+    </item>
+    
   </channel>
 </rss>

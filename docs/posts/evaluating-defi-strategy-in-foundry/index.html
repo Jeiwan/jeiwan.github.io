@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/">
+
+  <title>Evaluating DeFi Strategies Using Foundry - Going the distance</title>
+  <meta property="og:title" content="Evaluating DeFi Strategies Using Foundry - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockchains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Evaluating DeFi Strategies Using Foundry</h1>
+      <time class="post-date" datetime="0001-01-01 00:00:00 UTC">01 Jan 0001</time>
+    </header>
+
+    <p><img src="/images/brett-jordan-cBY2CtqQ6YI-unsplash.jpg" alt="Plan, make">
+Photo by
+<a href="https://unsplash.com/@brett_jordan?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Brett Jordan</a>
+on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p>Nowadays, the ecosystem of Ethereum is quite rich and complex. There are multitudes of DeFi applications: decentralized
+exchanges, staking protocols, money markets, yield farming vaults, derivatives, leverages, etc. As DeFi protocol evolve,
+they become more and more intertwined, allowing for new complex strategies.</p>
+<p>In this article, I&rsquo;ll show you how to program a custom DeFi strategy that interacts with several DeFi platforms to produce
+<strong>a leveraged position that earns passive income</strong>. Moreover, we&rsquo;ll run it against the Ethereum mainnet without deploying
+and paying for gas–this will allow us to validate the strategy before deploying it.</p>
+<blockquote>
+<p>The approach I&rsquo;m going to show requires programming skills and the knowledge of the Solidity programming language. If
+you&rsquo;re not a programmer or you prefer a shorter path, there&rsquo;s a user-friendly service that allows to build an exact same
+strategy–<a href="https://app.defisaver.com/">DeFi Saver</a>. Also, <a href="https://instadapp.io">Instadapp</a> provide a 1-click solution for the same
+strategy.</p>
+</blockquote>
+<p>Let&rsquo;s begin!</p>
+<h2 id="case-study">Case study</h2>
+<p>In the strategy that we&rsquo;re going to implement, we&rsquo;ll try to earn passive income on staking ETH. Moreover, we&rsquo;ll try to
+maximize our profit by taking a flash loan.</p>
+<p>You&rsquo;re probably aware that Ethereum is in the process of migrating from Proof-of-Work to Proof-of-Stake. Without going
+into details, PoS replaces miners by block validators and frees them from solving the PoW puzzle. To become a validator,
+one has to stake 32 ETH–an amount that&rsquo;s not affordable to everyone these days. As a reward for blocks production,
+validators get a share of ETH emission.</p>
+<p><a href="https://lido.fi/">Lido</a> is a service that makes Ethereum PoS staking available to anyone: with Lido, anyone who has
+ETH can stake it and start getting reward (around 4% APR at the moment of writing). In exchange for ETH, Lido gives you
+stETH, which is a rebase token–that is, a token that has its supply changed overtime.</p>
+<p>In February 2022, <a href="https://aave.com">Aave</a> added stETH as an asset and allowed to use it as collateral. This means that
+we can stake our ETH in Lido and then deposit stETH into Aave to get a loan and use that loan somewhere else. And we&rsquo;ll
+still keep receiving the reward from Lido. Nice!</p>
+<p>And the final piece in our strategy is <a href="https://balancer.fi/">Balancer</a>, which is a decentralized exchange. But we&rsquo;ll
+use it to take a flash loan–a loan that must be returned in the same transaction.</p>
+<p>Let&rsquo;s see how all these elements play together.</p>
+<h2 id="the-strategy">The strategy</h2>
+<ol>
+<li>Take some ETH via a flash loan.</li>
+<li>Stake our ETH + the flash loaned ETH in Lido. Lido gives us stETH in exchange.</li>
+<li>Stake the stETH in Aave.</li>
+<li>Borrow enough ETH from Aave to repay the flash loan.</li>
+</ol>
+<p>We&rsquo;ll end up having more stETH deposited in Aave, which means higher profit! But since around 2/3 ETH in this amount are
+loaned, there&rsquo;s a risk of liquidation.</p>
+<p>Aave borrowings must be collateralized up to a specific collateral factor. To
+maximize our profit, we&rsquo;ll take all available ETH. Since stETH (our collateral) and ETH (what we borrow) are correlated
+assets (stETH is issued 1-to-1 to staked ETH), the risk of stETH losing correlation with ETH is low. But this is still
+a risk and this is our biggest one.</p>
+<p>Another fact worth noting: we&rsquo;ll pay an interest on the borrowed amount. The rate is as low as 0.23% APY at the moment
+of writing and it might grow higher if there&rsquo;s a high demand for ETH on Aave.</p>
+<h2 id="tools">Tools</h2>
+<p>To implement the strategy, we&rsquo;ll write a smart contract in Solidity. Hardcore! But this gives us full control over the
+process.</p>
+<p>We&rsquo;ll use <a href="https://github.com/gakonst/foundry">Foundry</a>, which is a fantastic modern toolkit for Ethereum smart contracts
+development. We&rsquo;ll use Forge to build, test, and validate our strategy.</p>
+<p>Let&rsquo;s write a contract!</p>
+<h2 id="strategy-contract">Strategy contract</h2>
+<p>Initialize a new project and create Strategy contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ mkdir defi-strategy
+$ <span class="nb">cd</span> defi-strategy
+$ forge init
+</code></pre></div><p>Create <code>Strategy.sol</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// SPDX-License-Identifier: UNLICENSED
+</span><span class="c1"></span><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">13</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">Strategy</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="n">NotOwner</span><span class="p">();</span>
+
+    <span class="kt">uint256</span> <span class="kr">constant</span> <span class="n">funds</span> <span class="o">=</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="kr">constant</span> <span class="n">flashLoanFunds</span> <span class="o">=</span> <span class="p">(</span><span class="n">funds</span> <span class="o">*</span> <span class="mi">230</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">;</span>
+
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">aaveAddress</span> <span class="o">=</span> <span class="mh">0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">balancerAddress</span> <span class="o">=</span>
+        <span class="mh">0xBA12222222228d8Ba445958a75a0704d566BF2C8</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">lidoAddress</span> <span class="o">=</span> <span class="mh">0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">stethAddress</span> <span class="o">=</span> <span class="mh">0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">wethAddress</span> <span class="o">=</span> <span class="mh">0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2</span><span class="p">;</span>
+
+    <span class="kt">address</span> <span class="kr">private</span> <span class="n">immutable</span> <span class="n">owner</span><span class="p">;</span>
+
+    <span class="n">constructor</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+        <span class="n">owner</span> <span class="o">=</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="n">go</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span> <span class="o">!=</span> <span class="n">owner</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">NotOwner</span><span class="p">();</span>
+
+        <span class="p">...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p><code>1 ether</code> is our own funds that we&rsquo;ll stake in Lido and deposit in
+Aave. <code>flashLoanFunds</code> is the amount that we want to take as a flash loan, it equals to x2.3 of our own
+funds. This multiplier is calculated as 0.7/0.3, where 0.7 is the collateral factor of stETH on Aave, and
+0.3 is 1 minus the collateral factor.
+Correctly calculating this amount is important: it&rsquo;s also this amount that we&rsquo;ll later borrow from Aave to
+repay the flash loan, and it&rsquo;s this amount that we&rsquo;ll owe Aave in the end.</p>
+<blockquote>
+<p>I rounded the number down a little since stETH price in ETH was slightly below 1 and Aave didn&rsquo;t allow to
+loan 2.33 ETH.</p>
+</blockquote>
+<p>We&rsquo;re also setting addresses of all the DeFi services that we&rsquo;re going to use. Since we&rsquo;ll only use this
+strategy on mainnet, the addresses can be hardcoded as constants.</p>
+<p>As the first step, we want to take a flash loan, we&rsquo;ll do this by calling <code>flashLoan</code> method in the Balancer
+contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kn">import</span> <span class="p">{</span><span class="n">IBalancer</span><span class="p">}</span> <span class="kr">from</span> <span class="s">&#34;./interfaces.sol&#34;</span><span class="p">;</span>
+
+<span class="p">...</span>
+
+<span class="kd">function</span> <span class="n">go</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span> <span class="o">!=</span> <span class="n">owner</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">NotOwner</span><span class="p">();</span>
+
+    <span class="kt">address</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">tokens</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">address</span><span class="p">[](</span><span class="mi">1</span><span class="p">);</span>
+    <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">wethAddress</span><span class="p">;</span>
+
+    <span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">amounts</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">uint256</span><span class="p">[](</span><span class="mi">1</span><span class="p">);</span>
+    <span class="n">amounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">flashLoanFunds</span><span class="p">;</span>
+
+    <span class="n">IBalancer</span><span class="p">(</span><span class="n">balancerAddress</span><span class="p">).</span><span class="n">flashLoan</span><span class="p">(</span>
+        <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+        <span class="n">tokens</span><span class="p">,</span>
+        <span class="n">amounts</span><span class="p">,</span>
+        <span class="s">&#34;&#34;</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>First parameter of <code>flashLoan</code> is the address that will receive funds–we&rsquo;re receiving them on the contract.
+Next parameter is a list of tokens (only WETH in our case) and loan amounts (<code>flashLoanFunds</code>).</p>
+<p>When we&rsquo;re calling <code>flashLoan</code>, Balancer sends required amounts to the receiver address and calls a special
+method on that address. This means that <strong>flash loans can be taken and used only by smart contracts</strong>!</p>
+<p>Our contract needs to implement a special function that will be called by the Balancer contract after it has
+sent tokens. It&rsquo;s this function where we&rsquo;ll implement the rest of the strategy. And it&rsquo;s this function that
+will need to returned the loaned amounts.</p>
+<p>In the case of Balancer, the function is called <code>receiveFlashLoan</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">receiveFlashLoan</span><span class="p">(</span>
+    <span class="n">IERC20</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">tokens</span><span class="p">,</span>
+    <span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">amounts</span><span class="p">,</span>
+    <span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">feeAmounts</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="kr">memory</span> <span class="n">userData</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span> <span class="o">!=</span> <span class="n">balancerAddress</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">NotBalancer</span><span class="p">();</span>
+
+    <span class="p">...</span>
+</code></pre></div><p>When the function is called by Balancer, the loan already deposited to our contract&rsquo;s address.</p>
+<p><code>tokens</code> and <code>amounts</code> are the same parameters that we passed to <code>flashLoan</code>. <code>feeAmounts</code> are fees that we
+need to pay for taking the loan–ETH loans on Balancer are free at the moment.</p>
+<p>Notice that the function is public, which makes it callable by other contract (the Balancer one), but we want
+to let only the Balancer contract call it.</p>
+<p>We can now proceed with the strategy. The next step is to stake our ETH + loaned ETH in Lido. However, what we
+loaned is WETH, an ERC20-token representing ETH, but Lido requires ETH, not WETH. We need to unwrap the loaned
+tokens:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">IERC20</span> <span class="n">loanToken</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+<span class="kt">uint256</span> <span class="n">loanAmount</span> <span class="o">=</span> <span class="n">amounts</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+
+<span class="c1">// Unwrap WETH
+</span><span class="c1"></span><span class="n">IWETH</span><span class="p">(</span><span class="n">wethAddress</span><span class="p">).</span><span class="n">withdraw</span><span class="p">(</span><span class="n">loanAmount</span><span class="p">);</span>
+</code></pre></div><p>The WETH contract is also responsible for ETH↔WETH conversion. To unwrap WETH (convert WETH to ETH) we need to
+call <code>withdraw</code>.</p>
+<p>We&rsquo;re now ready to stake ETH in Lido:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// Stake ETH
+</span><span class="c1"></span><span class="n">ILido</span><span class="p">(</span><span class="n">lidoAddress</span><span class="p">).</span><span class="n">submit</span><span class="p">{</span><span class="nb">value</span><span class="o">:</span> <span class="n">funds</span> <span class="o">+</span> <span class="n">flashLoanFunds</span><span class="p">}(</span><span class="kt">address</span><span class="p">(</span><span class="mh">0x0</span><span class="p">));</span>
+<span class="kt">uint256</span> <span class="n">stethBalance</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">stethAddress</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</code></pre></div><p>To stake ETH, we&rsquo;re calling <code>submit</code> in the Lido contract and sending all our ETH along the call. The only
+parameter of the function is a referral address, we can simply set it to zero.</p>
+<p>Now, we can deposit our stETH on Aave:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// Deposit stETH
+</span><span class="c1"></span><span class="n">IERC20</span><span class="p">(</span><span class="n">stethAddress</span><span class="p">).</span><span class="n">approve</span><span class="p">(</span><span class="n">aaveAddress</span><span class="p">,</span> <span class="n">stethBalance</span><span class="p">);</span>
+<span class="n">IAAVE</span><span class="p">(</span><span class="n">aaveAddress</span><span class="p">).</span><span class="n">deposit</span><span class="p">(</span><span class="n">stethAddress</span><span class="p">,</span> <span class="n">stethBalance</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</code></pre></div><p>We first need to let Aave take our stETH–we&rsquo;re doing this by calling <code>approve</code> (Aave calls ERC20&rsquo;s
+<code>transferFrom</code> to pull user funds). Then, we&rsquo;re calling <code>deposit</code> to actually deposit funds. This is a general
+function that works with all the Aave markets. As parameters, we&rsquo;re passing the address of stETH token, the
+amount we want to deposit, and the address on behalf of which we&rsquo;re making the deposit.</p>
+<p>Next step: borrow from Aave to repay the flash loan.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// Borrow ETH
+</span><span class="c1"></span><span class="n">IAAVE</span><span class="p">(</span><span class="n">aaveAddress</span><span class="p">).</span><span class="n">borrow</span><span class="p">(</span><span class="n">wethAddress</span><span class="p">,</span> <span class="n">loanAmount</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">owner</span><span class="p">);</span>
+</code></pre></div><p>We&rsquo;re borrowing WETH to repay the flash loan we took in the very beginning. The third parameter to the
+function is interest rate mode. Aave supports variable and stable borrow interests, with stable often being
+significantly higher. We&rsquo;re passing <code>2</code> here, which means the variable rate.</p>
+<p>The last parameter is the address on behalf of which we&rsquo;ll take the loan. We set it to <code>owner</code>, which means
+<code>owner</code> will have to allow the contract to take the loan on its behalf–we&rsquo;ll do this in the test.</p>
+<p>And the final step, flash loan repaying.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// Repay flash loan
+</span><span class="c1"></span><span class="n">loanToken</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="n">balancerAddress</span><span class="p">,</span> <span class="n">loanAmount</span><span class="p">);</span>
+</code></pre></div><p>We&rsquo;re simply transferring the loaned amount of WETH to the Balancer contract address. After this function
+(<code>receiveFlashLoan</code>) has finished executing, the control will return to the <code>flashLoan</code> function from the
+Balancer contract. Balancer will then check that the flash loan was repaid. If it&rsquo;s not repaid, the
+transaction will be reverted.</p>
+<p>That&rsquo;s it! Our strategy is finished!</p>
+<h2 id="evaluating-the-strategy">Evaluating the strategy</h2>
+<p>To evaluate the strategy we&rsquo;ll write a test, in Solidity. The test will simulate deployment and execution of
+the strategy. We&rsquo;ll then use Forge to <strong>run the test against the Ethereum mainnet</strong>! This will allow us to
+ensure that we called all the contracts correctly and that our calculations were also correct. In the test,
+we&rsquo;ll also get our collateral and debt information from Aave and will check the LTV and health factor.</p>
+<p>Let&rsquo;s set up the test:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// SPDX-License-Identifier: UNLICENSED
+</span><span class="c1"></span><span class="kr">pragma solidity</span> <span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">13</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="s">&#34;ds-test/test.sol&#34;</span><span class="p">;</span>
+<span class="kn">import</span> <span class="p">{</span><span class="n">Strategy</span><span class="p">}</span> <span class="kr">from</span> <span class="s">&#34;../Strategy.sol&#34;</span><span class="p">;</span>
+<span class="kn">import</span> <span class="p">{</span><span class="n">IAAVE</span><span class="p">,</span> <span class="n">IERC20</span><span class="p">,</span> <span class="n">VariableDebtToken</span><span class="p">}</span> <span class="kr">from</span> <span class="s">&#34;../interfaces.sol&#34;</span><span class="p">;</span>
+
+<span class="kd">contract</span> <span class="n">StrategyTest</span> <span class="kr">is</span> <span class="n">DSTest</span> <span class="p">{</span>
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">aaveAddress</span> <span class="o">=</span> <span class="mh">0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9</span><span class="p">;</span>
+    <span class="kt">address</span> <span class="kr">constant</span> <span class="n">variableDebtWethAddress</span> <span class="o">=</span>
+        <span class="mh">0xF63B34710400CAd3e044cFfDcAb00a0f32E33eCf</span><span class="p">;</span>
+
+    <span class="n">Strategy</span> <span class="n">s</span><span class="p">;</span>
+
+    <span class="kd">function</span> <span class="n">setUp</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Strategy</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="p">...</span>
+</code></pre></div><p>We basically only need to deploy the strategy contract during setup.</p>
+<p>And now let&rsquo;s evaluate the strategy:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testGo</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="n">VariableDebtToken</span><span class="p">(</span><span class="n">variableDebtWethAddress</span><span class="p">).</span><span class="n">approveDelegation</span><span class="p">(</span>
+        <span class="kt">address</span><span class="p">(</span><span class="n">s</span><span class="p">),</span>
+        <span class="mi">2</span><span class="p">.</span><span class="mi">3</span> <span class="kc">ether</span>
+    <span class="p">);</span>
+    <span class="p">...</span>
+</code></pre></div><p>The strategy contract takes a loan on Aave on behalf of the contract owner–this means that the owner needs
+to allow the strategy contract to do that. For every asset supported by Aave, Aave has two special tokens
+deployed: <code>StableDebtToken</code> and <code>VariableDebtToken</code>. They are used to track users' borrowed positions with
+corresponding interest rate mode. They&rsquo;re in fact tokenized borrows. And they also allow to delegate
+borrowing: <code>approveDelegation</code> function allows a delegatee to borrow assets from Aave on behalf of delegator.
+This is what we&rsquo;re doing here: we&rsquo;re letting the strategy contract borrow on behalf of the test contract.</p>
+<p>Then we&rsquo;re running the strategy:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">s</span><span class="p">.</span><span class="n">go</span><span class="p">{</span><span class="nb">value</span><span class="o">:</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">}();</span>
+</code></pre></div><p>And validating its result by fetching user account data from Aave:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">totalCollateralETH</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">totalDebtETH</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">availableBorrowsETH</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">currentLiquidationThreshold</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">ltv</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">healthFactor</span>
+<span class="p">)</span> <span class="o">=</span> <span class="n">IAAVE</span><span class="p">(</span><span class="n">aaveAddress</span><span class="p">).</span><span class="n">getUserAccountData</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+
+<span class="n">assertEq</span><span class="p">(</span>
+    <span class="n">totalCollateralETH</span><span class="p">,</span>
+    <span class="mi">3</span><span class="p">.</span><span class="mi">298112774422300227</span> <span class="kc">ether</span><span class="p">,</span>
+    <span class="s">&#34;invalid total collateral&#34;</span>
+<span class="p">);</span>
+<span class="n">assertEq</span><span class="p">(</span><span class="n">totalDebtETH</span><span class="p">,</span> <span class="mi">2</span><span class="p">.</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="s">&#34;invalid total debt&#34;</span><span class="p">);</span>
+<span class="n">assertEq</span><span class="p">(</span>
+    <span class="n">availableBorrowsETH</span><span class="p">,</span>
+    <span class="mi">0</span><span class="p">.</span><span class="mi">008678942095610159</span> <span class="kc">ether</span><span class="p">,</span>
+    <span class="s">&#34;invalid available borrows ETH&#34;</span>
+<span class="p">);</span>
+<span class="n">assertEq</span><span class="p">(</span>
+    <span class="n">currentLiquidationThreshold</span><span class="p">,</span>
+    <span class="mi">7500</span><span class="p">,</span>
+    <span class="s">&#34;invalud current liquidation threshold&#34;</span>
+<span class="p">);</span>
+<span class="n">assertEq</span><span class="p">(</span><span class="n">ltv</span><span class="p">,</span> <span class="mi">7000</span><span class="p">,</span> <span class="s">&#34;invalid LTV&#34;</span><span class="p">);</span>
+<span class="n">assertEq</span><span class="p">(</span>
+    <span class="n">healthFactor</span><span class="p">,</span>
+    <span class="mi">1</span><span class="p">.</span><span class="mi">07547155687683703</span> <span class="kc">ether</span><span class="p">,</span>
+    <span class="s">&#34;invalid health factor&#34;</span>
+<span class="p">);</span>
+</code></pre></div><ol>
+<li>Total value of our collateral is 3.2981 ETH. Since stETH trades slightly lower than 1 ETH, the value of our
+collateral turns out to be slightly lower than 3.3 ETH (we deposited 1 stETH + 2.3 stETH).</li>
+<li>Our total debt is 2.3 ETH–this is the amount we borrowed from Aave to repay the flash loan.</li>
+<li>0.00867 ETH is still available for us to borrow, which means the multiplier we calculated in the very
+beginning was correct. We can still reduce it to lower the risk of liquidation.</li>
+<li><a href="https://docs.aave.com/risk/asset-risk/risk-parameters#liquidation-threshold">Current liquidation threshold</a> is 75%, which means that our position will be liquidated when <code>totalDebtETH</code>/
+<code>totalCollateralETH</code> &gt;= 75%. The debt/collateral ratio of our position is ~70%, which means there&rsquo;s some room
+for price movement.</li>
+<li><a href="https://docs.aave.com/risk/asset-risk/risk-parameters#loan-to-value">Loan-to-Value (LTV)</a> is 70%, which means stETH, as a collateral, allows to borrow up to 70% of its value in
+ETH.</li>
+<li><a href="https://docs.aave.com/faq/borrowing#what-is-the-health-factor">Health factor</a> is 1.07. Which means that
+our position is close to liquidation. As I said above, since stETH and ETH are correlated assets, price
+fluctuations are not likely and the risk of liquidation is low. But it still exists 😉</li>
+</ol>
+<p>Now, you want to ask: &ldquo;But how did you get all these numbers?&rdquo; I ran the test against the Ethereum mainnet.
+Here&rsquo;s how to do this.</p>
+<p>First, you need an Ethereum node. If you&rsquo;re not running a local one, you can use <a href="https://www.alchemy.com/">Alchemy</a> or <a href="https://infura.io/">Infura</a>. You need to get an HTTP node URL.</p>
+<p>Next, you need to run this command:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ forge <span class="nb">test</span> --fork-url<span class="o">=</span><span class="nv">$NODE_URL</span>
+</code></pre></div><p><code>--fork-url</code> enables the fork mode, in which Forge runs as a proxy that passes all RPC API calls to the
+specified <code>NODE_URL</code>. This means that <strong>everything that we do in the test is executed against the Ethereum
+mainnet</strong>. Of course, it doesn&rsquo;t execute transactions in the mainnet: transactions are still executed in the
+local test network.</p>
+<p>The fork mode is a great emulation environment that allows to interact with the Ethereum mainnet without
+paying for gas.</p>
+<p>That&rsquo;s it! I hope you learned something new. Next time I&rsquo;ll show how to run such strategy without writing and
+deploying a strategy contract. Stay tuned!.</p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+
+          Author:
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          Get in touch:
+
+          <a itemprop="sameAs" href="mailto:me@jeiwan.ru" target="_blank">E-mail</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">Telegram</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">Twitter</a>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GitHub</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+
