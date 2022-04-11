@@ -6,7 +6,18 @@
     <description>Recent content in Solidity on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 15 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/solidity/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 11 Apr 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/solidity/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Evaluating DeFi Strategies Using Foundry</title>
+      <link>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</link>
+      <pubDate>Mon, 11 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</guid>
+      <description>Photo by Brett Jordan on Unsplash
+Introduction Nowadays, the ecosystem of Ethereum is quite rich and complex. There are multitudes of DeFi applications: decentralized exchanges, staking protocols, money markets, yield farming vaults, derivatives, leverages, etc. As DeFi protocol evolve, they become more and more intertwined, allowing for new complex strategies.
+In this article, I&amp;rsquo;ll show you how to program a custom DeFi strategy that interacts with several DeFi platforms to produce a leveraged position that earns passive income.</description>
+    </item>
+    
     <item>
       <title>Programming DeFi: Uniswap V2. Part 3</title>
       <link>https://jeiwan.net/posts/programming-defi-uniswapv2-3/</link>
@@ -59,17 +70,6 @@ Introduction Ethernaut is an (awesome) browser game that let&amp;rsquo;s you pra
       <description>Photo by Rafał Naczyński on Unsplash
 Immutability gives Ethereum a big benefit: once a smart contract is deployed, there&amp;rsquo;s no way to change it. This means that smart contract logic won&amp;rsquo;t change over time and it&amp;rsquo;ll remain as reliable as it was from the beginning, e.g. you won&amp;rsquo;t suddenly see a contract doing something no one thought it could do.
 However, immutability comes with drawbacks that can be significant in some cases.</description>
-    </item>
-    
-    <item>
-      <title>Evaluating DeFi Strategies Using Foundry</title>
-      <link>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://jeiwan.net/posts/evaluating-defi-strategy-in-foundry/</guid>
-      <description>Photo by Brett Jordan on Unsplash
-Introduction Nowadays, the ecosystem of Ethereum is quite rich and complex. There are multitudes of DeFi applications: decentralized exchanges, staking protocols, money markets, yield farming vaults, derivatives, leverages, etc. As DeFi protocol evolve, they become more and more intertwined, allowing for new complex strategies.
-In this article, I&amp;rsquo;ll show you how to program a custom DeFi strategy that interacts with several DeFi platforms to produce a leveraged position that earns passive income.</description>
     </item>
     
   </channel>
