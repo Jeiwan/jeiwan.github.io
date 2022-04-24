@@ -686,7 +686,7 @@ I'm pretty sure you'll be able to implement them yourself! You can use [the orig
 as a reference. Also, PRs are welcomed 😉
 
 ## Conclusion
-This is it, our journey has came to its end. I really hope you enjoyed it and learned a lot along the way.
+This is it, our journey has come to its end. I really hope you enjoyed it and learned a lot along the way.
 Uniswap V2 is a fantastic project that combines simplicity, elegance, and unique invention. Its code is a gift
 to us, it let's us see that a truly decentralized platform and an integral DeFi solution can be implemented
 as a set of simple and elegant smart contracts–a role model for every Solidity developer!
