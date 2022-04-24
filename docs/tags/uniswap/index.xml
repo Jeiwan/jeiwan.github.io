@@ -6,7 +6,19 @@
     <description>Recent content in Uniswap on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 15 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/uniswap/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 24 Apr 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/uniswap/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Programming DeFi: Uniswap V2. Part 4</title>
+      <link>https://jeiwan.net/posts/programming-defi-uniswapv2-4/</link>
+      <pubDate>Sun, 24 Apr 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/programming-defi-uniswapv2-4/</guid>
+      <description>Photo by British Library on Unsplash
+Introduction Welcome to the final part of this series! Yes, we&amp;rsquo;ve almost done implementing a Uniswap V2 clone from scratch, and today we&amp;rsquo;re going to fill missing gaps. There&amp;rsquo;s a lot of things to do, so let&amp;rsquo;s get straight to business.
+ You can find full source code of this part here: source code, part 4.
+ LP-tokens burning bug We&amp;rsquo;ll begin with finishing the Router contract.</description>
+    </item>
+    
     <item>
       <title>Programming DeFi: Uniswap V2. Part 3</title>
       <link>https://jeiwan.net/posts/programming-defi-uniswapv2-3/</link>

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.83.1" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/programming-defi-uniswapv2-4/">
+
+  <title>Programming DeFi: Uniswap V2. Part 4 - Going the distance</title>
+  <meta property="og:title" content="Programming DeFi: Uniswap V2. Part 4 - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockchains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css" integrity="sha384-Um5gpz1odJg5Z4HAmzPtgZKdTBHZdw8S29IecapCSB31ligYPhHQZMIlWLYQGVoc" crossorigin="anonymous">
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Programming DeFi: Uniswap V2. Part 4</h1>
+      <time class="post-date" datetime="2022-04-24 00:00:00 &#43;0000">24 Apr 2022</time>
+    </header>
+
+    <p><img src="/images/british-library-Y1S0ApwC054-unsplash.jpg" alt="Machine">
+Photo by
+<a href="https://unsplash.com/@britishlibrary?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">British Library</a>
+on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<h2 id="introduction">Introduction</h2>
+<p>Welcome to the final part of this series! Yes, we&rsquo;ve almost done implementing a Uniswap V2 clone from scratch,
+and today we&rsquo;re going to fill missing gaps. There&rsquo;s a lot of things to do, so let&rsquo;s get straight to business.</p>
+<blockquote>
+<p>You can find full source code of this part here:
+<a href="https://github.com/Jeiwan/zuniswapv2/tree/part_4">source code, part 4</a>.</p>
+</blockquote>
+<h2 id="lp-tokens-burning-bug">LP-tokens burning bug</h2>
+<p>We&rsquo;ll begin with finishing the Router contract. Last time we stopped at implementing <code>addLiquidity</code> function,
+and now we&rsquo;re going to implement <code>removeLiquidity</code>, which removes liquidity from a pool.</p>
+<p>Before implementing <code>removeLiquidity</code>, we need to fix a bug in Pair contract. To understand the bug, let&rsquo;s
+look at <code>testBurn</code> function in Pair contract tests:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurn</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+    <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+    <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+    <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+
+    <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>When someone provides liquidity to a pool, they get LP-tokens in return. When liquidity is removed, these
+LP-tokens are exchange for pool liquidity and burned. In this test, you can see that we&rsquo;re not transferring
+our LP-tokens to the pool, but it&rsquo;s still able to burn our tokens. If you now look in the <code>burn</code> function,
+you&rsquo;ll see this line</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+</code></pre></div><p><strong>The contract can burn sender&rsquo;s tokens without sender explicitly allowing that!</strong> This is wrong. Instead, the
+user needs to have a way to tell the contract how much tokens to burn–this can be achieved in two steps:</p>
+<ol>
+<li>Let user send some amount of their LP-tokens to the contract.</li>
+<li>Change the contract so it burns its LP-tokens.</li>
+</ol>
+<p>You can find the fix of this bug in <a href="https://github.com/Jeiwan/zuniswapv2/commit/babf8509b8be96796e2d944710bfcb22cc1fe77d#diff-835d3f34100b5508951336ba5a961932492eaa6923e3c5299f77007019bf2b6fR84">this commit</a>.</p>
+<p>Now, we&rsquo;re ready to implement liquidity removal in the Router contract.</p>
+<h2 id="liquidity-removal">Liquidity removal</h2>
+<p>Router contract is a high-level contract that makes interaction with Uniswap easier. As a result, its
+functions perform multiple actions, as opposed to the pair contract, in which functions perform only one core
+action. In addition to that, Router&rsquo;s functions are general–they can be used to interact with any pair.</p>
+<p>So, we need a function that:</p>
+<ol>
+<li>Abstracts away pairs–users operate with tokens, not pairs.</li>
+<li>Transfers user&rsquo;s LP-tokens to a pair contract. User needs to be able to select the amount.</li>
+<li>Removes user&rsquo;s liquidity from a pair.</li>
+<li>Protects user from slippage. Yes, liquidity removal is also affected by slippage–check out <code>testBurnUnbalancedDifferentUsers</code> test in Pair contract.</li>
+</ol>
+<p>Let&rsquo;s implement this function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">removeLiquidity</span><span class="p">(</span>
+    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">tokenB</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">liquidity</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amountAMin</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amountBMin</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">amountA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amountB</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+</code></pre></div><ol>
+<li><code>tokenA</code>, <code>tokenB</code> are token addresses of the pair. Since users operate with tokens, they don&rsquo;t need to
+specify pair address.</li>
+<li><code>liquidity</code> is the amount of LP-tokens to burn.</li>
+<li><code>amountAMin</code>, <code>amountBMin</code> is the minimal amounts of tokenA and tokenB that we want to get in return for
+burning our LP-tokens. It&rsquo;s these parameters that protect us from slippage.</li>
+<li><code>to</code> – the address that will receive tokens.</li>
+</ol>
+<p>First step is to find the pair:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">address</span> <span class="n">pair</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span>
+    <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
+    <span class="n">tokenA</span><span class="p">,</span>
+    <span class="n">tokenB</span>
+<span class="p">);</span>
+</code></pre></div><p>Next: sending LP-tokens to the pair and burning the exact amount of tokens.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">IZuniswapV2Pair</span><span class="p">(</span><span class="n">pair</span><span class="p">).</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">pair</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+<span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="n">IZuniswapV2Pair</span><span class="p">(</span><span class="n">pair</span><span class="p">).</span><span class="n">burn</span><span class="p">(</span><span class="n">to</span><span class="p">);</span>
+</code></pre></div><p>In the end, we&rsquo;re checking that amounts returned are within the tolerated slippage chosen by user.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">amountA</span> <span class="o">&lt;</span> <span class="n">amountAMin</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAAmount</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">amountA</span> <span class="o">&lt;</span> <span class="n">amountBMin</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientBAmount</span><span class="p">();</span>
+</code></pre></div><p>And, that&rsquo;s it! Simple and elegant.</p>
+<h2 id="output-amount-calculation">Output amount calculation</h2>
+<p>We&rsquo;re now approaching the moment when we can implement high-level swapping, including chained swapping (e.g.
+swap Token A for Token C via Token B). Before implementing it, we need to learn about how output amounts are
+calculated in Uniswap. Let&rsquo;s first figure out how amounts are related to prices.</p>
+<p>What is price? It&rsquo;s the amount of one thing you get in exchange for <strong>1 unit</strong> of another thing. When trading,
+price, in a sense, is an intermediate entity: what matters is the amount of tokens you have and the amount of
+tokens you get in return.</p>
+<p>In a constant product exchange, price is simply a relation between reserves–we already implement price
+calculation in the <code>quote</code> function of <code>ZuniswapV2Library</code>. However, when actually doing a swap, this price
+is incorrect because it represents only the relation between reserves at a moment. But when a swap is made,
+reserves are changed, and what we expect in fact is <strong>the price to fall</strong>, following the change in reserves.</p>
+<p>To make this all clear, let&rsquo;s recall the constant product formula:
+$$x*y=k$$
+Where <em>x</em> and <em>y</em> are pair reserves (<code>reserve0</code> and <code>reserve1</code>).</p>
+<p>When doing a swap, <em>x</em> and <em>y</em> are changed but <em>k</em> remains the same (or, actually, it grows slowly thanks to
+swap fees). We can write this as a formula:
+$$(x+r\Delta x)(y-\Delta y)=xy$$</p>
+<p>Where <em>r</em> is <code>1 - swap fee</code> (1 - 0.3% = 0.997), \(\Delta x\) is the amount we give in exchange for
+\(\Delta y\), the amount we get.</p>
+<p>This is a very nice and concise formula that shows that the product of reserves after a swap must be equal to
+the product of reserves before the swap, which is the definition of the constant product formula. And we can
+use this formula to calculate the amount we get during a swap. After doing some basic algebraic operations, we
+get this:
+$$\Delta y = \frac{yr\Delta x}{x + r\Delta x}$$
+As you can see, this is a relation of two reserves (\(y/x\)) that takes into consideration the input
+amount (\(r\Delta x\)), including the fee.</p>
+<p>Let&rsquo;s now program this formula:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmountOut</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">amountIn</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">reserveIn</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">reserveOut</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">amountIn</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAmount</span><span class="p">();</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">reserveIn</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">reserveOut</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
+  <span class="p">...</span>
+</code></pre></div><p><code>amountIn</code> is \(\Delta x\), <code>reserveIn</code> is <em>x</em>, <code>reserveOut</code> is <em>y</em>.</p>
+<p>Because of Solidity not supporting float point division, we need to multiply numerator and denominator by
+1000 and then subtract 3 from the multiplier applied to <code>amountIn</code>–this will apply the 0.3% fee to <code>amountIn</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">uint256</span> <span class="n">amountInWithFee</span> <span class="o">=</span> <span class="n">amountIn</span> <span class="o">*</span> <span class="mi">997</span><span class="p">;</span>
+<span class="kt">uint256</span> <span class="n">numerator</span> <span class="o">=</span> <span class="n">amountInWithFee</span> <span class="o">*</span> <span class="n">reserveOut</span><span class="p">;</span>
+<span class="kt">uint256</span> <span class="n">denominator</span> <span class="o">=</span> <span class="p">(</span><span class="n">reserveIn</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">+</span> <span class="n">amountInWithFee</span><span class="p">;</span>
+
+<span class="k">return</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">;</span>
+</code></pre></div><p>And this is it! Now we can proceed with swapping.</p>
+<h2 id="swapexacttokensfortokens">swapExactTokensForTokens</h2>
+<p>The Router contract implements different ways of swapping tokens. The most common of them is when we have an
+exact amount of tokens and want to get some, calculated, amount in exchange. Let&rsquo;s implement this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">swapExactTokensForTokens</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">amountIn</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amountOutMin</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">[]</span> <span class="n">calldata</span> <span class="n">path</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">amounts</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+</code></pre></div><p>This is a function that swaps an exact input amount (<code>amountIn</code>) for some output amount not smaller than
+<code>amountOutMin</code>. It makes <strong>chained swaps</strong> along the specified <code>path</code> (which is simply a sequence of token
+addresses). The final amount is sent to address <code>to</code>.</p>
+<p>The <code>path</code> parameter might seem like something complex, but it&rsquo;s just an array of token addresses. If we want
+to swap Token A for Token B directly, the path will contain only Token A and Token B addresses. If we want
+to swap Token A for Token C via Token B, the path will contain: Token A address, Token B address, Token C
+address; the contract would swap Token A for Token B and then Token B for Token C. We&rsquo;ll see how this works
+in tests.</p>
+<p>In the function, we begin with pre-calculating all output amounts along the path:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">amounts</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">getAmountsOut</span><span class="p">(</span>
+    <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
+    <span class="n">amountIn</span><span class="p">,</span>
+    <span class="n">path</span>
+<span class="p">);</span>
+</code></pre></div><p><code>getAmountsOut</code> (notice the plural &ldquo;amounts&rdquo;) is the new function that we haven&rsquo;t implemented yet. For
+brevity, I won&rsquo;t explain its implementation, you can check the code to see it. This function simply extracts
+pairs of tokens from the path (e.g. <code>[[tokenA, tokenB], [tokenB, tokenC]]</code>) and then iteratively calls
+<code>getAmountOut</code> for each of them to build an array of output amounts.</p>
+<p>After obtaining output amounts, we can verify the final amount right away:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">amounts</span><span class="p">[</span><span class="n">amounts</span><span class="p">.</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">amountOutMin</span><span class="p">)</span>
+    <span class="nb">revert</span> <span class="n">InsufficientOutputAmount</span><span class="p">();</span>
+</code></pre></div><p>If the final amount is good, the contract initializes a swap by sending input tokens to the first pair:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">_safeTransferFrom</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span>
+    <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+    <span class="n">amounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="p">);</span>
+</code></pre></div><p>And then it performs chained swaps:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">_swap</span><span class="p">(</span><span class="n">amounts</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">to</span><span class="p">);</span>
+</code></pre></div><p>Let&rsquo;s look at this function closely: the function takes an array of <strong>output</strong> amounts and a path, and
+iterates over the path.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">_swap</span><span class="p">(</span>
+    <span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">amounts</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">path</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to_</span>
+<span class="p">)</span> <span class="kr">internal</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">i</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">path</span><span class="p">.</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+      <span class="p">...</span>
+</code></pre></div><p>It takes current and next token address from the path and sorts them. Sorting is required because, in pair
+contracts, token addresses are stored in ascending order, but, in the path, they&rsquo;re sorted logically: input token
+goes first, then there&rsquo;s 0 or multiple intermediate output tokens, then there&rsquo;s final output token.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">(</span><span class="kt">address</span> <span class="n">input</span><span class="p">,</span> <span class="kt">address</span> <span class="n">output</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]);</span>
+<span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="p">)</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">sortTokens</span><span class="p">(</span><span class="n">input</span><span class="p">,</span> <span class="n">output</span><span class="p">);</span>
+</code></pre></div><p>Next, we&rsquo;re sorting amounts so they match the order of tokens in pairs. When doing a swap, we want to
+correctly choose output token.</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">uint256</span> <span class="n">amountOut</span> <span class="o">=</span> <span class="n">amounts</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+<span class="p">(</span><span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">)</span> <span class="o">=</span> <span class="n">input</span> <span class="o">==</span> <span class="n">token0</span>
+    <span class="o">?</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">amountOut</span><span class="p">)</span>
+    <span class="o">:</span> <span class="p">(</span><span class="n">amountOut</span><span class="p">,</span> <span class="kt">uint256</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+</code></pre></div><p>After figuring out amounts, we need to find swap destination address. We have two options here:</p>
+<ol>
+<li>If current pair is not final in the path, we want to send tokens to next pair directly. This allows to save
+gas.</li>
+<li>If current pair is final, we want to send tokens to address <code>to_</code>, which is the address that initiated the
+swap.</li>
+</ol>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">address</span> <span class="n">to</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">path</span><span class="p">.</span><span class="n">length</span> <span class="o">-</span> <span class="mi">2</span>
+    <span class="o">?</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span>
+        <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
+        <span class="n">output</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="o">:</span> <span class="n">to_</span><span class="p">;</span>
+</code></pre></div><p>After we obtained all the swap parameters, we&rsquo;re ready to make actual swap:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">IZuniswapV2Pair</span><span class="p">(</span>
+    <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span> <span class="n">input</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+<span class="p">).</span><span class="n">swap</span><span class="p">(</span><span class="n">amount0Out</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">);</span>
+</code></pre></div><p>We&rsquo;ve just implemented the core functionality of Uniswap! Congratulations! It wasn&rsquo;t that hard, right?</p>
+<h2 id="swaptokensforexacttokens">swapTokensForExactTokens</h2>
+<p>The original Router contract <a href="https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L224-L400">implements many different ways of swapping</a>.
+We&rsquo;re not going to implement all of them, but I want to show you how an inverted swapping is implemented:
+swapping unknown amount of input tokens for exact amount of output tokens.
+This is an interesting use case and it&rsquo;s probably not used very often but it&rsquo;s still possible.</p>
+<p>Let&rsquo;s return to the swapping formula:
+$$(x+r\Delta x)(y-\Delta y)=xy$$</p>
+<p>Now, instead of \(\Delta y\), we want to find \(\Delta x\): we know the exact amount of output tokens we
+want to get but we don&rsquo;t know how much input tokens we need to give.</p>
+<p>Again, after applying basic algebraic operations we get:
+$$\Delta x = \frac{x \Delta y}{(y-\Delta y)r}$$
+And again, this is a relation of reserves (\(x/y\)) that takes into consideration output amount
+(\(\Delta y\)) and fee <em>r</em>.</p>
+<p>We can now implement this formula:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmountIn</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">amountOut</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">reserveIn</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">reserveOut</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">amountOut</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAmount</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">reserveIn</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">reserveOut</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
+
+    <span class="kt">uint256</span> <span class="n">numerator</span> <span class="o">=</span> <span class="n">reserveIn</span> <span class="o">*</span> <span class="n">amountOut</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="n">denominator</span> <span class="o">=</span> <span class="p">(</span><span class="n">reserveOut</span> <span class="o">-</span> <span class="n">amountOut</span><span class="p">)</span> <span class="o">*</span> <span class="mi">997</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><p>Everything is clear, except the 1 added to the final result–why is that? The reason is that division,
+which is integer division, in Solidity rounds result down, which means that result gets truncated. In input
+amount calculation, we want to guarantee that the calculated amount will result in the requested <code>amountOut</code>.
+If result is truncated, output amount will be slightly smaller.</p>
+<p>Next, we need <code>getAmountsIn</code> function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmountsIn</span><span class="p">(</span>
+    <span class="kt">address</span> <span class="n">factory</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amountOut</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">path</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">path</span><span class="p">.</span><span class="n">length</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidPath</span><span class="p">();</span>
+    <span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">amounts</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">uint256</span><span class="p">[](</span><span class="n">path</span><span class="p">.</span><span class="n">length</span><span class="p">);</span>
+    <span class="n">amounts</span><span class="p">[</span><span class="n">amounts</span><span class="p">.</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">amountOut</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">i</span> <span class="o">=</span> <span class="n">path</span><span class="p">.</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserve0</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserve1</span><span class="p">)</span> <span class="o">=</span> <span class="n">getReserves</span><span class="p">(</span>
+            <span class="n">factory</span><span class="p">,</span>
+            <span class="n">path</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">);</span>
+        <span class="n">amounts</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">getAmountIn</span><span class="p">(</span><span class="n">amounts</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">reserve0</span><span class="p">,</span> <span class="n">reserve1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">amounts</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div><p>It copies <code>getAmountsOut</code> with on significant change: the path is traversed in reversed order. Since we know
+the output amount and want to find input amounts, we start from the end of the path and fill <code>amounts</code> array
+with input amounts in reverse order.</p>
+<p>The high-level swap function also looks very familiar:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">swapTokensForExactTokens</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">amountOut</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amountInMax</span><span class="p">,</span>
+    <span class="kt">address</span><span class="p">[]</span> <span class="n">calldata</span> <span class="n">path</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">[]</span> <span class="kr">memory</span> <span class="n">amounts</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">amounts</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">getAmountsIn</span><span class="p">(</span>
+        <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
+        <span class="n">amountOut</span><span class="p">,</span>
+        <span class="n">path</span>
+    <span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">amounts</span><span class="p">[</span><span class="n">amounts</span><span class="p">.</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">amountInMax</span><span class="p">)</span>
+        <span class="nb">revert</span> <span class="n">ExcessiveInputAmount</span><span class="p">();</span>
+    <span class="n">_safeTransferFrom</span><span class="p">(</span>
+        <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span>
+        <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="n">amounts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">);</span>
+    <span class="n">_swap</span><span class="p">(</span><span class="n">amounts</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">to</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>It&rsquo;s almost identical to the swap function we implemented earlier, but it calls <code>getAmountsIn</code> instead. It&rsquo;s
+also interesting that we can use the same <code>_swap</code> function even when amounts are input ones.</p>
+<p>Phew, we&rsquo;re done with the router contract! There&rsquo;s one more feature that I&rsquo;d want to show you: flash loans.</p>
+<h2 id="fixing-swap-fee-bug">Fixing swap fee bug</h2>
+<p>Before we implement flash loans, there&rsquo;s another bug that we need to fix. In the pair contract, we have these
+lines:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">))</span> <span class="o">-</span> <span class="n">amount0Out</span><span class="p">;</span>
+<span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">))</span> <span class="o">-</span> <span class="n">amount1Out</span><span class="p">;</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">balance0</span> <span class="o">*</span> <span class="n">balance1</span> <span class="o">&lt;</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">)</span> <span class="o">*</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">))</span>
+    <span class="nb">revert</span> <span class="n">InvalidK</span><span class="p">();</span>
+</code></pre></div><p>This is a crucial check because it ensures that the swap was correct, i.e. correct input amount was provided
+and correct output amount was requested. However, these lines don&rsquo;t guarantee that swap fee was paid! The way
+the pair contract is currently implemented, there are no swap fees! Let&rsquo;s fix that.</p>
+<p>Let&rsquo;s look closely at what we&rsquo;re doing in those lines:</p>
+<ol>
+<li>First, we&rsquo;re getting current token balances (not reserves) of the pair contract.</li>
+<li>Then we subtract output amounts from them because we expect to send those amounts to user.</li>
+<li>We end up with balances that include input amount (sent to the contract by user) and exclude output
+amounts. They don&rsquo;t include swap fee.</li>
+<li>Then, we calculate a new <code>k</code> and compare it with the previous one. The new one must be equal or bigger.</li>
+</ol>
+<p>It&rsquo;s clear that the new <code>k</code> considers only input and output amount, not the swap fee. And this is wrong.</p>
+<p>To fix the bug, we need to rewrite the function.</p>
+<p>First thing we do after obtaining reserves and doing pre-checks, is transferring tokens to users. Interesting
+that we can do this early, which makes this an optimistic operation (there&rsquo;s a price for doing that, we&rsquo;ll
+take a look at it later). After transfers are made, we calculate input amounts:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">);</span>
+
+<span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+<span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+
+<span class="kt">uint256</span> <span class="n">amount0In</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">&gt;</span> <span class="n">reserve0</span> <span class="o">-</span> <span class="n">amount0Out</span>
+    <span class="o">?</span> <span class="n">balance0</span> <span class="o">-</span> <span class="p">(</span><span class="n">reserve0</span> <span class="o">-</span> <span class="n">amount0Out</span><span class="p">)</span>
+    <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+<span class="kt">uint256</span> <span class="n">amount1In</span> <span class="o">=</span> <span class="n">balance1</span> <span class="o">&gt;</span> <span class="n">reserve1</span> <span class="o">-</span> <span class="n">amount1Out</span>
+    <span class="o">?</span> <span class="n">balance1</span> <span class="o">-</span> <span class="p">(</span><span class="n">reserve1</span> <span class="o">-</span> <span class="n">amount1Out</span><span class="p">)</span>
+    <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">amount0In</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">amount1In</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientInputAmount</span><span class="p">();</span>
+</code></pre></div><p>To make the logic of this piece clear, we can think of <code>reserve0</code> and <code>reserve1</code> as &ldquo;old balances&rdquo;, balances
+that the contract had before the swap started.</p>
+<p>When swapping tokens, we usually provide either <code>amount0Out</code> or <code>amount1Out</code>. So, usually, there will be
+either <code>amount0In</code> or <code>amount1In</code> (the other one will be zero). But this piece (as well as the swap function)
+allows us to set both <code>amount0Out</code> and <code>amount1Out</code>, so it&rsquo;s also possible that both <code>amount0In</code> and
+<code>amount1In</code> will be greater than zero. But if both of them are zero, the user hasn&rsquo;t sent any tokens to the
+contract, which is not allowed.</p>
+<p>So, in these lines, we&rsquo;re finding out new balances: they don&rsquo;t include output amounts but include input ones.</p>
+<p>Next lines are fixed versions of the bugged implementation:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">uint256</span> <span class="n">balance0Adjusted</span> <span class="o">=</span> <span class="p">(</span><span class="n">balance0</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">amount0In</span> <span class="o">*</span> <span class="mi">3</span><span class="p">);</span>
+<span class="kt">uint256</span> <span class="n">balance1Adjusted</span> <span class="o">=</span> <span class="p">(</span><span class="n">balance1</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">amount1In</span> <span class="o">*</span> <span class="mi">3</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span>
+    <span class="n">balance0Adjusted</span> <span class="o">*</span> <span class="n">balance1Adjusted</span> <span class="o">&lt;</span>
+    <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">)</span> <span class="o">*</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1000</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">)</span> <span class="nb">revert</span> <span class="n">InvalidK</span><span class="p">();</span>
+</code></pre></div><p>First, we calculate adjusted balances: these are <strong>current balances minus swap fees</strong>, which are applied to
+input amounts. Again, because of
+integer division, we have to multiply balances by 1000 and amounts by 3 to &ldquo;emulate&rdquo; multiplication of the
+input amounts by 0.003 (0.3%).</p>
+<p>Next, we&rsquo;re calculating a new <em>k</em> for the adjusted balances and comparing it to the current one.
+To compensate for the multiplication by 1000 in the adjusted balances, we multiply old reserves by 1000 * 1000.</p>
+<p>We&rsquo;re basically calculating a new <em>k</em> on new balances minus the swap fee. And this new <em>k</em> must be greater or
+equal to the old <em>k</em>.</p>
+<p>Let&rsquo;s test the case when we&rsquo;re trying to get too much of output tokens and are getting the <code>InvalidK</code> error:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testSwapUnpaidFee</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+    <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+    <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+
+    <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">0</span><span class="p">.</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+
+    <span class="n">vm</span><span class="p">.</span><span class="n">expectRevert</span><span class="p">(</span><span class="n">encodeError</span><span class="p">(</span><span class="s">&#34;InvalidK()&#34;</span><span class="p">));</span>
+    <span class="n">pair</span><span class="p">.</span><span class="n">swap</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">181322178776029827</span> <span class="kc">ether</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="s">&#34;&#34;</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>Here, we&rsquo;re trying to swap 0.1 ether of token0 for 0.181322178776029827 ether of token1 and fail. If you
+reduce the token1 amount by 1, the test will pass. I used <code>getAmountOut</code> to calculate this amount–
+feel free to experiment with it!</p>
+<p>This is a tricky piece, you might need to experiment with tests and number to get it. Hopefully, it&rsquo;ll be
+clear in the end!</p>
+<p>And now we&rsquo;re ready to implement flash loans 🎃</p>
+<h2 id="flash-loans">Flash loans</h2>
+<p>Everybody likes them! Or not? Well, maybe not the developers who got their contracts hacked using flash loans 🤭</p>
+<p>Flash loans is a very powerful financial instrument that has no analogues in traditional finances. It&rsquo;s an
+<strong>unlimited</strong> and <strong>uncollateralized</strong> loan that must be repaid in <strong>the same transaction</strong> where it&rsquo;s taken.
+Uniswap is one of the platforms that&rsquo;s able to give flash loans. Let&rsquo;s add them to our contracts and see how
+they work.</p>
+<p>First thing you need to know about flash loans implementation is that <strong>they can only be used by smart
+contracts</strong>. Here&rsquo;s how borrowing and repaying happens with flash loans:</p>
+<ol>
+<li>A smart contract borrows a flash loan from another contract.</li>
+<li>The lender contract sends tokens to the borrowing contract and calls a special function in this contract.</li>
+<li>In the special function, the borrowing contract performs some operations with the loan and then transfers
+the loan back.</li>
+<li>The lender contract ensures that the whole amount was paid back. In case when there are fees, it also
+ensures that they were paid.</li>
+<li>Control flow returns to the borrowing contract.</li>
+</ol>
+<p>To add flash loans to Zuniswap, we need to make a few changes. First, update <code>swap</code> to take an additional
+parameter:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">swap</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="n">calldata</span> <span class="n">data</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+</code></pre></div><p>The new parameter is a byte array <code>data</code>. It can contain literary anything.</p>
+<p>Next step is to actually issue a loan. Remember that we have optimistic transfers in the <code>swap</code> function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">);</span>
+<span class="p">...</span>
+</code></pre></div><p>And this means that we&rsquo;re already giving an arbitrary amount (the output amounts are specified by user) of
+tokens without asking for collateral! The only thing we need to change is to let the caller to repay the loan.
+We&rsquo;re doing this by calling a special function in the caller contract:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">IZuniswapV2Callee</span><span class="p">(</span><span class="n">to</span><span class="p">).</span><span class="n">zuniswapV2Call</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+<span class="p">...</span>
+</code></pre></div><p>By the convention we define, we expect the caller contract to implement <code>zuniswapV2Call</code> function that receives:
+sender address, first output amount, second output amount, and the new data parameter. Everything else remains
+unchanged in the contract! Again, very elegant and simple solution.</p>
+<p>And that&rsquo;s basically it! It turns out, we&rsquo;ve already implemented the logic that checks if the loan was repaid–
+it&rsquo;s the same logic that checks that a new <em>k</em> is valid!</p>
+<p>Now, let&rsquo;s test the flash loans! I hope the whole flow will be clearer after we add a test.</p>
+<p>As I said above, to use flash loans we need a smart contract. And to test flash loans we need a separate
+contract–let&rsquo;s call it <code>Flashloaner</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Flashloaner</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="n">InsufficientFlashLoanAmount</span><span class="p">();</span>
+
+    <span class="kt">uint256</span> <span class="n">expectedLoanAmount</span><span class="p">;</span>
+
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div><p>The contract will implement two functions:</p>
+<ol>
+<li>First function will borrow a flash loan from Zuniswap.</li>
+<li>Second function, <code>zuniswapV2Call</code>, will handle the loan and repay it.</li>
+</ol>
+<p>Taking a flash loan is as easy as making a swap:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">flashloan</span><span class="p">(</span>
+    <span class="kt">address</span> <span class="n">pairAddress</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">tokenAddress</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">expectedLoanAmount</span> <span class="o">=</span> <span class="n">amount0Out</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">expectedLoanAmount</span> <span class="o">=</span> <span class="n">amount1Out</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">ZuniswapV2Pair</span><span class="p">(</span><span class="n">pairAddress</span><span class="p">).</span><span class="n">swap</span><span class="p">(</span>
+        <span class="n">amount0Out</span><span class="p">,</span>
+        <span class="n">amount1Out</span><span class="p">,</span>
+        <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+        <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">)</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>Before making the swap, we want to set <code>expectedLoanAmount</code> so we can later check that requested amount of
+tokens was in fact given to us.</p>
+<p>In the swap function, notice that we&rsquo;re passing <code>tokenAddress</code> as the <code>data</code> parameter–we&rsquo;ll use it later to
+repay the loan. Alternatively, we could&rsquo;ve stored this address in a state variable. Since data is a byte
+array, we need a way to convert an address to bytes, and <code>abi.encode</code> is a common solution for that.</p>
+<p>Now, the flash loan handler:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">zuniswapV2Call</span><span class="p">(</span>
+    <span class="kt">address</span> <span class="nb">sender</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="n">calldata</span> <span class="n">data</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="kt">address</span> <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="kt">address</span><span class="p">));</span>
+    <span class="kt">uint256</span> <span class="nb">balance</span> <span class="o">=</span> <span class="n">ERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nb">balance</span> <span class="o">&lt;</span> <span class="n">expectedLoanAmount</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientFlashLoanAmount</span><span class="p">();</span>
+
+    <span class="n">ERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="nb">balance</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>This is the function that will be called by the pair contract in the swap function that we call in
+<code>flashloan</code>. The pair contract will also pass whatever data we passed to the swap call.</p>
+<p>In the handler function, we&rsquo;re ensuring that we in fact got the requested loan and we&rsquo;re simply paying it
+back. Instead of repaying it, we could&rsquo;ve used it for something like <a href="https://medium.com/coinmonks/evaluating-defi-strategies-using-foundry-151bf8cb8759">leveraging</a>,
+arbitraging, or exploiting bugs in smart contracts. Flash loans is a very powerful instrument that can be used
+for the good or the bad.</p>
+<p>Finally, let&rsquo;s add a test that takes a loan and ensures that a correct amount is repaid:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testFlashloan</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
+    <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+    <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+    <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+
+    <span class="kt">uint256</span> <span class="n">flashloanAmount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="n">flashloanFee</span> <span class="o">=</span> <span class="p">(</span><span class="n">flashloanAmount</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="mi">997</span> <span class="o">-</span> <span class="n">flashloanAmount</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="n">Flashloaner</span> <span class="n">fl</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Flashloaner</span><span class="p">();</span>
+
+    <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">fl</span><span class="p">),</span> <span class="n">flashloanFee</span><span class="p">);</span>
+
+    <span class="n">fl</span><span class="p">.</span><span class="n">flashloan</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">flashloanAmount</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">));</span>
+
+    <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">fl</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">)),</span> <span class="mi">2</span> <span class="kc">ether</span> <span class="o">+</span> <span class="n">flashloanFee</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div><p>The thing is, Uniswap V2 imposes fees on flash loans: <strong>we must pay the swap fee on them</strong>. Recall that we
+didn&rsquo;t implement any additional checks for whether a flash loan was repaid or not–we simply used the new <em>k</em>
+calculation. And this calculation subtracts the swap fee from balances! So, when returning a flash loan we
+must pay the amount we&rsquo;ve taken + 0.3% (slightly above that actually: 0.3009027%).</p>
+<p>For Flashloaner to repay full amount, we calculate <code>flashloanFee</code> and send it to the contract. After the flash
+loan is repaid, Flashloaner&rsquo;s balance is 0 and the pair contract gets the fee.</p>
+<h2 id="fixing-re-entrancy-vulnerability">Fixing re-entrancy vulnerability</h2>
+<p>And the final touch: with the new changes in the pair contract, we introduced a very dangerous vulnerability–re-entrancy.
+We have already discussed this in a previous part: when implementing functions that make external
+calls, we must be very cautious to not make re-entrancy attacks possible. We have also discussed that the
+<a href="https://fravoll.github.io/solidity-patterns/checks_effects_interactions.html">Checks Effects Interactions pattern</a>
+is one way of preventing the attack. However, in the rewritten <code>swap</code> function, we cannot use the pattern
+because the implementation forces us to make external calls (token transfers) before applying effects
+(updating reserves). We want the optimistic transfers and we like the simplicity of the flash loans
+implementation! So, we need a different protection. And it&rsquo;s not hard to implement.</p>
+<p>In situations when the Checks Effects Interactions patterns cannot be applied, we can use <a href="https://fravoll.github.io/solidity-patterns/guard_check.html">the Guard Check
+pattern</a>: we simply need to add a flag that is
+set when <code>swap</code> function is called; and we won&rsquo;t allow to call the function if flag is set. Here&rsquo;s how to do
+this.</p>
+<p>First, add the flag. We&rsquo;ll call it <code>isEntered</code>:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2Pair</span> <span class="kr">is</span> <span class="n">ERC20</span><span class="p">,</span> <span class="n">Math</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="kt">bool</span> <span class="kr">private</span> <span class="n">isEntered</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div><p>Yes, it&rsquo;s stored in the contract&rsquo;s storage, which increases the gas cost of the swap function. And this is why
+Checks Effects Interactions pattern is better.</p>
+<p>Next, we add a modifier:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">  <span class="kd">modifier</span> <span class="n">nonReentrant</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nb">require</span><span class="p">(</span><span class="o">!</span><span class="n">isEntered</span><span class="p">);</span>
+      <span class="n">isEntered</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+
+      <span class="kr">_</span><span class="p">;</span>
+
+      <span class="n">isEntered</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="p">}</span>
+</code></pre></div><p>The modifier:</p>
+<ol>
+<li>Ensures that the flag is not set.</li>
+<li>Sets the flag.</li>
+<li>Executes function body (<code>_</code> is replaced with the body of the function this modifier is applied to).</li>
+<li>When the function is done, it unsets the flag.</li>
+</ol>
+<p>Finally, we need to apply this modifier to the swap function:</p>
+<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">swap</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="n">calldata</span> <span class="n">data</span>
+<span class="p">)</span> <span class="kr">public</span> <span class="n">nonReentrant</span> <span class="p">{</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div><p>That&rsquo;s it! I&rsquo;ll leave it to you to test this vulnerability 😉</p>
+<h2 id="protocol-fees">Protocol fees</h2>
+<p>Last thing we haven&rsquo;t implemented is protocol fees.</p>
+<p>Protocol fees are fees collected by Uniswap every time someone adds liquidity to a pool. These fees go
+directly to the Uniswap team, not to liquidity providers or traders. However, at the moment of writing,
+<strong>protocol fees are not enabled, which means that the Uniswap team earns nothing from the exchange that they
+built</strong>.</p>
+<p>Since this post is already quite long, I&rsquo;m not going to implement protocol fees in our clone. By this moment,
+I&rsquo;m pretty sure you&rsquo;ll be able to implement them yourself! You can use <a href="https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L88-L107">the original implementation</a>
+as a reference. Also, PRs are welcomed 😉</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This is it, our journey has came to its end. I really hope you enjoyed it and learned a lot along the way.
+Uniswap V2 is a fantastic project that combines simplicity, elegance, and unique invention. Its code is a gift
+to us, it let&rsquo;s us see that a truly decentralized platform and an integral DeFi solution can be implemented
+as a set of simple and elegant smart contracts–a role model for every Solidity developer!</p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+
+          Author:
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          Get in touch:
+
+          <a itemprop="sameAs" href="mailto:me@jeiwan.ru" target="_blank">E-mail</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">Telegram</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">Twitter</a>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GitHub</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js" integrity="sha384-YNHdsYkH6gMx9y3mRkmcJ2mFUjTd0qNQQvY9VYZgQd7DcN7env35GzlmFaZ23JGp" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js" integrity="sha384-vZTG03m+2yp6N6BNi5iM4rW4oIwk5DfcNdFfxkk9ZWpDriOkXX8voJBFrAO7MpVl" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+
