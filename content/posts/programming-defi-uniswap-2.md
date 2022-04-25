@@ -232,7 +232,7 @@ proportional to their share. This sounds like a reasonable idea and, surprisingl
 
 That's it! Let's get to the code.
 
-Uniswap takes 0.03% in fees from each swap. We'll take 1% just so that it's easier to see the difference in tests.
+Uniswap takes 0.3% in fees from each swap. We'll take 1% just so that it's easier to see the difference in tests.
 Adding fees to the contract is as easy as adding a couple of multipliers to `getAmount` function:
 
 ```solidity

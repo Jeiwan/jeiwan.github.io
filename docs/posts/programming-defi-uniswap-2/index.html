@@ -213,7 +213,7 @@ invalidate it: the fee is small compared to reserves and there&rsquo;s no way to
 get a balanced amount of ethers and tokens plus a share of accumulated fees proportional to the share of their LP-tokens.</li>
 </ol>
 <p>That&rsquo;s it! Let&rsquo;s get to the code.</p>
-<p>Uniswap takes 0.03% in fees from each swap. We&rsquo;ll take 1% just so that it&rsquo;s easier to see the difference in tests.
+<p>Uniswap takes 0.3% in fees from each swap. We&rsquo;ll take 1% just so that it&rsquo;s easier to see the difference in tests.
 Adding fees to the contract is as easy as adding a couple of multipliers to <code>getAmount</code> function:</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmount</span><span class="p">(</span>
   <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
