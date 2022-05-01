@@ -334,6 +334,9 @@ function burn() public {
 
 As you can see, UniswapV2 doesn't support partial removal of liquidity.
 
+> **Update**: the above statement is wrong! I made a logical bug in this function, can you spot it? If not, I explained
+and fixed it in [Part 4](https://jeiwan.net/posts/programming-defi-uniswapv2-4/) ([commit](https://github.com/Jeiwan/zuniswapv2/commit/babf8509b8be96796e2d944710bfcb22cc1fe77d#diff-835d3f34100b5508951336ba5a961932492eaa6923e3c5299f77007019bf2b6fR84))
+
 Let's test it:
 
 ```solidity
