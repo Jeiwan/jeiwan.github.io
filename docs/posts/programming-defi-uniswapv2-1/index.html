@@ -305,6 +305,10 @@ tokens. The bigger your share of LP-tokens, the bigger share of reserve you get 
 <span class="p">}</span>
 
 </code></pre></div><p>As you can see, UniswapV2 doesn&rsquo;t support partial removal of liquidity.</p>
+<blockquote>
+<p><strong>Update</strong>: the above statement is wrong! I made a logical bug in this function, can you spot it? If not, I explained
+and fixed it in <a href="https://jeiwan.net/posts/programming-defi-uniswapv2-4/">Part 4</a> (<a href="https://github.com/Jeiwan/zuniswapv2/commit/babf8509b8be96796e2d944710bfcb22cc1fe77d#diff-835d3f34100b5508951336ba5a961932492eaa6923e3c5299f77007019bf2b6fR84">commit</a>)</p>
+</blockquote>
 <p>Let&rsquo;s test it:</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurn</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
   <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
