@@ -469,13 +469,11 @@ Now, how do we get contract bytecode and its hash?
 Getting contract bytecode is not a problem–we simply need to compile the pair contract. And we have already done that
 during development: Forge compiles contracts automatically and stores them in `out` folder. Specifically, compiled pair
 contract is saved at `out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json`–there's a bunch of things in this file and we need only
-the bytecode. Here's how to extract bytecode from the file:
+the bytecode. We can extract it from the file, but, luckily, Forge makes this simpler:
 
 ```shell
-$ cat out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json| jq -r .bytecode.object
+$ forge inspect ZuniswapV2Pair bytecode
 ```
-
-> Ensure you have [jq tool](https://stedolan.github.io/jq/) installed!
 
 Next, we need to hash the output of this command. Foundry is not only Forge but also Cast, a CLI tool with a bunch of
 useful Ethereum and EVM related functions. Specifically, we're interested in `keccak` subcommand, which hashes input
@@ -484,7 +482,7 @@ with Keccak-256.
 This is what the final command looks like:
 
 ```shell
-$ cat out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json | jq -r .bytecode.object | xargs cast keccak
+$ forge inspect ZuniswapV2Pair bytecode| xargs cast keccak
 0x049f60b9e01e08c8f30809369bea021451544d751aa028da0bc80c726d334c6c
 ```
 

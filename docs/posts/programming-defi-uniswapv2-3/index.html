@@ -418,16 +418,13 @@ opcode. What we&rsquo;re doing here is reimplementing address generation in Soli
 <p>Getting contract bytecode is not a problem–we simply need to compile the pair contract. And we have already done that
 during development: Forge compiles contracts automatically and stores them in <code>out</code> folder. Specifically, compiled pair
 contract is saved at <code>out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json</code>–there&rsquo;s a bunch of things in this file and we need only
-the bytecode. Here&rsquo;s how to extract bytecode from the file:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ cat out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json<span class="p">|</span> jq -r .bytecode.object
-</code></pre></div><blockquote>
-<p>Ensure you have <a href="https://stedolan.github.io/jq/">jq tool</a> installed!</p>
-</blockquote>
-<p>Next, we need to hash the output of this command. Foundry is not only Forge but also Cast, a CLI tool with a bunch of
+the bytecode. We can extract it from the file, but, luckily, Forge makes this simpler:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ forge inspect ZuniswapV2Pair bytecode
+</code></pre></div><p>Next, we need to hash the output of this command. Foundry is not only Forge but also Cast, a CLI tool with a bunch of
 useful Ethereum and EVM related functions. Specifically, we&rsquo;re interested in <code>keccak</code> subcommand, which hashes input
 with Keccak-256.</p>
 <p>This is what the final command looks like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ cat out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json <span class="p">|</span> jq -r .bytecode.object <span class="p">|</span> xargs cast keccak
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ forge inspect ZuniswapV2Pair bytecode<span class="p">|</span> xargs cast keccak
 0x049f60b9e01e08c8f30809369bea021451544d751aa028da0bc80c726d334c6c
 </code></pre></div><p>Finally, we&rsquo;ve reached the <code>quote</code> function.</p>
 <div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">quote</span><span class="p">(</span>
