@@ -107,7 +107,7 @@ The only good solution is to collect a small fee on each token swap and distribu
 providers. This also seems pretty much fair: users (traders) pay for services (liquidity) provided by other people.
 
 For rewards to be fair, we need to reward liquidity providers proportionally to their contribution, i.e. the amount of
-liquidity they provide. If someone has provided 50% of pool liquidity, they should get 50% of accumulated feels. This
+liquidity they provide. If someone has provided 50% of pool liquidity, they should get 50% of accumulated fees. This
 makes sense, right?
 
 Now, the task seems pretty complicated. However, there's an elegant solution: LP-tokens.
