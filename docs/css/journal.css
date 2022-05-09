@@ -270,3 +270,26 @@ img[src$="#center"] {
   display: block;
   margin: 0 auto;
 }
+
+.support {
+  border: 4px solid #f47edd;
+  border-radius: 10px;
+  padding: 1.6em;
+  text-align: center;
+}
+
+.support p {
+  margin-bottom: 1em;
+}
+
+.support button {
+  cursor: pointer;
+  background: #f47edd;
+  border: 1px solid #f47edd;
+  border-radius: 4px;
+  color: #fff;
+  font-family: "Arvo", serif;
+  font-size: 1em;
+  text-transform: uppercase;
+  padding: 0.3em 0.6em;
+}

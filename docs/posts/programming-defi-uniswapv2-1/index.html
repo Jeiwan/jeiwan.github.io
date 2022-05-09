@@ -402,6 +402,40 @@ when adding liquidity to a pool.</p>
 
 
 
+<div class="support">
+  <p>
+    If you found this post useful, consider supporting the author.
+  </p>
+  <div>
+    <button id="eth-button">Send ETH</button>
+  </div>
+  <small>You can send any amount to <a href="https://etherscan.io/address/0xaf8dde65b84ae5d77e4f9a18cdc854e324a41b04" target="_blank">jeiwan.eth</a></small>
+</div>
+
+<script>
+  var tipButton = document.querySelector('#eth-button');
+  var address = '0xAF8Dde65b84ae5d77E4F9A18cDC854E324A41B04';
+
+  tipButton.addEventListener('click', function () {
+    if (typeof window.ethereum === 'undefined') {
+      return alert('Metamask is not installed! You can support by sending ETH to ' + address + '. Thank you!');
+    }
+
+    window.ethereum.request({ method: 'eth_requestAccounts' }).then(function (accs) {
+      var acc = accs[0];
+      var params = {
+        from: acc,
+        to: address,
+        value: '0x11c37937e08000' 
+      };
+      window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [params]
+      });
+    });
+  })
+</script>
+
 
       <footer class="site-footer">
         <span itemscope itemtype="http://schema.org/Person">
