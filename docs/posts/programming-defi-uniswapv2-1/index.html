@@ -139,7 +139,7 @@ contracts that perform only core operations.</p>
    <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
    <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
    <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">-</span> <span class="n">reserve0</span><span class="p">;</span>
-   <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">-</span> <span class="n">reserve1</span><span class="p">;</span>
+   <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="n">balance1</span> <span class="o">-</span> <span class="n">reserve1</span><span class="p">;</span>
 
    <span class="kt">uint256</span> <span class="n">liquidity</span><span class="p">;</span>
 
