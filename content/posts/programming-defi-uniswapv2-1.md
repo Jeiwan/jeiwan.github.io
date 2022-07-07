@@ -209,7 +209,7 @@ contracts that test smart contracts**.
 This is all we need to set up testing of the pair contract:
 
 ```solidity
-contract ZuniswapV2PairTest is DSTest {
+contract ZuniswapV2PairTest is Test {
   ERC20Mintable token0;
   ERC20Mintable token1;
   ZuniswapV2Pair pair;

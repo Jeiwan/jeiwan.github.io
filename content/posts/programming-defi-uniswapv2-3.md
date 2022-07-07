@@ -442,7 +442,7 @@ pairAddress = address(
                     hex"ff",
                     factoryAddress,
                     keccak256(abi.encodePacked(token0, token1)),
-                    hex"049f60b9e01e08c8f30809369bea021451544d751aa028da0bc80c726d334c6c"
+                    keccak256(type(ZuniswapV2Pair).creationCode)
                 )
             )
         )
@@ -457,34 +457,12 @@ This piece of code generates an address in the same way `CREATE2` does.
    1. `0xff` – this first byte helps to avoid collisions with `CREATE` opcode. (More details are in [EIP-1014](https://eips.ethereum.org/EIPS/eip-1014).)
    1. `factoryAddress` – factory that was used to deploy the pair.
    1. salt – token addressees sorted and hashed.
-   1. hash of pair contract bytecode – in the `createPair` function, we used `creationCode` to get this bytecode.
+   1. hash of pair contract bytecode – we hash `creationCode` to get this value.
 1. Then, this sequence of bytes gets hashed (`keccak256`) and converted to `address`
    (`bytes`->`uint256`->`uint160`->`address`).
 
 This whole process is defined in [EIP-1014](https://eips.ethereum.org/EIPS/eip-1014) and implemented in the `CREATE2`
 opcode. What we're doing here is reimplementing address generation in Solidity!
-
-Now, how do we get contract bytecode and its hash?
-
-Getting contract bytecode is not a problem–we simply need to compile the pair contract. And we have already done that
-during development: Forge compiles contracts automatically and stores them in `out` folder. Specifically, compiled pair
-contract is saved at `out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json`–there's a bunch of things in this file and we need only
-the bytecode. We can extract it from the file, but, luckily, Forge makes this simpler:
-
-```shell
-$ forge inspect ZuniswapV2Pair bytecode
-```
-
-Next, we need to hash the output of this command. Foundry is not only Forge but also Cast, a CLI tool with a bunch of
-useful Ethereum and EVM related functions. Specifically, we're interested in `keccak` subcommand, which hashes input
-with Keccak-256.
-
-This is what the final command looks like:
-
-```shell
-$ forge inspect ZuniswapV2Pair bytecode| xargs cast keccak
-0x049f60b9e01e08c8f30809369bea021451544d751aa028da0bc80c726d334c6c
-```
 
 Finally, we've reached the `quote` function.
 
