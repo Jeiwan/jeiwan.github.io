@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -88,32 +88,32 @@ not what we&rsquo;re looking for at this moment. So we&rsquo;ll go with the manu
 <p>The function takes two output amounts, one for each token. These are the amounts that caller wants to get in exchange
 for their tokens. Why doing it like that? Because we don&rsquo;t even want to enforce the direction of swap: caller can
 specify either of the amounts or both of them, and we&rsquo;ll just perform necessary checks.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">swap</span><span class="p">(</span>
-    <span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">,</span>
-    <span class="kt">address</span> <span class="n">to</span>
-<span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">amount1Out</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="nb">revert</span> <span class="n">InsufficientOutputAmount</span><span class="p">();</span>
-
-    <span class="p">...</span>
-</code></pre></div><p>Next, we need to ensure that there are enough of reserves to send to user.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="p">...</span>
-
-    <span class="p">(</span><span class="kt">uint112</span> <span class="n">reserve0_</span><span class="p">,</span> <span class="kt">uint112</span> <span class="n">reserve1_</span><span class="p">,</span> <span class="p">)</span> <span class="o">=</span> <span class="n">getReserves</span><span class="p">();</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="n">reserve0_</span> <span class="o">||</span> <span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="n">reserve1_</span><span class="p">)</span>
-        <span class="nb">revert</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
-
-    <span class="p">...</span>
-</code></pre></div><p>Next, we&rsquo;re calculating token balances of this contract minus the amounts we&rsquo;re expected to send to the caller. At this
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">swap</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amount0Out</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amount1Out</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">to</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">amount1Out</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">revert</span> <span class="n">InsufficientOutputAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>Next, we need to ensure that there are enough of reserves to send to user.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">(</span><span class="kt">uint112</span> <span class="n">reserve0_</span><span class="p">,</span> <span class="kt">uint112</span> <span class="n">reserve1_</span><span class="p">,</span> <span class="p">)</span> <span class="o">=</span> <span class="n">getReserves</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="n">reserve0_</span> <span class="o">||</span> <span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="n">reserve1_</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">revert</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>Next, we&rsquo;re calculating token balances of this contract minus the amounts we&rsquo;re expected to send to the caller. At this
 point, it&rsquo;s expected that the caller has sent tokens they want to trade in to this contract. So, either or both of the
 balances is expected to be greater than corresponding reserve.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="p">...</span>
-    <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">))</span> <span class="o">-</span> <span class="n">amount0Out</span><span class="p">;</span>
-    <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">))</span> <span class="o">-</span> <span class="n">amount1Out</span><span class="p">;</span>
-    <span class="p">...</span>
-</code></pre></div><p>And here&rsquo;s the constant product check we talked about above. We expect that this contract token balances are different than its
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">))</span> <span class="o">-</span> <span class="n">amount0Out</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">))</span> <span class="o">-</span> <span class="n">amount1Out</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>And here&rsquo;s the constant product check we talked about above. We expect that this contract token balances are different than its
 reserves (the balances will be saved to reserves soon) and we need to ensure that their product is equal or greater than
 the product of current reserves. If this requirement is met then:</p>
 <ol>
@@ -121,19 +121,19 @@ the product of current reserves. If this requirement is met then:</p>
 <li>The output amount is correct.</li>
 <li>The amount transferred to the contract is also correct.</li>
 </ol>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="p">...</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">balance0</span> <span class="o">*</span> <span class="n">balance1</span> <span class="o">&lt;</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">)</span> <span class="o">*</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">))</span>
-        <span class="nb">revert</span> <span class="n">InvalidK</span><span class="p">();</span>
-    <span class="p">...</span>
-</code></pre></div><p>It&rsquo;s now safe to transfer tokens to the caller and to update the reserves. The swap is complete.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">,</span> <span class="n">reserve0_</span><span class="p">,</span> <span class="n">reserve1_</span><span class="p">);</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">);</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">);</span>
-
-    <span class="n">emit</span> <span class="n">Swap</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">,</span> <span class="n">to</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div><p>Feel free to write tests for this function. And don&rsquo;t forget about the case when both output amounts are specified. 😉</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">balance0</span> <span class="o">*</span> <span class="n">balance1</span> <span class="o">&lt;</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">)</span> <span class="o">*</span> <span class="kt">uint256</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">revert</span> <span class="n">InvalidK</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>It&rsquo;s now safe to transfer tokens to the caller and to update the reserves. The swap is complete.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl">    <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">,</span> <span class="n">reserve0_</span><span class="p">,</span> <span class="n">reserve1_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">amount0Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">amount1Out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">emit</span> <span class="n">Swap</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0Out</span><span class="p">,</span> <span class="n">amount1Out</span><span class="p">,</span> <span class="n">to</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Feel free to write tests for this function. And don&rsquo;t forget about the case when both output amounts are specified. 😉</p>
 <blockquote>
 <p>Keep in mind that this implementation is not complete: the contract doesn&rsquo;t collect exchange fees and, as a result,
 liquidity providers don&rsquo;t get profit on their assets. We&rsquo;ll fill this gap after implementing price calculation.</p>
@@ -197,36 +197,36 @@ why they&rsquo;re multiplied by <code>2**112</code> before price calculation. Ch
 simple.</p>
 <p>I hope this all will be clearer for you from code, so let&rsquo;s implement prices accumulation. We only need to add one state
 variable:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">uint32</span> <span class="kr">private</span> <span class="n">blockTimestampLast</span><span class="p">;</span>
-</code></pre></div><p>Which will store last swap (or, actually, reserves update) timestamp. And then we need to modify the reserves updating
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kt">uint32</span> <span class="k">private</span> <span class="n">blockTimestampLast</span><span class="p">;</span>
+</span></span></code></pre></div><p>Which will store last swap (or, actually, reserves update) timestamp. And then we need to modify the reserves updating
 function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">_update</span><span class="p">(</span>
-    <span class="kt">uint256</span> <span class="n">balance0</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">balance1</span><span class="p">,</span>
-    <span class="kt">uint112</span> <span class="n">reserve0_</span><span class="p">,</span>
-    <span class="kt">uint112</span> <span class="n">reserve1_</span>
-<span class="p">)</span> <span class="kr">private</span> <span class="p">{</span>
-    <span class="p">...</span>
-    <span class="n">unchecked</span> <span class="p">{</span>
-        <span class="kt">uint32</span> <span class="n">timeElapsed</span> <span class="o">=</span> <span class="kt">uint32</span><span class="p">(</span><span class="nb">block</span><span class="p">.</span><span class="n">timestamp</span><span class="p">)</span> <span class="o">-</span> <span class="n">blockTimestampLast</span><span class="p">;</span>
-
-        <span class="k">if</span> <span class="p">(</span><span class="n">timeElapsed</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">reserve0_</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">reserve1_</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-            <span class="n">price0CumulativeLast</span> <span class="o">+=</span>
-                <span class="kt">uint256</span><span class="p">(</span><span class="n">UQ112x112</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">).</span><span class="n">uqdiv</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">))</span> <span class="o">*</span>
-                <span class="n">timeElapsed</span><span class="p">;</span>
-            <span class="n">price1CumulativeLast</span> <span class="o">+=</span>
-                <span class="kt">uint256</span><span class="p">(</span><span class="n">UQ112x112</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">).</span><span class="n">uqdiv</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">))</span> <span class="o">*</span>
-                <span class="n">timeElapsed</span><span class="p">;</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-
-    <span class="n">reserve0</span> <span class="o">=</span> <span class="kt">uint112</span><span class="p">(</span><span class="n">balance0</span><span class="p">);</span>
-    <span class="n">reserve1</span> <span class="o">=</span> <span class="kt">uint112</span><span class="p">(</span><span class="n">balance1</span><span class="p">);</span>
-    <span class="n">blockTimestampLast</span> <span class="o">=</span> <span class="kt">uint32</span><span class="p">(</span><span class="nb">block</span><span class="p">.</span><span class="n">timestamp</span><span class="p">);</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-</code></pre></div><p><code>UQ112x112.encode</code> multiplies a <code> uint112</code> value by <code>2**112</code>, which makes it a <code>uint224</code> value. Then, it&rsquo;s divided by
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">_update</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">balance0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">balance1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint112</span> <span class="n">reserve0_</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint112</span> <span class="n">reserve1_</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">private</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">unchecked</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">uint32</span> <span class="n">timeElapsed</span> <span class="o">=</span> <span class="kt">uint32</span><span class="p">(</span><span class="nb">block</span><span class="p">.</span><span class="nb">timestamp</span><span class="p">)</span> <span class="o">-</span> <span class="n">blockTimestampLast</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">timeElapsed</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">reserve0_</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">reserve1_</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">price0CumulativeLast</span> <span class="o">+=</span>
+</span></span><span class="line"><span class="cl">                <span class="kt">uint256</span><span class="p">(</span><span class="n">UQ112x112</span><span class="p">.</span><span class="nb">encode</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">).</span><span class="n">uqdiv</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">))</span> <span class="o">*</span>
+</span></span><span class="line"><span class="cl">                <span class="n">timeElapsed</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">price1CumulativeLast</span> <span class="o">+=</span>
+</span></span><span class="line"><span class="cl">                <span class="kt">uint256</span><span class="p">(</span><span class="n">UQ112x112</span><span class="p">.</span><span class="nb">encode</span><span class="p">(</span><span class="n">reserve0_</span><span class="p">).</span><span class="n">uqdiv</span><span class="p">(</span><span class="n">reserve1_</span><span class="p">))</span> <span class="o">*</span>
+</span></span><span class="line"><span class="cl">                <span class="n">timeElapsed</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">reserve0</span> <span class="o">=</span> <span class="kt">uint112</span><span class="p">(</span><span class="n">balance0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">reserve1</span> <span class="o">=</span> <span class="kt">uint112</span><span class="p">(</span><span class="n">balance1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">blockTimestampLast</span> <span class="o">=</span> <span class="kt">uint32</span><span class="p">(</span><span class="nb">block</span><span class="p">.</span><span class="nb">timestamp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p><code>UQ112x112.encode</code> multiplies a <code> uint112</code> value by <code>2**112</code>, which makes it a <code>uint224</code> value. Then, it&rsquo;s divided by
 the other reserve and multiplied by <code>timeElapsed</code>. The result is <strong>added</strong> to the currently stored one–this makes it
 cumulative. Notice the <code>unchecked</code> block–we&rsquo;ll discuss it shortly.</p>
 <h2 id="storage-optimization">Storage optimization</h2>
@@ -236,17 +236,16 @@ gas, but there are operations that consume a lot of gas. The most expensive one 
 storage. Its counterpart, <code>SLOAD</code>, is also expensive. So, it&rsquo;s beneficial to users if smart contract developers try to
 optimize gas consumption of their contracts. Using <code>uuint112</code> for the reserve variables serves exactly this purpose.</p>
 <p>Take a look at how we laid out the variables:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">address</span> <span class="kr">public</span> <span class="n">token0</span><span class="p">;</span>
-<span class="kt">address</span> <span class="kr">public</span> <span class="n">token1</span><span class="p">;</span>
-
-<span class="kt">uint112</span> <span class="kr">private</span> <span class="n">reserve0</span><span class="p">;</span>
-<span class="kt">uint112</span> <span class="kr">private</span> <span class="n">reserve1</span><span class="p">;</span>
-<span class="kt">uint32</span> <span class="kr">private</span> <span class="n">blockTimestampLast</span><span class="p">;</span>
-
-<span class="kt">uint256</span> <span class="kr">public</span> <span class="n">price0CumulativeLast</span><span class="p">;</span>
-<span class="kt">uint256</span> <span class="kr">public</span> <span class="n">price1CumulativeLast</span><span class="p">;</span>
-
-</code></pre></div><p>This is critical–they must go in exactly this order. The reason is that each state variable corresponds to a certain
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kt">address</span> <span class="k">public</span> <span class="n">token0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">address</span> <span class="k">public</span> <span class="n">token1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">uint112</span> <span class="k">private</span> <span class="n">reserve0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">uint112</span> <span class="k">private</span> <span class="n">reserve1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">uint32</span> <span class="k">private</span> <span class="n">blockTimestampLast</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kt">uint256</span> <span class="k">public</span> <span class="n">price0CumulativeLast</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">uint256</span> <span class="k">public</span> <span class="n">price1CumulativeLast</span><span class="p">;</span>
+</span></span></code></pre></div><p>This is critical–they must go in exactly this order. The reason is that each state variable corresponds to a certain
 storage slot, and EVM uses 32-byte storage slots (every storage slot is exactly 32 bytes). When you read a state variable
 value, it&rsquo;s get read from the storage slot this variable is linked to. Every <code>SLOAD</code> call reads 32 bytes at a time,
 and every <code>SSTORE</code> call writes 32 bytes at a time. Since these are expensive operations, we&rsquo;d really want to reduce the
@@ -284,19 +283,18 @@ either of them overflows. We want them to overflow without throwing an error so 
 <p>Such cases are rare, and the overflow/underflow detection should almost never be disabled.</p>
 <h2 id="safe-transfer">Safe transfer</h2>
 <p>You probably have noticed the strange way of sending tokens we&rsquo;re using:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">_safeTransfer</span><span class="p">(</span>
-  <span class="kt">address</span> <span class="n">token</span><span class="p">,</span>
-  <span class="kt">address</span> <span class="n">to</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="nb">value</span>
-<span class="p">)</span> <span class="kr">private</span> <span class="p">{</span>
-  <span class="p">(</span><span class="kt">bool</span> <span class="n">success</span><span class="p">,</span> <span class="kt">bytes</span> <span class="kr">memory</span> <span class="n">data</span><span class="p">)</span> <span class="o">=</span> <span class="n">token</span><span class="p">.</span><span class="nb">call</span><span class="p">(</span>
-    <span class="n">abi</span><span class="p">.</span><span class="n">encodeWithSignature</span><span class="p">(</span><span class="s">&#34;transfer(address,uint256)&#34;</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="nb">value</span><span class="p">)</span>
-  <span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">success</span> <span class="o">||</span> <span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">length</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">abi</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="kt">bool</span><span class="p">))))</span>
-    <span class="nb">revert</span> <span class="n">TransferFailed</span><span class="p">();</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Why not call <code>transfer</code> method directly on ERC20 interface?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">_safeTransfer</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">address</span> <span class="n">token</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">address</span> <span class="n">to</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="nb">value</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">private</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="p">(</span><span class="kt">bool</span> <span class="n">success</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="nb">data</span><span class="p">)</span> <span class="o">=</span> <span class="n">token</span><span class="p">.</span><span class="nb">call</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">abi</span><span class="p">.</span><span class="nb">encodeWithSignature</span><span class="p">(</span><span class="s">&#34;transfer(address,uint256)&#34;</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="nb">value</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">success</span> <span class="o">||</span> <span class="p">(</span><span class="nb">data</span><span class="p">.</span><span class="n">length</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nb">abi</span><span class="p">.</span><span class="nb">decode</span><span class="p">(</span><span class="nb">data</span><span class="p">,</span> <span class="p">(</span><span class="kt">bool</span><span class="p">))))</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">revert</span> <span class="n">TransferFailed</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Why not call <code>transfer</code> method directly on ERC20 interface?</p>
 <p>In the pair contract, when doing token transfers, we always want to be sure that they&rsquo;re successful. According to ERC20,
 <code>transfer</code> method must return a boolean value: <code>true</code>, when it&rsquo;s successful; <code>fails</code>, when it&rsquo;s not. Most of tokens
 implement this correctly, but some tokens don&rsquo;t–they simply return nothing. Of course, we cannot check token contract

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -116,16 +116,15 @@ manipulations possible: imaging someone sending a big amount of tokens to a pool
 in the end. To avoid such situations, <strong>we need to track pool reserves on our side</strong>, and we also need to control when they&rsquo;re
 updated.</p>
 <p>We&rsquo;ll use <code>reserve0</code> and <code>reserve1</code> variable to track reserves in pools:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2Pair</span> <span class="kr">is</span> <span class="n">ERC20</span><span class="p">,</span> <span class="n">Math</span> <span class="p">{</span>
-  <span class="p">...</span>
-
-  <span class="kt">uint256</span> <span class="kr">private</span> <span class="n">reserve0</span><span class="p">;</span>
-  <span class="kt">uint256</span> <span class="kr">private</span> <span class="n">reserve1</span><span class="p">;</span>
-
-  <span class="p">...</span>
-<span class="p">}</span>
-
-</code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">ZuniswapV2Pair</span> <span class="k">is</span> <span class="n">ERC20</span><span class="p">,</span> <span class="n">Math</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="k">private</span> <span class="n">reserve0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="k">private</span> <span class="n">reserve1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><blockquote>
 <p>I omit a lot of code for brevity. <a href="https://github.com/Jeiwan/zuniswapv2/tree/part_1">Check the GitHub repo</a> for full code.</p>
 </blockquote>
 <p>If you followed my <a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">UniswapV1 series</a>, you probably remember that
@@ -135,30 +134,30 @@ lower level: liquidity management is simply viewed as LP-tokens management. When
 mints LP-tokens; when you remove liquidity, LP-tokens get burned. As I explained earlier, core contracts are lower-level
 contracts that perform only core operations.</p>
 <p>So, here&rsquo;s the low-level function for depositing new liquidity:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">mint</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-   <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-   <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-   <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">-</span> <span class="n">reserve0</span><span class="p">;</span>
-   <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="n">balance1</span> <span class="o">-</span> <span class="n">reserve1</span><span class="p">;</span>
-
-   <span class="kt">uint256</span> <span class="n">liquidity</span><span class="p">;</span>
-
-   <span class="k">if</span> <span class="p">(</span><span class="n">totalSupply</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n">liquidity</span> <span class="o">=</span> <span class="o">???</span>
-      <span class="n">_mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">);</span>
-   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-      <span class="n">liquidity</span> <span class="o">=</span> <span class="o">???</span>
-   <span class="p">}</span>
-
-   <span class="k">if</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidityMinted</span><span class="p">();</span>
-
-   <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
-
-   <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">);</span>
-
-   <span class="n">emit</span> <span class="n">Mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div><p>First, we need to calculate newly deposited amounts that haven&rsquo;t yet been counted (saved in reserves). Then, we calculate
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">mint</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">   <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">   <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="n">balance0</span> <span class="o">-</span> <span class="n">reserve0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">   <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="n">balance1</span> <span class="o">-</span> <span class="n">reserve1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kt">uint256</span> <span class="n">liquidity</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">(</span><span class="n">totalSupply</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">liquidity</span> <span class="o">=</span> <span class="o">???</span>
+</span></span><span class="line"><span class="cl">      <span class="n">_mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">liquidity</span> <span class="o">=</span> <span class="o">???</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidityMinted</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="n">emit</span> <span class="n">Mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First, we need to calculate newly deposited amounts that haven&rsquo;t yet been counted (saved in reserves). Then, we calculate
 the amount of LP-tokens that must be issued as a reward for provided liquidity. Then, we issue the tokens and update
 reserves (function <code>_update</code> simply saves balances to the reserve variables). The function is quite minimal, isn&rsquo;t it?</p>
 <p>As you can see from the code, liquidity is calculated differently when initially deposited into pool (the <code>totalSupply == 0</code> branch).
@@ -186,16 +185,16 @@ be different, and one of them will be bigger than the other. If we choose the bi
 changing via liquidity provision and this leads to price manipulation. If we choose the smaller one, we&rsquo;ll punish for
 depositing of unbalanced liquidity (liquidity providers would get fewer LP-tokens). It&rsquo;s clear that choosing smaller number
 is more benefitial, and this is what Uniswap is doing. Let&rsquo;s fill the gaps in the above code:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">totalSupply</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-   <span class="n">liquidity</span> <span class="o">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">amount0</span> <span class="o">*</span> <span class="n">amount1</span><span class="p">)</span> <span class="o">-</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">;</span>
-   <span class="n">_mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">);</span>
-<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-   <span class="n">liquidity</span> <span class="o">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">min</span><span class="p">(</span>
-      <span class="p">(</span><span class="n">amount0</span> <span class="o">*</span> <span class="n">totalSupply</span><span class="p">)</span> <span class="o">/</span> <span class="n">_reserve0</span><span class="p">,</span>
-      <span class="p">(</span><span class="n">amount1</span> <span class="o">*</span> <span class="n">totalSupply</span><span class="p">)</span> <span class="o">/</span> <span class="n">_reserve1</span>
-   <span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div><p>In the first branch, we&rsquo;re subtracting <code>MINIMUM_LIQUIDITY</code> (which is a constant 1000, or 1e-15) when initial liquidity is
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">totalSupply</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="n">liquidity</span> <span class="o">=</span> <span class="n">Math</span><span class="p">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">amount0</span> <span class="o">*</span> <span class="n">amount1</span><span class="p">)</span> <span class="o">-</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">   <span class="n">_mint</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">MINIMUM_LIQUIDITY</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="n">liquidity</span> <span class="o">=</span> <span class="n">Math</span><span class="p">.</span><span class="nb">min</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="n">amount0</span> <span class="o">*</span> <span class="n">totalSupply</span><span class="p">)</span> <span class="o">/</span> <span class="n">_reserve0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="n">amount1</span> <span class="o">*</span> <span class="n">totalSupply</span><span class="p">)</span> <span class="o">/</span> <span class="n">_reserve1</span>
+</span></span><span class="line"><span class="cl">   <span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>In the first branch, we&rsquo;re subtracting <code>MINIMUM_LIQUIDITY</code> (which is a constant 1000, or 1e-15) when initial liquidity is
 provided. This protect against one liquidity pool token share (1e-18) becoming too expensive, which would turn
 away small liquidity providers. Simply subtracting 1000 from initial liquidity makes the price of one liquidity share
 1000 times cheaper.</p>
@@ -205,72 +204,68 @@ away small liquidity providers. Simply subtracting 1000 from initial liquidity m
 not have any business with JavaScript. Our smart contracts tests will simply be other smart contracts. That&rsquo;s it: <strong>smart
 contracts that test smart contracts</strong>.</p>
 <p>This is all we need to set up testing of the pair contract:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2PairTest</span> <span class="kr">is</span> <span class="n">DSTest</span> <span class="p">{</span>
-  <span class="n">ERC20Mintable</span> <span class="n">token0</span><span class="p">;</span>
-  <span class="n">ERC20Mintable</span> <span class="n">token1</span><span class="p">;</span>
-  <span class="n">ZuniswapV2Pair</span> <span class="n">pair</span><span class="p">;</span>
-
-  <span class="kd">function</span> <span class="n">setUp</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-    <span class="n">token0</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ERC20Mintable</span><span class="p">(</span><span class="s">&#34;Token A&#34;</span><span class="p">,</span> <span class="s">&#34;TKNA&#34;</span><span class="p">);</span>
-    <span class="n">token1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ERC20Mintable</span><span class="p">(</span><span class="s">&#34;Token B&#34;</span><span class="p">,</span> <span class="s">&#34;TKNB&#34;</span><span class="p">);</span>
-    <span class="n">pair</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ZuniswapV2Pair</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span> <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">));</span>
-
-    <span class="n">token0</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
-    <span class="n">token1</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="p">}</span>
-
-  <span class="c1">// Any function starting with &#34;test&#34; is a test case.
-</span><span class="c1"></span><span class="p">}</span>
-
-</code></pre></div><p>Let&rsquo;s add a test for pair bootstrapping (providing initial liquidity):</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testMintBootstrap</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
-
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>1 ether of <code>token0</code> and 1 ether of <code>token1</code> are added to the test pool. As a result, 1 ether of LP-tokens is issued and we
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">ZuniswapV2PairTest</span> <span class="k">is</span> <span class="n">Test</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ERC20Mintable</span> <span class="n">token0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ERC20Mintable</span> <span class="n">token1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">ZuniswapV2Pair</span> <span class="n">pair</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">setUp</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token0</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ERC20Mintable</span><span class="p">(</span><span class="s">&#34;Token A&#34;</span><span class="p">,</span> <span class="s">&#34;TKNA&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ERC20Mintable</span><span class="p">(</span><span class="s">&#34;Token B&#34;</span><span class="p">,</span> <span class="s">&#34;TKNB&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">pair</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ZuniswapV2Pair</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span> <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">token0</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token1</span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1">// Any function starting with &#34;test&#34; is a test case.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></div><p>Let&rsquo;s add a test for pair bootstrapping (providing initial liquidity):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testMintBootstrap</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>1 ether of <code>token0</code> and 1 ether of <code>token1</code> are added to the test pool. As a result, 1 ether of LP-tokens is issued and we
 get 1 ether - 1000 (minus the minimal liquidity). Pool reserves and total supply get changed accordingly.</p>
 <p>What happens when balanced liquidity is provided to a pool that already has some liquidity? Let&rsquo;s see:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testMintWhenTheresLiquidity</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
-</span><span class="c1"></span>
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 2 LP
-</span><span class="c1"></span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">3</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">3</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">3</span> <span class="kc">ether</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Everything looks correct here. Let&rsquo;s see what happens when unbalanced liquidity is provided:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testMintUnbalanced</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
-</span><span class="c1"></span>  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
-</span><span class="c1"></span>  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">2</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>This is what we talked about: even though user provided more <code>token0</code> liquidity than <code>token1</code> liquidity,
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testMintWhenTheresLiquidity</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 2 LP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">3</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">3</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">3</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Everything looks correct here. Let&rsquo;s see what happens when unbalanced liquidity is provided:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testMintUnbalanced</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">2</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">3</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This is what we talked about: even though user provided more <code>token0</code> liquidity than <code>token1</code> liquidity,
 they still got only 1 LP-token.</p>
 <p>Alright, liquidity provision looks good. Let&rsquo;s now move to liquidity removal.</p>
 <h2 id="removing-liquidity">Removing liquidity</h2>
@@ -281,106 +276,102 @@ provided is calculated like that:</p>
 In plain English: the amount of tokens returned is proportional to the amount of LP-tokens held over total supply of LP
 tokens. The bigger your share of LP-tokens, the bigger share of reserve you get after burning.</p>
 <p>And this is all we need to know to implement <code>burn</code> function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">burn</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-  <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-  <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="n">balanceOf</span><span class="p">[</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">];</span>
-
-  <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">*</span> <span class="n">balance0</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">;</span>
-  <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">*</span> <span class="n">balance1</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">;</span>
-
-  <span class="k">if</span> <span class="p">(</span><span class="n">amount0</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">amount1</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidityBurned</span><span class="p">();</span>
-
-  <span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
-
-  <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">);</span>
-  <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
-
-  <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-  <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-
-  <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">);</span>
-
-  <span class="n">emit</span> <span class="n">Burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>As you can see, UniswapV2 doesn&rsquo;t support partial removal of liquidity.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">burn</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="n">balanceOf</span><span class="p">[</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">amount0</span> <span class="o">=</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">*</span> <span class="n">balance0</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">amount1</span> <span class="o">=</span> <span class="p">(</span><span class="n">liquidity</span> <span class="o">*</span> <span class="n">balance1</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">amount0</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">amount1</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidityBurned</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_safeTransfer</span><span class="p">(</span><span class="n">token1</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">balance0</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token0</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="n">balance1</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">token1</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">_update</span><span class="p">(</span><span class="n">balance0</span><span class="p">,</span> <span class="n">balance1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">emit</span> <span class="n">Burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">amount0</span><span class="p">,</span> <span class="n">amount1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>As you can see, UniswapV2 doesn&rsquo;t support partial removal of liquidity.</p>
 <blockquote>
 <p><strong>Update</strong>: the above statement is wrong! I made a logical bug in this function, can you spot it? If not, I explained
 and fixed it in <a href="https://jeiwan.net/posts/programming-defi-uniswapv2-4/">Part 4</a> (<a href="https://github.com/Jeiwan/zuniswapv2/commit/babf8509b8be96796e2d944710bfcb22cc1fe77d#diff-835d3f34100b5508951336ba5a961932492eaa6923e3c5299f77007019bf2b6fR84">commit</a>)</p>
 </blockquote>
 <p>Let&rsquo;s test it:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurn</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
-  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
-
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>We see that the pool returns to its uninitialized state except the minimum liquidity that was sent to the zero address–
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testBurn</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>We see that the pool returns to its uninitialized state except the minimum liquidity that was sent to the zero address–
 it cannot be claimed.</p>
 <p>Now, let&rsquo;s see what happens when we burn after providing unbalanced liquidity:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurnUnbalanced</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
-
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
-</span><span class="c1"></span>
-  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
-
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1500</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>What we see here is that we have lost 500 wei of <code>token0</code>! This is the punishment for price manipulation we talked
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testBurnUnbalanced</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1500</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>What we see here is that we have lost 500 wei of <code>token0</code>! This is the punishment for price manipulation we talked
 above. But the amount is ridiculously small, it doesn&rsquo;t seem significant at all. This so because our current user (the
 test contract) is the only liquidity provider. What if we provide unbalanced liquidity to a pool that was initialized
 by another user? Let&rsquo;s see:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">testBurnUnbalancedDifferentUsers</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">testUser</span><span class="p">.</span><span class="n">provideLiquidity</span><span class="p">(</span>
-    <span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span>
-    <span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span>
-    <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">),</span>
-    <span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span>
-    <span class="mi">1</span> <span class="kc">ether</span>
-  <span class="p">);</span>
-
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">testUser</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
-</span><span class="c1"></span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span><span class="p">);</span>
-
-  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
-
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
-  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">5</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">0</span><span class="p">.</span><span class="mi">5</span> <span class="kc">ether</span><span class="p">);</span>
-  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>This looks completely different! We&rsquo;ve now lost 0.5 ether of <code>token0</code>, which is 1/4 of what we deposited. Now that&rsquo;s
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testBurnUnbalancedDifferentUsers</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">testUser</span><span class="p">.</span><span class="n">provideLiquidity</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">1</span> <span class="kc">ether</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">1</span> <span class="kc">ether</span>
+</span></span><span class="line"><span class="cl">  <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">testUser</span><span class="p">)),</span> <span class="mi">1</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">2</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span><span class="p">.</span><span class="nb">transfer</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">mint</span><span class="p">();</span> <span class="c1">// + 1 LP
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pair</span><span class="p">.</span><span class="n">burn</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertReserves</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">5</span> <span class="kc">ether</span><span class="p">,</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">pair</span><span class="p">.</span><span class="n">totalSupply</span><span class="p">(),</span> <span class="mi">1</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">token0</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span> <span class="o">-</span> <span class="mi">0</span><span class="p">.</span><span class="mi">5</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">assertEq</span><span class="p">(</span><span class="n">token1</span><span class="p">.</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">10</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This looks completely different! We&rsquo;ve now lost 0.5 ether of <code>token0</code>, which is 1/4 of what we deposited. Now that&rsquo;s
 a significant amount!</p>
 <p>Try to figure out who eventually gets that 0.5 ether: the pair or the test user? 😉</p>
 <h2 id="conclusion">Conclusion</h2>

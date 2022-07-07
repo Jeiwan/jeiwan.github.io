@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -117,43 +117,42 @@ Highly recommended!</p>
 <p>If you&rsquo;re new to smart contracts development, I highly recommend you to finish <a href="https://cryptozombies.io/en/course/">this course</a> (at least the basic path) – that&rsquo;ll be a huge help to you!</p>
 <h3 id="setting-up-the-project">Setting up the project</h3>
 <p>First, create an empty directory (I called mine <code>zuniswap</code>), <code>cd</code> into it and install HardHat:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ mkdir zuniswap <span class="o">&amp;&amp;</span> <span class="nb">cd</span> <span class="nv">$_</span>
-$ yarn add -D hardhat
-</code></pre></div><p>We&rsquo;ll also need a token contract, let&rsquo;s use ERC20 contracts provided by <a href="https://openzeppelin.com/">OpenZeppelin</a>.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ yarn add -D @openzeppelin/contracts
-</code></pre></div><p>Initialize a HardHat project and remove everything from <code>contract</code>, <code>script</code>, and <code>test</code> folders.</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$ yarn hardhat
-...follow the instructions...
-$ rm ...
-$ tree -a
-.
-├── .gitignore
-├── contracts
-├── hardhat.config.js
-├── scripts
-└── <span class="nb">test</span>
-</code></pre></div><p>Final touch: we&rsquo;ll use the latest version of Solidity, which is 0.8.4 at the time of writing .
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ mkdir zuniswap <span class="o">&amp;&amp;</span> <span class="nb">cd</span> <span class="nv">$_</span>
+</span></span><span class="line"><span class="cl">$ yarn add -D hardhat
+</span></span></code></pre></div><p>We&rsquo;ll also need a token contract, let&rsquo;s use ERC20 contracts provided by <a href="https://openzeppelin.com/">OpenZeppelin</a>.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ yarn add -D @openzeppelin/contracts
+</span></span></code></pre></div><p>Initialize a HardHat project and remove everything from <code>contract</code>, <code>script</code>, and <code>test</code> folders.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ yarn hardhat
+</span></span><span class="line"><span class="cl">...follow the instructions...
+</span></span><span class="line"><span class="cl">$ rm ...
+</span></span><span class="line"><span class="cl">$ tree -a
+</span></span><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── .gitignore
+</span></span><span class="line"><span class="cl">├── contracts
+</span></span><span class="line"><span class="cl">├── hardhat.config.js
+</span></span><span class="line"><span class="cl">├── scripts
+</span></span><span class="line"><span class="cl">└── <span class="nb">test</span>
+</span></span></code></pre></div><p>Final touch: we&rsquo;ll use the latest version of Solidity, which is 0.8.4 at the time of writing .
 Open your <code>hardhat.config.js</code> and update Solidity version at the bottom of it.</p>
 <h3 id="token-contract">Token contract</h3>
 <p>Uniswap V1 supports only ether-token swaps.
 To make them possible we need an ERC20 token contract.
 Let&rsquo;s write it!</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// contracts/Token.sol
-</span><span class="c1"></span><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
-
-<span class="kn">import</span> <span class="s">&#34;@openzeppelin/contracts/token/ERC20/ERC20.sol&#34;</span><span class="p">;</span>
-
-<span class="kd">contract</span> <span class="n">Token</span> <span class="kr">is</span> <span class="n">ERC20</span> <span class="p">{</span>
-  <span class="n">constructor</span><span class="p">(</span>
-    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">name</span><span class="p">,</span>
-    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">symbol</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">initialSupply</span>
-  <span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">symbol</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">initialSupply</span><span class="p">);</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>This is all we need: we&rsquo;re extending the ERC20 contract provided by OpenZeppelin and defining our own constructor
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="c1">// contracts/Token.sol
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;@openzeppelin/contracts/token/ERC20/ERC20.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Token</span> <span class="k">is</span> <span class="n">ERC20</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">constructor</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">string</span> <span class="k">memory</span> <span class="nb">name</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">string</span> <span class="k">memory</span> <span class="n">symbol</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">initialSupply</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="nb">name</span><span class="p">,</span> <span class="n">symbol</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">initialSupply</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This is all we need: we&rsquo;re extending the ERC20 contract provided by OpenZeppelin and defining our own constructor
 that allows us to set token name, symbol, and initial supply.
 The constructor also mints <code>initialSupply</code> of tokens and sends them to token creator&rsquo;s address.</p>
 <p>Now, the most interesting part begins!</p>
@@ -164,39 +163,36 @@ Exchange contract actually defines exchanging logic.
 Each pair (eth-token) is deployed as an exchange contract and allows to exchange ether to/from only one token.</p>
 <p>We&rsquo;ll build Exchange contract and leave Factory to a later blog post.</p>
 <p>Let&rsquo;s create a new blank contract:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// contracts/Exchange.sol
-</span><span class="c1"></span><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
-
-<span class="kd">contract</span> <span class="n">Exchange</span> <span class="p">{}</span>
-
-</code></pre></div><p>Since every exchange allows swaps with only one token, we need to connect Exchange with a token address:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Exchange</span> <span class="p">{</span>
-  <span class="kt">address</span> <span class="kr">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
-
-  <span class="n">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
-
-    <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Token address is a state variable which makes it accessible from any other contract function.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="c1">// contracts/Exchange.sol
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Exchange</span> <span class="p">{}</span>
+</span></span></code></pre></div><p>Since every exchange allows swaps with only one token, we need to connect Exchange with a token address:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Exchange</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">address</span> <span class="k">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Token address is a state variable which makes it accessible from any other contract function.
 Making it public allows users and developers to read it and to find out what token this exchange is linked to.
 In the constructor, we&rsquo;re checking that provided token is valid (not the zero address) and save it to the state variable.</p>
 <h3 id="providing-liquidity">Providing liquidity</h3>
 <p>As we have already learned, liquidity makes trades possible. Thus, we need a way to add liquidity to the exchange contract:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kn">import</span> <span class="s">&#34;@openzeppelin/contracts/token/ERC20/IERC20.sol&#34;</span><span class="p">;</span>
-
-<span class="kd">contract</span> <span class="n">Exchange</span> <span class="p">{</span>
-    <span class="p">...</span>
-
-    <span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
-        <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
-        <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>By default, contracts cannot receive ethers, which can be fixed via the <code>payable</code> modifier that enables ethers receiving in a function:
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;@openzeppelin/contracts/token/ERC20/IERC20.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Exchange</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">function</span> <span class="nf">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span> <span class="k">public</span> <span class="k">payable</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>By default, contracts cannot receive ethers, which can be fixed via the <code>payable</code> modifier that enables ethers receiving in a function:
 any ethers sent along with a function call are added to contract&rsquo;s balance.</p>
 <p>Depositing tokens is a different thing: since token balances are stored on token contracts, we have to use <code>transferFrom</code> function
 (as defined by the ERC20 standard) to transfer tokens from transaction sender&rsquo;s address to the contract.
@@ -207,21 +203,20 @@ I intentionally made it so to focus more on pricing functions.
 We&rsquo;ll fill the gap in a later part.</p>
 </blockquote>
 <p>Let&rsquo;s also add a helper function that returns token balance of an exchange:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getReserve</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">return</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
-<span class="p">}</span>
-
-</code></pre></div><p>And we can now test <code>addLiquidity</code> to ensure everything&rsquo;s correct:</p>
-<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;addLiquidity&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;adds liquidity&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="kr">await</span> <span class="nx">token</span><span class="p">.</span><span class="nx">approve</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">));</span>
-    <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="p">});</span>
-
-    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">getBalance</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getReserve</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">));</span>
-  <span class="p">});</span>
-<span class="p">});</span>
-</code></pre></div><p>First, we let the exchange contract spend 200 of our tokens by calling <code>approve</code>.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getReserve</span><span class="p">()</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>And we can now test <code>addLiquidity</code> to ensure everything&rsquo;s correct:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;addLiquidity&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;adds liquidity&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">token</span><span class="p">.</span><span class="nx">approve</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="p">});</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">getBalance</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getReserve</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>First, we let the exchange contract spend 200 of our tokens by calling <code>approve</code>.
 Then, we call <code>addLiquidity</code> to deposit 200 tokens (the exchange contract calls <code>transferFrom</code> to get them)
 and 100 ethers, which are sent along with the function call.
 We then ensure that the exchange did in fact receive them.</p>
@@ -237,56 +232,54 @@ so they cannot know the right price.
 In fact, exchange contract is a price oracle.
 Everything they know is ether and token reserves, and this is the only information we have to calculate prices.</p>
 <p>Let&rsquo;s stick to this idea and build a pricing function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getPrice</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">outputReserve</span><span class="p">)</span>
-  <span class="kr">public</span>
-  <span class="kr">pure</span>
-  <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
-<span class="p">{</span>
-  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
-
-  <span class="k">return</span> <span class="n">inputReserve</span> <span class="o">/</span> <span class="n">outputReserve</span><span class="p">;</span>
-<span class="p">}</span>
-
-</code></pre></div><p>And let&rsquo;s test it:</p>
-<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getPrice&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct prices&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="kr">await</span> <span class="nx">token</span><span class="p">.</span><span class="nx">approve</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">));</span>
-    <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="p">});</span>
-
-    <span class="kr">const</span> <span class="nx">tokenReserve</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getReserve</span><span class="p">();</span>
-    <span class="kr">const</span> <span class="nx">etherReserve</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">getBalance</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
-
-    <span class="c1">// ETH per token
-</span><span class="c1"></span>    <span class="nx">expect</span><span class="p">(</span>
-      <span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">etherReserve</span><span class="p">,</span> <span class="nx">tokenReserve</span><span class="p">)).</span><span class="nx">toString</span><span class="p">()</span>
-    <span class="p">).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0.5&#34;</span><span class="p">);</span>
-
-    <span class="c1">// token per ETH
-</span><span class="c1"></span>    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">tokenReserve</span><span class="p">,</span> <span class="nx">etherReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
-  <span class="p">});</span>
-<span class="p">});</span>
-</code></pre></div><p>We deposited 2000 tokens and 1000 ethers and we&rsquo;re expecting the price of token to be 0.5 ethers and the price of ether to be 2 tokens.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getPrice</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">outputReserve</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span>
+</span></span><span class="line"><span class="cl">  <span class="k">pure</span>
+</span></span><span class="line"><span class="cl">  <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">inputReserve</span> <span class="o">/</span> <span class="n">outputReserve</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>And let&rsquo;s test it:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getPrice&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct prices&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">token</span><span class="p">.</span><span class="nx">approve</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="p">});</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nx">tokenReserve</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getReserve</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nx">etherReserve</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">getBalance</span><span class="p">(</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// ETH per token
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">expect</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">etherReserve</span><span class="p">,</span> <span class="nx">tokenReserve</span><span class="p">)).</span><span class="nx">toString</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="p">).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0.5&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// token per ETH
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">tokenReserve</span><span class="p">,</span> <span class="nx">etherReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>We deposited 2000 tokens and 1000 ethers and we&rsquo;re expecting the price of token to be 0.5 ethers and the price of ether to be 2 tokens.
 However, the test fails: it says we&rsquo;re getting 0 ethers in exchange for our tokens.
 Why is that?</p>
 <p>The reason is that Solidity supports integer division with only floor rounding. The price of 0.5 gets rounded to 0!
 Let&rsquo;s fix that by increasing the precision:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getPrice</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">outputReserve</span><span class="p">)</span>
-  <span class="kr">public</span>
-  <span class="kr">pure</span>
-  <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="p">...</span>
-
-  <span class="k">return</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">outputReserve</span><span class="p">;</span>
-<span class="p">}</span>
-
-</code></pre></div><p>After updating the test, it&rsquo;ll pass:</p>
-<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="c1">// ETH per token
-</span><span class="c1"></span><span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">etherReserve</span><span class="p">,</span> <span class="nx">tokenReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">500</span><span class="p">);</span>
-
-<span class="c1">// token per ETH
-</span><span class="c1"></span><span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">tokenReserve</span><span class="p">,</span> <span class="nx">etherReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">2000</span><span class="p">);</span>
-</code></pre></div><p>So, now 1 token equals to 0.5 ethers and 1 ether equals to 2 tokens.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getPrice</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">outputReserve</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span>
+</span></span><span class="line"><span class="cl">  <span class="k">pure</span>
+</span></span><span class="line"><span class="cl">  <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">outputReserve</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>After updating the test, it&rsquo;ll pass:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="c1">// ETH per token
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">etherReserve</span><span class="p">,</span> <span class="nx">tokenReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">500</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// token per ETH
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getPrice</span><span class="p">(</span><span class="nx">tokenReserve</span><span class="p">,</span> <span class="nx">etherReserve</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="mi">2000</span><span class="p">);</span>
+</span></span></code></pre></div><p>So, now 1 token equals to 0.5 ethers and 1 ether equals to 2 tokens.</p>
 <p>Everything looks correct but what will happen if we swap 2000 tokens for ether?
 We&rsquo;ll get 1000 ethers and this is everything we have on the contract!
 <strong>The exchange would be drained!</strong></p>
@@ -311,53 +304,51 @@ Having this formula we can now find \(\Delta y\):
 $$\Delta y = \frac{y \Delta x}{x + \Delta x}$$</p>
 <p>This looks interesting: the function now respects input amount.
 Let&rsquo;s try to program it, but note that we&rsquo;re now dealing with amounts, not prices.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmount</span><span class="p">(</span>
-  <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="n">outputReserve</span>
-<span class="p">)</span> <span class="kr">private</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
-
-  <span class="k">return</span> <span class="p">(</span><span class="n">inputAmount</span> <span class="o">*</span> <span class="n">outputReserve</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">+</span> <span class="n">inputAmount</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>This is a low-level function, so let it be private.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getAmount</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">outputReserve</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">private</span> <span class="k">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="p">(</span><span class="n">inputAmount</span> <span class="o">*</span> <span class="n">outputReserve</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">+</span> <span class="n">inputAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This is a low-level function, so let it be private.
 Let&rsquo;s make two high-level wrapper functions to simplify calculations:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getTokenAmount</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_ethSold</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nb">require</span><span class="p">(</span><span class="n">_ethSold</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;ethSold is too small&#34;</span><span class="p">);</span>
-
-  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-
-  <span class="k">return</span> <span class="n">getAmount</span><span class="p">(</span><span class="n">_ethSold</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="kd">function</span> <span class="n">getEthAmount</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenSold</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nb">require</span><span class="p">(</span><span class="n">_tokenSold</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;tokenSold is too small&#34;</span><span class="p">);</span>
-
-  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-
-  <span class="k">return</span> <span class="n">getAmount</span><span class="p">(</span><span class="n">_tokenSold</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>And test them:</p>
-<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getTokenAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct token amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
-
-    <span class="kd">let</span> <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1.998001998001998001&#34;</span><span class="p">);</span>
-  <span class="p">});</span>
-<span class="p">});</span>
-
-<span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getEthAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct eth amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
-
-    <span class="kd">let</span> <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;0.999000999000999&#34;</span><span class="p">);</span>
-  <span class="p">});</span>
-<span class="p">});</span>
-</code></pre></div><p>So, now we&rsquo;re getting 1.998 tokens for 1 ether and 0.999 ether for 2 tokens.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getTokenAmount</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_ethSold</span><span class="p">)</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">_ethSold</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;ethSold is too small&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">getAmount</span><span class="p">(</span><span class="n">_ethSold</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getEthAmount</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenSold</span><span class="p">)</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">_tokenSold</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;tokenSold is too small&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">getAmount</span><span class="p">(</span><span class="n">_tokenSold</span><span class="p">,</span> <span class="n">tokenReserve</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>And test them:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getTokenAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct token amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">let</span> <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1.998001998001998001&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getEthAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct eth amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">let</span> <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;0.999000999000999&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>So, now we&rsquo;re getting 1.998 tokens for 1 ether and 0.999 ether for 2 tokens.
 Those amounts are very close to the ones produced by the previous pricing function.
 However, they&rsquo;re slightly smaller.
 Why is that?</p>
@@ -373,76 +364,74 @@ The bigger the amount of tokens traded in relative to reserves, the lower the pr
 This might be seemed as a drawback of constant product market makers (since every trade has a slippage), however this is the same mechanism that protects pools from being drained.
 This also aligns with the law of supply and demand: the higher the demand (the bigger output amount you
 want to get) relative to the supply (the reserves), the higher the price (the less you get).</p>
-<p>Let' improve our tests to see how slippage affects prices:</p>
-<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getTokenAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct token amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
-
-    <span class="kd">let</span> <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1.998001998001998001&#34;</span><span class="p">);</span>
-
-    <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;181.818181818181818181&#34;</span><span class="p">);</span>
-
-    <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1000.0&#34;</span><span class="p">);</span>
-  <span class="p">});</span>
-<span class="p">});</span>
-
-<span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getEthAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct ether amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
-
-    <span class="kd">let</span> <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;0.999000999000999&#34;</span><span class="p">);</span>
-
-    <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;47.619047619047619047&#34;</span><span class="p">);</span>
-
-    <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">));</span>
-    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;500.0&#34;</span><span class="p">);</span>
-  <span class="p">});</span>
-<span class="p">});</span>
-</code></pre></div><p>As you can see, when we&rsquo;re trying to drain the pool, we&rsquo;re getting only a half of what we&rsquo;d expect.</p>
+<p>Let&rsquo; improve our tests to see how slippage affects prices:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getTokenAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct token amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">let</span> <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1.998001998001998001&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;181.818181818181818181&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">tokensOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getTokenAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">tokensOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;1000.0&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;getEthAmount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">it</span><span class="p">(</span><span class="s2">&#34;returns correct ether amount&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span> <span class="nx">addLiquidity</span> <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">let</span> <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;0.999000999000999&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;47.619047619047619047&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">ethOut</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">exchange</span><span class="p">.</span><span class="nx">getEthAmount</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">2000</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">expect</span><span class="p">(</span><span class="nx">fromWei</span><span class="p">(</span><span class="nx">ethOut</span><span class="p">)).</span><span class="nx">to</span><span class="p">.</span><span class="nx">equal</span><span class="p">(</span><span class="s2">&#34;500.0&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>As you can see, when we&rsquo;re trying to drain the pool, we&rsquo;re getting only a half of what we&rsquo;d expect.</p>
 <p>A final thing to note here: our initial, reserves ratio based, pricing function wasn&rsquo;t wrong.
 In fact, it&rsquo;s correct when the amount of tokens we&rsquo;re trading in is very small compared to reserves.
 But to make an AMM we need something more sophisticated.</p>
 <h3 id="swapping-functions">Swapping functions</h3>
 <p>Now, we&rsquo;re ready to implement swapping.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">ethToTokenSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
-  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-  <span class="kt">uint256</span> <span class="n">tokensBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
-    <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
-    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
-    <span class="n">tokenReserve</span>
-  <span class="p">);</span>
-
-  <span class="nb">require</span><span class="p">(</span><span class="n">tokensBought</span> <span class="o">&gt;=</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
-
-  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokensBought</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Swapping ethers for tokens means sending some amount of ethers (stored in <code>msg.value</code> variable) to a payable contract function and getting tokens in return.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">ethToTokenSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_minTokens</span><span class="p">)</span> <span class="k">public</span> <span class="k">payable</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">tokensBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenReserve</span>
+</span></span><span class="line"><span class="cl">  <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">tokensBought</span> <span class="o">&gt;=</span> <span class="n">_minTokens</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokensBought</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Swapping ethers for tokens means sending some amount of ethers (stored in <code>msg.value</code> variable) to a payable contract function and getting tokens in return.
 Note that we need to subtract <code>msg.value</code> from contract&rsquo;s balance because by the time the function is called the ethers sent have already been added to its balance.</p>
 <p>Another important variable here is <code>__minTokens</code> – this is a minimal amount of tokens the user wants to get in exchange for their ethers.
 This amount is calculated in UI and always includes slippage tolerance; user agrees to get at least that much but not less.
 This is a very important mechanism that protects users from front-running bots that try to intercept their transactions and modify pool balances to for their profit.</p>
 <p>Finally, the last piece of code for today:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">tokenToEthSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokensSold</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_minEth</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-  <span class="kt">uint256</span> <span class="n">ethBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
-    <span class="n">_tokensSold</span><span class="p">,</span>
-    <span class="n">tokenReserve</span><span class="p">,</span>
-    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
-  <span class="p">);</span>
-
-  <span class="nb">require</span><span class="p">(</span><span class="n">ethBought</span> <span class="o">&gt;=</span> <span class="n">_minEth</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
-
-  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokensSold</span><span class="p">);</span>
-  <span class="kr">payable</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">ethBought</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>The function basically transfers <code>_tokensSold</code> of tokens from user&rsquo;s balance and sends them <code>ethBought</code> of ethers in exchange.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">tokenToEthSwap</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokensSold</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_minEth</span><span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">ethBought</span> <span class="o">=</span> <span class="n">getAmount</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">_tokensSold</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenReserve</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
+</span></span><span class="line"><span class="cl">  <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">ethBought</span> <span class="o">&gt;=</span> <span class="n">_minEth</span><span class="p">,</span> <span class="s">&#34;insufficient output amount&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokensSold</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">payable</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">ethBought</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>The function basically transfers <code>_tokensSold</code> of tokens from user&rsquo;s balance and sends them <code>ethBought</code> of ethers in exchange.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>That&rsquo;s it for today! We&rsquo;re not done yet, but we did a lot.
 Our Exchange contract can accept liquidity from users, calculate prices in a way that protects from

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,44 +66,41 @@ As a result of such chaining, it becomes possible to <strong>swap the implementa
 proxy contract knows implementation contract address.</p>
 <p>Let&rsquo;s write a simple contract and then see how we can use a proxy to call it.
 We don&rsquo;t need something complicated, just a basic contract that allows to read and write some state variable:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">4</span><span class="p">;</span>
-
-<span class="kd">contract</span> <span class="n">Logic</span> <span class="p">{</span>
-  <span class="kt">uint256</span> <span class="n">magicNumber</span><span class="p">;</span>
-
-  <span class="n">constructor</span><span class="p">()</span> <span class="p">{</span>
-    <span class="n">magicNumber</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
-  <span class="p">}</span>
-
-  <span class="kd">function</span> <span class="n">setMagicNumber</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">newMagicNumber</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-    <span class="n">magicNumber</span> <span class="o">=</span> <span class="n">newMagicNumber</span><span class="p">;</span>
-  <span class="p">}</span>
-
-  <span class="kd">function</span> <span class="n">getMagicNumber</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">magicNumber</span><span class="p">;</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Now, let&rsquo;s build a proxy contract step-by-step:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">4</span><span class="p">;</span>
-
-<span class="kd">contract</span> <span class="n">Proxy</span> <span class="p">{}</span>
-
-</code></pre></div><p>What would we begin with?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="k">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">4</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Logic</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">magicNumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">magicNumber</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">setMagicNumber</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">newMagicNumber</span><span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">magicNumber</span> <span class="o">=</span> <span class="n">newMagicNumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">getMagicNumber</span><span class="p">()</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">magicNumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Now, let&rsquo;s build a proxy contract step-by-step:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="k">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">.</span><span class="mi">4</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Proxy</span> <span class="p">{}</span>
+</span></span></code></pre></div><p>What would we begin with?</p>
 <p>As you remember, proxy contract knows implementation contract address. Let&rsquo;s add that:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Proxy</span> <span class="p">{</span>
-  <span class="kt">address</span> <span class="kr">public</span> <span class="n">implementation</span><span class="p">;</span>
-
-  <span class="kd">function</span> <span class="n">setImplementation</span><span class="p">(</span><span class="kt">address</span> <span class="n">implementation_</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-    <span class="n">implementation</span> <span class="o">=</span> <span class="n">implementation_</span><span class="p">;</span>
-  <span class="p">}</span>
-
-  <span class="kd">function</span> <span class="n">getImplementation</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">implementation</span><span class="p">;</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>That was the easy part. Now, how do we relay all calls to the proxy contract to the logic contract?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Proxy</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">address</span> <span class="k">public</span> <span class="n">implementation</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">setImplementation</span><span class="p">(</span><span class="kt">address</span> <span class="n">implementation_</span><span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">implementation</span> <span class="o">=</span> <span class="n">implementation_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">getImplementation</span><span class="p">()</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">implementation</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>That was the easy part. Now, how do we relay all calls to the proxy contract to the logic contract?</p>
 <p>Solidity has a special fallback function which is called whenever a function unsupported by a contract is called.
 This function is called&hellip;<code>fallback</code>!
 Unfortunately, this is all Solidity can give us here since Solidity is a higher-level abstraction.
@@ -116,8 +113,8 @@ This information includes:</p>
 <ol>
 <li>
 <p>Function identifier, which is defined as the first 4 bytes of hashed function signature, e.g.:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="nf">keccak256</span><span class="p">(</span><span class="s">&#34;transfer(address,uint256)&#34;</span><span class="p">)</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="nb">keccak256</span><span class="p">(</span><span class="s">&#34;transfer(address,uint256)&#34;</span><span class="p">)</span>
+</span></span></code></pre></div></li>
 <li>
 <p>Function arguments that follow function identifier and are encoded according to <a href="https://docs.soliditylang.org/en/latest/abi-spec.html#argument-encoding">the ABI specification</a>.</p>
 </li>
@@ -126,40 +123,39 @@ This information includes:</p>
 Solidity won&rsquo;t allow us to make decisions on that level of deepness, so we&rsquo;ll have to use <code>assembly</code> to write relaying logic in <a href="https://docs.soliditylang.org/en/latest/yul.html">the Yul language</a>.</p>
 <p>What we want is, in the fallback function, to <strong>get call data and pass it to the implementation contract</strong> as is, without parsing or modifying it.
 Here&rsquo;s how to do that:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">fallback</span><span class="p">()</span> <span class="kr">external</span> <span class="p">{</span>
-  <span class="k">assembly</span> <span class="p">{</span>
-    <span class="ow">let</span> <span class="nv">ptr</span> <span class="o">:=</span> <span class="nf">mload</span><span class="p">(</span><span class="mh">0x40</span><span class="p">)</span>
-    <span class="nf">calldatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nf">calldatasize</span><span class="p">())</span>
-
-    <span class="ow">let</span> <span class="nv">result</span> <span class="o">:=</span> <span class="nf">delegatecall</span><span class="p">(</span>
-      <span class="nf">gas</span><span class="p">(),</span>
-      <span class="nf">sload</span><span class="p">(</span><span class="n">implementation</span><span class="err">.</span><span class="n">slot</span><span class="p">),</span>
-      <span class="n">ptr</span><span class="p">,</span>
-      <span class="nf">calldatasize</span><span class="p">(),</span>
-      <span class="mi">0</span><span class="p">,</span>
-      <span class="mi">0</span>
-    <span class="p">)</span>
-
-    <span class="ow">let</span> <span class="nv">size</span> <span class="o">:=</span> <span class="nf">returndatasize</span><span class="p">()</span>
-    <span class="nf">returndatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-
-    <span class="nf">switch</span> <span class="n">result</span>
-    <span class="n">case</span> <span class="mi">0</span> <span class="p">{</span>
-      <span class="nf">revert</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="n">default</span> <span class="p">{</span>
-      <span class="nf">return</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Let&rsquo;s break it down because it looks too complicated:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="n">fallback</span><span class="p">()</span> <span class="k">external</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">assembly</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="ow">let</span> <span class="nv">ptr</span> <span class="o">:=</span> <span class="nf">mload</span><span class="p">(</span><span class="mh">0x40</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">calldatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nf">calldatasize</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="ow">let</span> <span class="nv">result</span> <span class="o">:=</span> <span class="nf">delegatecall</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">gas</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">sload</span><span class="p">(</span><span class="n">implementation</span><span class="err">.</span><span class="n">slot</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="n">ptr</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">calldatasize</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">      <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="ow">let</span> <span class="nv">size</span> <span class="o">:=</span> <span class="nf">returndatasize</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">returndatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nf">switch</span> <span class="n">result</span>
+</span></span><span class="line"><span class="cl">    <span class="n">case</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">revert</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">default</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">return</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Let&rsquo;s break it down because it looks too complicated:</p>
 <ol>
 <li>
 <p>First, we need to load call data into memory. We do that in the first two lines:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">let</span> <span class="n">ptr</span> <span class="o">:=</span> <span class="n">mload</span><span class="p">(</span><span class="mh">0x40</span><span class="p">)</span>
-<span class="n">calldatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">calldatasize</span><span class="p">())</span>
-</code></pre></div><p>Memory in EVM is organized in slots, with every slot having an index and occupying 32 bytes.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kr">let</span> <span class="n">ptr</span> <span class="o">:=</span> <span class="n">mload</span><span class="p">(</span><span class="mh">0x40</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">calldatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">calldatasize</span><span class="p">())</span>
+</span></span></code></pre></div><p>Memory in EVM is organized in slots, with every slot having an index and occupying 32 bytes.
 We&rsquo;re using <code>calldatasize</code> function to get call data size and are using <code>calldatacopy</code> to copy call data of specific size to a slot located at index <code>ptr</code> (it&rsquo;ll occupy other slots if it doesn&rsquo;t fit).
 <code>mload</code> is a function that reads 32 bytes from specified index, and index <code>0x40</code> points a special slot that contains
 the index of the next free memory slot.
@@ -167,16 +163,15 @@ So we&rsquo;re basically saving call data to a free memory slot.</p>
 </li>
 <li>
 <p>Next, we relay the call:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">let</span> <span class="n">result</span> <span class="o">:=</span> <span class="nb">delegatecall</span><span class="p">(</span>
-    <span class="nb">gas</span><span class="p">(),</span>
-    <span class="n">sload</span><span class="p">(</span><span class="n">implementation</span><span class="p">.</span><span class="n">slot</span><span class="p">),</span>
-    <span class="n">ptr</span><span class="p">,</span>
-    <span class="n">calldatasize</span><span class="p">(),</span>
-    <span class="mi">0</span><span class="p">,</span>
-    <span class="mi">0</span>
-<span class="p">)</span>
-
-</code></pre></div><p><code>delegatecall</code> is a tricky way to call another contract, and we&rsquo;ll soon learn why it&rsquo;s tricky.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kr">let</span> <span class="n">result</span> <span class="o">:=</span> <span class="nb">delegatecall</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">gas</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sload</span><span class="p">(</span><span class="n">implementation</span><span class="p">.</span><span class="n">slot</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ptr</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">calldatasize</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></div><p><code>delegatecall</code> is a tricky way to call another contract, and we&rsquo;ll soon learn why it&rsquo;s tricky.</p>
 <p>First argument in <code>delegatecall</code> is how much gas is remaining in the current call – this tells the other contract
 how much of gas it&rsquo;s allowed to spend.</p>
 <p>Next argument is the address of the contract we&rsquo;re calling, and it looks somewhat complicated here.
@@ -190,9 +185,9 @@ But since we&rsquo;re relaying all calls and we&rsquo;re not aware of what data 
 </li>
 <li>
 <p>We&rsquo;ll use functions similar to the two call data functions we used earlier:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">let</span> <span class="n">size</span> <span class="o">:=</span> <span class="n">returndatasize</span><span class="p">()</span>
-<span class="n">returndatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-</code></pre></div><p>Here, we&rsquo;re getting the size of the data returned by the relayed call and save it in a slot at index <code>ptr</code> – we don&rsquo;t need its previous value (call data) anymore.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kr">let</span> <span class="n">size</span> <span class="o">:=</span> <span class="n">returndatasize</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">returndatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span></span></code></pre></div><p>Here, we&rsquo;re getting the size of the data returned by the relayed call and save it in a slot at index <code>ptr</code> – we don&rsquo;t need its previous value (call data) anymore.</p>
 </li>
 <li>
 <p>Finally, we&rsquo;re checking if the relayed call was successful and returning; otherwise, we&rsquo;re reverting.
@@ -206,48 +201,47 @@ it requires us to define function return type before compilation.</p>
 </blockquote>
 <p>Let&rsquo;s see if this works! We&rsquo;ll do that by testing.</p>
 <p>First, let&rsquo;s set up our tests: we need to deploy both contracts:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;Proxy&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="kd">let</span> <span class="nx">owner</span><span class="p">;</span>
-  <span class="kd">let</span> <span class="nx">proxy</span><span class="p">,</span> <span class="nx">logic</span><span class="p">;</span>
-
-  <span class="nx">beforeEach</span><span class="p">(</span><span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="p">[</span><span class="nx">owner</span><span class="p">]</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getSigners</span><span class="p">();</span>
-
-    <span class="kr">const</span> <span class="nx">Logic</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getContractFactory</span><span class="p">(</span><span class="s2">&#34;Logic&#34;</span><span class="p">);</span>
-    <span class="nx">logic</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">Logic</span><span class="p">.</span><span class="nx">deploy</span><span class="p">();</span>
-    <span class="kr">await</span> <span class="nx">logic</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
-
-    <span class="kr">const</span> <span class="nb">Proxy</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getContractFactory</span><span class="p">(</span><span class="s2">&#34;Proxy&#34;</span><span class="p">);</span>
-    <span class="nx">proxy</span> <span class="o">=</span> <span class="kr">await</span> <span class="nb">Proxy</span><span class="p">.</span><span class="nx">deploy</span><span class="p">();</span>
-    <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
-
-    <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">setImplementation</span><span class="p">(</span><span class="nx">logic</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
-  <span class="p">});</span>
-
-</code></pre></div><p>Then, let&rsquo;s ensure that implementation contract address was set correctly:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">it</span><span class="p">(</span><span class="s2">&#34;points to an implementation contract&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">implementation</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="nx">logic</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
-<span class="p">});</span>
-</code></pre></div><p>And then, let&rsquo;s ensure that proxying works:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">it</span><span class="p">(</span><span class="s2">&#34;proxies calls to implementation contract&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="nx">abi</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&#34;function setMagicNumber(uint256 newMagicNumber) public&#34;</span><span class="p">,</span>
-    <span class="s2">&#34;function getMagicNumber() public view returns (uint256)&#34;</span><span class="p">,</span>
-  <span class="p">];</span>
-
-  <span class="kr">const</span> <span class="nx">proxied</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">Contract</span><span class="p">(</span><span class="nx">proxy</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">abi</span><span class="p">,</span> <span class="nx">owner</span><span class="p">);</span>
-
-  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">getMagicNumber</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0x42&#34;</span><span class="p">);</span>
-<span class="p">});</span>
-</code></pre></div><p><a href="https://docs.ethers.io/">Ethers.js</a> is quite a helpful library: it parses ABI and generates contract methods in JS to make our life easier.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;Proxy&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">let</span> <span class="nx">owner</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">let</span> <span class="nx">proxy</span><span class="p">,</span> <span class="nx">logic</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nx">beforeEach</span><span class="p">(</span><span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">[</span><span class="nx">owner</span><span class="p">]</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getSigners</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nx">Logic</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getContractFactory</span><span class="p">(</span><span class="s2">&#34;Logic&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">logic</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">Logic</span><span class="p">.</span><span class="nx">deploy</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">logic</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nb">Proxy</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getContractFactory</span><span class="p">(</span><span class="s2">&#34;Proxy&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">proxy</span> <span class="o">=</span> <span class="kr">await</span> <span class="nb">Proxy</span><span class="p">.</span><span class="nx">deploy</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">setImplementation</span><span class="p">(</span><span class="nx">logic</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">});</span>
+</span></span></code></pre></div><p>Then, let&rsquo;s ensure that implementation contract address was set correctly:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">it</span><span class="p">(</span><span class="s2">&#34;points to an implementation contract&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">implementation</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="nx">logic</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>And then, let&rsquo;s ensure that proxying works:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">it</span><span class="p">(</span><span class="s2">&#34;proxies calls to implementation contract&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">abi</span> <span class="o">=</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;function setMagicNumber(uint256 newMagicNumber) public&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;function getMagicNumber() public view returns (uint256)&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="p">];</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kr">const</span> <span class="nx">proxied</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">Contract</span><span class="p">(</span><span class="nx">proxy</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">abi</span><span class="p">,</span> <span class="nx">owner</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">getMagicNumber</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0x42&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p><a href="https://docs.ethers.io/">Ethers.js</a> is quite a helpful library: it parses ABI and generates contract methods in JS to make our life easier.
 However, in this situation, this is not what we want.
 We want to call our proxy logic using ABI from the implementation contract.
 That&rsquo;s why we need to create a different contract instance, using the address of the proxy contract and the ABI of the implementation contract.</p>
 <p>Let&rsquo;s run the test:</p>
-<div class="highlight"><pre class="chroma"><code class="language-plain" data-lang="plain">1) Proxy
-proxies calls to implementation contract:
-AssertionError: Expected &#34;912823093544680850579175995568783282090442467040&#34; to be equal 0x42
-</code></pre></div><p>Uh-oh! This is not something we expected.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-plain" data-lang="plain"><span class="line"><span class="cl">1) Proxy
+</span></span><span class="line"><span class="cl">proxies calls to implementation contract:
+</span></span><span class="line"><span class="cl">AssertionError: Expected &#34;912823093544680850579175995568783282090442467040&#34; to be equal 0x42
+</span></span></code></pre></div><p>Uh-oh! This is not something we expected.</p>
 <p>The time has come to learn about the trickiness of <code>delegatecall</code>.</p>
 <h2 id="call-vs-delegatecall">CALL vs DELEGATECALL</h2>
 <p>Every program consists of two components:</p>
@@ -276,20 +270,20 @@ With <code>delegatecall</code>, we&rsquo;re storing state in the proxy contract,
 <ol>
 <li>
 <p>In the proxy contract, we&rsquo;re storing implementation contract address in the first state variable:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Proxy</span> <span class="p">{</span>
-    <span class="kt">address</span> <span class="kr">public</span> <span class="n">implementation</span><span class="p">;</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Proxy</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="k">public</span> <span class="n">implementation</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div></li>
 <li>
 <p>In the logic contract, we&rsquo;re storing magic number in the first state variable:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Logic</span> <span class="p">{</span>
-    <span class="kt">uint256</span> <span class="n">magicNumber</span><span class="p">;</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Logic</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">magicNumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div></li>
 </ol>
 <p>As I said earlier, state variables is syntactic sugar in Solidity: they simplify reading and writing to/from memory.
 What happens under the hood is:</p>
@@ -298,22 +292,21 @@ What happens under the hood is:</p>
 third one – 2, and so on.</li>
 <li>Every state variable is mapped to a slot in memory. Its value is stored in memory.</li>
 <li>Slot address is defined as hashed state variable index, literally:
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="nf">keccak256</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="nb">keccak256</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span></code></pre></div></li>
 </ol>
 <p>And this is what causes the problem: when Logic contract is called via <code>delegatecall</code> from Proxy contract,
 variable <code>magicNumber</code> points at the same memory slot as variable <code>implementation</code> in Proxy contract!
 Since both of them have the same index 0.
 And that big number that we saw in the failed test is the implementation contract address (in the decimal system)!</p>
 <p>To better understand the idea, try changing the proxy contract like that and run the tests:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Proxy</span> <span class="p">{</span>
-    <span class="kt">uint256</span> <span class="kr">public</span> <span class="n">woot</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
-    <span class="kt">address</span> <span class="kr">public</span> <span class="n">implementation</span><span class="p">;</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-
-</code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Proxy</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="k">public</span> <span class="n">woot</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="k">public</span> <span class="n">implementation</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><blockquote>
 <p>You can learn more about the layout of state variables <a href="https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html">here</a>.</p>
 </blockquote>
 <h2 id="resolving-the-state-collision">Resolving the state collision</h2>
@@ -326,8 +319,8 @@ Since addresses are simply <code>byte32</code> values, we can use whatever addre
 <p>So, we need to choose an address to store the <code>implementation</code> variable value.
 Luckily, there&rsquo;s already a (draft) EIP – <a href="https://eips.ethereum.org/EIPS/eip-1967">EIP-1967</a> – that proposes a scheme to find such address.
 The idea is simple:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kt">bytes32</span><span class="p">(</span><span class="kt">uint256</span><span class="p">(</span><span class="nf">keccak256</span><span class="p">(</span><span class="s">&#39;eip1967.proxy.implementation&#39;</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-</code></pre></div><p>We&rsquo;re hashing the string &ldquo;eip1967.proxy.implementation&rdquo; and then subtracting 1 from the hash.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kt">bytes32</span><span class="p">(</span><span class="kt">uint256</span><span class="p">(</span><span class="nb">keccak256</span><span class="p">(</span><span class="s">&#39;eip1967.proxy.implementation&#39;</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+</span></span></code></pre></div><p>We&rsquo;re hashing the string &ldquo;eip1967.proxy.implementation&rdquo; and then subtracting 1 from the hash.
 Hashing is needed to define the address in a unique way (it&rsquo;s unlikely someone is using this string for other purposes) and subtraction is needed
 to reduce the probability of getting the hash even further.</p>
 <p>We have a solution, let&rsquo;s implement it!</p>
@@ -335,133 +328,127 @@ to reduce the probability of getting the hash even further.</p>
 <p>As we&rsquo;ve already learned, Solidity is a higher level language and it doesn&rsquo;t allow us to do low-level manipulations – we have to use Yul instead.</p>
 <p>This time, we&rsquo;ll build a library to help us save an Ethereum address at a custom slot and read it from there –
 that&rsquo;s basically it, the library is simple and has only two functions:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">library</span> <span class="n">StorageSlot</span> <span class="p">{</span>
-  <span class="kd">function</span> <span class="n">getAddressAt</span><span class="p">(</span><span class="kt">bytes32</span> <span class="n">slot</span><span class="p">)</span> <span class="kr">internal</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span> <span class="n">a</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">assembly</span> <span class="p">{</span>
-      <span class="n">a</span> <span class="o">:=</span> <span class="nf">sload</span><span class="p">(</span><span class="n">slot</span><span class="p">)</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-
-  <span class="kd">function</span> <span class="n">setAddressAt</span><span class="p">(</span><span class="kt">bytes32</span> <span class="n">slot</span><span class="p">,</span> <span class="kt">address</span> <span class="n">address_</span><span class="p">)</span> <span class="kr">internal</span> <span class="p">{</span>
-    <span class="k">assembly</span> <span class="p">{</span>
-      <span class="nf">sstore</span><span class="p">(</span><span class="n">slot</span><span class="p">,</span> <span class="n">address_</span><span class="p">)</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p><code>getAddressAt</code> wraps low-level <code>sload</code> function and <code>setAddressAt</code> wraps <code>sstore</code> function, which allows to read or write data in a specific slot respectively.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">library</span> <span class="n">StorageSlot</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">getAddressAt</span><span class="p">(</span><span class="kt">bytes32</span> <span class="n">slot</span><span class="p">)</span> <span class="k">internal</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span> <span class="n">a</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assembly</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">a</span> <span class="o">:=</span> <span class="nf">sload</span><span class="p">(</span><span class="n">slot</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">setAddressAt</span><span class="p">(</span><span class="kt">bytes32</span> <span class="n">slot</span><span class="p">,</span> <span class="kt">address</span> <span class="n">address_</span><span class="p">)</span> <span class="k">internal</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assembly</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nf">sstore</span><span class="p">(</span><span class="n">slot</span><span class="p">,</span> <span class="n">address_</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p><code>getAddressAt</code> wraps low-level <code>sload</code> function and <code>setAddressAt</code> wraps <code>sstore</code> function, which allows to read or write data in a specific slot respectively.</p>
 <p>Next step, we need to define the slot address:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Proxy</span> <span class="p">{</span>
-    <span class="kt">bytes32</span> <span class="kr">private</span> <span class="kr">constant</span> <span class="n">_IMPL_SLOT</span> <span class="o">=</span>
-        <span class="kt">bytes32</span><span class="p">(</span><span class="kt">uint256</span><span class="p">(</span><span class="nf">keccak256</span><span class="p">(</span><span class="s">&#34;eip1967.proxy.implementation&#34;</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Notice that this is a constant so it won&rsquo;t occupy a memory slot – the compiler will replace all its occurrences with
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Proxy</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bytes32</span> <span class="k">private</span> <span class="k">constant</span> <span class="n">_IMPL_SLOT</span> <span class="o">=</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">bytes32</span><span class="p">(</span><span class="kt">uint256</span><span class="p">(</span><span class="nb">keccak256</span><span class="p">(</span><span class="s">&#34;eip1967.proxy.implementation&#34;</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Notice that this is a constant so it won&rsquo;t occupy a memory slot – the compiler will replace all its occurrences with
 its value. Also, notice that the <code>implementation</code> state variable has gone now – we won&rsquo;t use it!</p>
 <p>Next, rewrite the setter and getter functions:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">setImplementation</span><span class="p">(</span><span class="kt">address</span> <span class="n">implementation_</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="n">StorageSlot</span><span class="p">.</span><span class="n">setAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">,</span> <span class="n">implementation_</span><span class="p">);</span>
-
-<span class="kd">function</span> <span class="n">getImplementation</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">return</span> <span class="n">StorageSlot</span><span class="p">.</span><span class="n">getAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Finally, rework the fallback function to extract Yul code into <code>_delegate</code> function so we don&rsquo;t mix Solidity and Yul
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">setImplementation</span><span class="p">(</span><span class="kt">address</span> <span class="n">implementation_</span><span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">StorageSlot</span><span class="p">.</span><span class="n">setAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">,</span> <span class="n">implementation_</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getImplementation</span><span class="p">()</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">StorageSlot</span><span class="p">.</span><span class="n">getAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Finally, rework the fallback function to extract Yul code into <code>_delegate</code> function so we don&rsquo;t mix Solidity and Yul
 in one function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">fallback</span><span class="p">()</span> <span class="kr">external</span> <span class="p">{</span>
-  <span class="n">_delegate</span><span class="p">(</span><span class="n">StorageSlot</span><span class="p">.</span><span class="n">getAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">));</span>
-<span class="p">}</span>
-
-</code></pre></div><p>And slightly rework the <code>delegatecall</code> for it to take implementation address as is, without calling <code>sload</code>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">_delegate</span><span class="p">(</span><span class="kt">address</span> <span class="n">impl</span><span class="p">)</span> <span class="kr">internal</span> <span class="n">virtual</span> <span class="p">{</span>
-    <span class="k">assembly</span> <span class="p">{</span>
-        <span class="ow">let</span> <span class="nv">ptr</span> <span class="o">:=</span> <span class="nf">mload</span><span class="p">(</span><span class="mh">0x40</span><span class="p">)</span>
-        <span class="nf">calldatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nf">calldatasize</span><span class="p">())</span>
-
-        <span class="ow">let</span> <span class="nv">result</span> <span class="o">:=</span> <span class="nf">delegatecall</span><span class="p">(</span><span class="nf">gas</span><span class="p">(),</span> <span class="n">impl</span><span class="p">,</span> <span class="n">ptr</span><span class="p">,</span> <span class="nf">calldatasize</span><span class="p">(),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-
-        <span class="err">...</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>That&rsquo;s it for the proxy contract! However, if you run the tests you&rsquo;ll see this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-plain" data-lang="plain">1) Proxy
-proxies calls to implementation contract:
-AssertionError: Expected &#34;0&#34; to be equal 0x42
-</code></pre></div><p>Why do we get zero?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="n">fallback</span><span class="p">()</span> <span class="k">external</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">_delegate</span><span class="p">(</span><span class="n">StorageSlot</span><span class="p">.</span><span class="n">getAddressAt</span><span class="p">(</span><span class="n">_IMPL_SLOT</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>And slightly rework the <code>delegatecall</code> for it to take implementation address as is, without calling <code>sload</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">_delegate</span><span class="p">(</span><span class="kt">address</span> <span class="n">impl</span><span class="p">)</span> <span class="k">internal</span> <span class="k">virtual</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">assembly</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="ow">let</span> <span class="nv">ptr</span> <span class="o">:=</span> <span class="nf">mload</span><span class="p">(</span><span class="mh">0x40</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">calldatacopy</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nf">calldatasize</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="ow">let</span> <span class="nv">result</span> <span class="o">:=</span> <span class="nf">delegatecall</span><span class="p">(</span><span class="nf">gas</span><span class="p">(),</span> <span class="n">impl</span><span class="p">,</span> <span class="n">ptr</span><span class="p">,</span> <span class="nf">calldatasize</span><span class="p">(),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="err">...</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>That&rsquo;s it for the proxy contract! However, if you run the tests you&rsquo;ll see this:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-plain" data-lang="plain"><span class="line"><span class="cl">1) Proxy
+</span></span><span class="line"><span class="cl">proxies calls to implementation contract:
+</span></span><span class="line"><span class="cl">AssertionError: Expected &#34;0&#34; to be equal 0x42
+</span></span></code></pre></div><p>Why do we get zero?</p>
 <h2 id="callee-contract-initialization">Callee contract initialization</h2>
 <p>We forgot one thing: <strong>we cannot use constructor to initialize callee contract when it&rsquo;s used via a Proxy</strong>.
 When constructor is used to initialize state variables, they&rsquo;re initialized within the state of the contract.
 But we want them to be initialized within the state of the proxy contract.</p>
 <p>There&rsquo;s a simple solution: use a custom initialization function instead of <code>constructor</code>.
 It looks like that:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Logic</span> <span class="p">{</span>
-    <span class="kt">bool</span> <span class="n">initialized</span><span class="p">;</span>
-    <span class="kt">uint256</span> <span class="n">magicNumber</span><span class="p">;</span>
-
-    <span class="kd">function</span> <span class="n">initialize</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-        <span class="nb">require</span><span class="p">(</span><span class="o">!</span><span class="n">initialized</span><span class="p">,</span> <span class="s">&#34;already initialized&#34;</span><span class="p">);</span>
-
-        <span class="n">magicNumber</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
-        <span class="n">initialized</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
-    <span class="p">}</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-</code></pre></div><p>This function must be called after an implementation contract was set in the proxy contract.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Logic</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="n">initialized</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">magicNumber</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">function</span> <span class="nf">initialize</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">require</span><span class="p">(</span><span class="o">!</span><span class="n">initialized</span><span class="p">,</span> <span class="s">&#34;already initialized&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">magicNumber</span> <span class="o">=</span> <span class="mh">0x42</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">initialized</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This function must be called after an implementation contract was set in the proxy contract.
 In our tests, it&rsquo;ll look like that:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">beforeEach</span><span class="p">(</span><span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="p">...</span>
-  <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
-
-  <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">setImplementation</span><span class="p">(</span><span class="nx">logic</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
-
-  <span class="kr">const</span> <span class="nx">abi</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&#34;function initialize() public&#34;</span><span class="p">];</span>
-  <span class="kr">const</span> <span class="nx">proxied</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">Contract</span><span class="p">(</span><span class="nx">proxy</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">abi</span><span class="p">,</span> <span class="nx">owner</span><span class="p">);</span>
-
-  <span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">initialize</span><span class="p">();</span>
-<span class="p">});</span>
-
-</code></pre></div><p>If you run the tests now, they will pass.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">beforeEach</span><span class="p">(</span><span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="p">...</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">setImplementation</span><span class="p">(</span><span class="nx">logic</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kr">const</span> <span class="nx">abi</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&#34;function initialize() public&#34;</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">const</span> <span class="nx">proxied</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">Contract</span><span class="p">(</span><span class="nx">proxy</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">abi</span><span class="p">,</span> <span class="nx">owner</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">initialize</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>If you run the tests now, they will pass.</p>
 <h2 id="changing-implementations">Changing implementations</h2>
 <p>Now, let&rsquo;s add a new version of the logic contract and see if we can upgrade our older implementation.</p>
 <p>Copy <code>Logic.sol</code>, rename it to <code>LogicV2</code>, and add a new function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">LogicV2</span> <span class="p">{</span>
-    <span class="p">...</span>
-
-    <span class="kd">function</span> <span class="n">doMagic</span><span class="p">()</span> <span class="kr">public</span> <span class="p">{</span>
-        <span class="n">magicNumber</span> <span class="o">=</span> <span class="n">magicNumber</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Everything else remains the same.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">LogicV2</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">function</span> <span class="nf">doMagic</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">magicNumber</span> <span class="o">=</span> <span class="n">magicNumber</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Everything else remains the same.</p>
 <p>Now, let&rsquo;s check if it works.
 First, deploy the new contract:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">it</span><span class="p">(</span><span class="s2">&#34;allows to change implementations&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
-  <span class="kr">const</span> <span class="nx">LogicV2</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getContractFactory</span><span class="p">(</span><span class="s2">&#34;LogicV2&#34;</span><span class="p">);</span>
-  <span class="nx">logicv2</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">LogicV2</span><span class="p">.</span><span class="nx">deploy</span><span class="p">();</span>
-  <span class="kr">await</span> <span class="nx">logicv2</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
-</code></pre></div><p>Then, change implementation in the proxy contract:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">setImplementation</span><span class="p">(</span><span class="nx">logicv2</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
-</code></pre></div><p>Since the logic contract has already been initialized, we don&rsquo;t need to initialize it again.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">it</span><span class="p">(</span><span class="s2">&#34;allows to change implementations&#34;</span><span class="p">,</span> <span class="kr">async</span> <span class="p">()</span> <span class="p">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">const</span> <span class="nx">LogicV2</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">getContractFactory</span><span class="p">(</span><span class="s2">&#34;LogicV2&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">logicv2</span> <span class="o">=</span> <span class="kr">await</span> <span class="nx">LogicV2</span><span class="p">.</span><span class="nx">deploy</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">await</span> <span class="nx">logicv2</span><span class="p">.</span><span class="nx">deployed</span><span class="p">();</span>
+</span></span></code></pre></div><p>Then, change implementation in the proxy contract:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="kr">await</span> <span class="nx">proxy</span><span class="p">.</span><span class="nx">setImplementation</span><span class="p">(</span><span class="nx">logicv2</span><span class="p">.</span><span class="nx">address</span><span class="p">);</span>
+</span></span></code></pre></div><p>Since the logic contract has already been initialized, we don&rsquo;t need to initialize it again.</p>
 <p>Next, initialize a proxy contract instance with the ABI from the new implementation:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">abi</span> <span class="o">=</span> <span class="p">[</span>
-  <span class="s2">&#34;function initialize() public&#34;</span><span class="p">,</span>
-  <span class="s2">&#34;function setMagicNumber(uint256 newMagicNumber) public&#34;</span><span class="p">,</span>
-  <span class="s2">&#34;function getMagicNumber() public view returns (uint256)&#34;</span><span class="p">,</span>
-  <span class="s2">&#34;function doMagic() public&#34;</span><span class="p">,</span>
-<span class="p">];</span>
-
-<span class="kr">const</span> <span class="nx">proxied</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">Contract</span><span class="p">(</span><span class="nx">proxy</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">abi</span><span class="p">,</span> <span class="nx">owner</span><span class="p">);</span>
-</code></pre></div><p>Finally, do something to ensure version 2 is working correctly:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js">  <span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">setMagicNumber</span><span class="p">(</span><span class="mh">0x33</span><span class="p">);</span>
-  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">getMagicNumber</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0x33&#34;</span><span class="p">);</span>
-
-  <span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">doMagic</span><span class="p">();</span>
-  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">getMagicNumber</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0x19&#34;</span><span class="p">);</span>
-<span class="p">});</span>
-</code></pre></div><p>Run the tests and see that they pass!</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">abi</span> <span class="o">=</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;function initialize() public&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;function setMagicNumber(uint256 newMagicNumber) public&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;function getMagicNumber() public view returns (uint256)&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;function doMagic() public&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">];</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kr">const</span> <span class="nx">proxied</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">Contract</span><span class="p">(</span><span class="nx">proxy</span><span class="p">.</span><span class="nx">address</span><span class="p">,</span> <span class="nx">abi</span><span class="p">,</span> <span class="nx">owner</span><span class="p">);</span>
+</span></span></code></pre></div><p>Finally, do something to ensure version 2 is working correctly:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl">  <span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">setMagicNumber</span><span class="p">(</span><span class="mh">0x33</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">getMagicNumber</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0x33&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">doMagic</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">expect</span><span class="p">(</span><span class="kr">await</span> <span class="nx">proxied</span><span class="p">.</span><span class="nx">getMagicNumber</span><span class="p">()).</span><span class="nx">to</span><span class="p">.</span><span class="nx">eq</span><span class="p">(</span><span class="s2">&#34;0x19&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></div><p>Run the tests and see that they pass!</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>Studying upgradeable proxy contracts is a good way to start learning about some deeper concepts of EVM, like storage layout, storage management, and contract calls.
 If some parts are not clear to you, feel free returning and giving them another try.

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +38,7 @@
   <article class="post">
     <header class="post-header">
       <h1 class="post-title">What is Lightning Network and How to Try It Today</h1>
-      <time class="post-date" datetime="2018-03-02 16:58:56 &#43;07">02 Mar 2018</time>
+      <time class="post-date" datetime="2018-03-02 16:58:56 &#43;0700">02 Mar 2018</time>
     </header>
 
     <p><img src="/images/ln-topology.png" alt="Lightning Network topology"></p>
@@ -85,13 +85,13 @@
 </li>
 <li>
 <p>A text editor will be opened with the default Bitcoin Core configuration. Replace it with the following:</p>
-<pre><code> estnet=1
- erver=1
- pcuser=foo
- pcpassword=bar
- xindex=1
- mqpubrawblock=tcp://127.0.0.1:29000
- mqpubrawtx=tcp://127.0.0.1:29000
+<pre tabindex="0"><code> testnet=1
+ server=1
+ rpcuser=foo
+ rpcpassword=bar
+ txindex=1
+ zmqpubrawblock=tcp://127.0.0.1:29000
+ zmqpubrawtx=tcp://127.0.0.1:29000
 </code></pre><p>``</p>
 </li>
 <li>
@@ -140,7 +140,7 @@ To get some BTC, visit <a href="https://testnet.coinfaucet.eu/en/">https://testn
 </ol>
 <h2 id="buying-coffee-for-bitcoin">Buying coffee for Bitcoin</h2>
 <p>The same company that created Eclair, also created a demo online shop selling coffee for Bitcoin: <a href="https://starblocks.acinq.co/">https://starblocks.acinq.co/</a> And we&rsquo;re going to buy coffee from it and will pay with Bitcoin via LN!</p>
-<p>LN doesn&rsquo;t allow to arbitrary send coins to any address without a permission of the address' owner, unlike in the main Bitcoin network. The party willing to receive a payment has to create a <strong>payment request</strong>, an analogue of invoice. The party then hands (via a QU-code, link, or in raw) the payment request to the paying party, and the paying party uses an application that reads the request and performs a payment.</p>
+<p>LN doesn&rsquo;t allow to arbitrary send coins to any address without a permission of the address&rsquo; owner, unlike in the main Bitcoin network. The party willing to receive a payment has to create a <strong>payment request</strong>, an analogue of invoice. The party then hands (via a QU-code, link, or in raw) the payment request to the paying party, and the paying party uses an application that reads the request and performs a payment.</p>
 <p>So, in order to buy a coffee:</p>
 <ol>
 <li>

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -64,12 +64,11 @@ To see full code of the project so far, <a href="https://github.com/Jeiwan/zunis
 <p>In the previous part, we discussed that our implementation of <code>addLiquidity</code> is not complete.
 There was a reason for that and today we&rsquo;re going to finish the function.</p>
 <p>So far, the function looks like that:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
-  <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
-  <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Can you identify the problem?</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span> <span class="k">public</span> <span class="k">payable</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Can you identify the problem?</p>
 <p>The function allows to add arbitrary amounts of liquidity at any moment.</p>
 <p>As you remember, exchange rate is calculated as a ratio of reserves:
 $$P_X=\frac y x, P_Y=\frac x y$$
@@ -89,21 +88,20 @@ initialized. And this is an important moment because <strong>this is when the pr
 <li>Else, enforce established reserves proportion when there&rsquo;s some liquidity.</li>
 </ol>
 <p>The first branch remains unchanged:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="k">if</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
-    <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
-</code></pre></div><p>The second branch is where the new code goes to:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="kt">uint256</span> <span class="n">ethReserve</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">;</span>
-    <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
-    <span class="kt">uint256</span> <span class="n">tokenAmount</span> <span class="o">=</span> <span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">value</span> <span class="o">*</span> <span class="n">tokenReserve</span><span class="p">)</span> <span class="o">/</span> <span class="n">ethReserve</span><span class="p">;</span>
-    <span class="nb">require</span><span class="p">(</span><span class="n">_tokenAmount</span> <span class="o">&gt;=</span> <span class="n">tokenAmount</span><span class="p">,</span> <span class="s">&#34;insufficient token amount&#34;</span><span class="p">);</span>
-
-    <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
-    <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">tokenAmount</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>The only difference is that we&rsquo;re not depositing all tokens provided by user but only an amount calculated based on current reserves ratio.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">_tokenAmount</span><span class="p">);</span>
+</span></span></code></pre></div><p>The second branch is where the new code goes to:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">ethReserve</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">-</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">tokenReserve</span> <span class="o">=</span> <span class="n">getReserve</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">tokenAmount</span> <span class="o">=</span> <span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">value</span> <span class="o">*</span> <span class="n">tokenReserve</span><span class="p">)</span> <span class="o">/</span> <span class="n">ethReserve</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">require</span><span class="p">(</span><span class="n">_tokenAmount</span> <span class="o">&gt;=</span> <span class="n">tokenAmount</span><span class="p">,</span> <span class="s">&#34;insufficient token amount&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">IERC20</span> <span class="n">token</span> <span class="o">=</span> <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">token</span><span class="p">.</span><span class="n">transferFrom</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">tokenAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>The only difference is that we&rsquo;re not depositing all tokens provided by user but only an amount calculated based on current reserves ratio.
 To get the amount, we multiply the ratio (<code>tokenReserve / ethReserve</code>) by the amount of deposited ethers.
 Then, an error is thrown if user deposited less than this amount.</p>
 <p>This will preserve a price when liquidity is added to a pool.</p>
@@ -155,43 +153,41 @@ what <code>amountMinted</code> and <code>totalAmount</code> would be when someon
 still valid after that?</p>
 <p>Let&rsquo;s get to the code.</p>
 <p>Before modifying <code>addLiquidity</code>, we need to make our Exchange contract an ERC20 contract and change its constructor:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">Exchange</span> <span class="kr">is</span> <span class="n">ERC20</span> <span class="p">{</span>
-    <span class="kt">address</span> <span class="kr">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
-
-    <span class="n">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="s">&#34;Zuniswap-V1&#34;</span><span class="p">,</span> <span class="s">&#34;ZUNI-V1&#34;</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
-
-        <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
-    <span class="p">}</span>
-</code></pre></div><p>Our LP-tokens will have a constant name and a symbol, this is how Uniswap does it. Feel free to improve this by taking
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">Exchange</span> <span class="k">is</span> <span class="n">ERC20</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="k">public</span> <span class="n">tokenAddress</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_token</span><span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="s">&#34;Zuniswap-V1&#34;</span><span class="p">,</span> <span class="s">&#34;ZUNI-V1&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">require</span><span class="p">(</span><span class="n">_token</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">&#34;invalid token address&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">tokenAddress</span> <span class="o">=</span> <span class="n">_token</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span></code></pre></div><p>Our LP-tokens will have a constant name and a symbol, this is how Uniswap does it. Feel free to improve this by taking
 the underlaying token&rsquo;s name and symbol.</p>
 <p>Now, let&rsquo;s update <code>addLiquidity</code>: when adding initial liquidity, the amount of LP-tokens issued equals to the amount
 of ethers deposited.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span>
-    <span class="kr">public</span>
-    <span class="kr">payable</span>
-    <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-        <span class="p">...</span>
-
-        <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">;</span>
-        <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
-
-        <span class="k">return</span> <span class="n">liquidity</span><span class="p">;</span>
-
-</code></pre></div><p>Additional liquidity mints LP-tokens proportionally to the amount of ethers deposited:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="p">...</span>
-
-        <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="p">(</span><span class="n">totalSupply</span><span class="p">()</span> <span class="o">*</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">)</span> <span class="o">/</span> <span class="n">ethReserve</span><span class="p">;</span>
-        <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
-
-        <span class="k">return</span> <span class="n">liquidity</span><span class="p">;</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Just a few lines and we now have LP-tokens!</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">addLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_tokenAmount</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">public</span>
+</span></span><span class="line"><span class="cl">    <span class="k">payable</span>
+</span></span><span class="line"><span class="cl">    <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">liquidity</span><span class="p">;</span>
+</span></span></code></pre></div><p>Additional liquidity mints LP-tokens proportionally to the amount of ethers deposited:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span> <span class="n">liquidity</span> <span class="o">=</span> <span class="p">(</span><span class="n">totalSupply</span><span class="p">()</span> <span class="o">*</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">value</span><span class="p">)</span> <span class="o">/</span> <span class="n">ethReserve</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">_mint</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">liquidity</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="n">liquidity</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Just a few lines and we now have LP-tokens!</p>
 <h2 id="fees">Fees</h2>
 <p>We&rsquo;re now ready to collect fees on swaps. Before that, we need to answer a couple of questions:</p>
 <ol>
@@ -215,21 +211,20 @@ get a balanced amount of ethers and tokens plus a share of accumulated fees prop
 <p>That&rsquo;s it! Let&rsquo;s get to the code.</p>
 <p>Uniswap takes 0.3% in fees from each swap. We&rsquo;ll take 1% just so that it&rsquo;s easier to see the difference in tests.
 Adding fees to the contract is as easy as adding a couple of multipliers to <code>getAmount</code> function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">getAmount</span><span class="p">(</span>
-  <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="n">outputReserve</span>
-<span class="p">)</span> <span class="kr">private</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
-
-  <span class="kt">uint256</span> <span class="n">inputAmountWithFee</span> <span class="o">=</span> <span class="n">inputAmount</span> <span class="o">*</span> <span class="mi">99</span><span class="p">;</span>
-  <span class="kt">uint256</span> <span class="n">numerator</span> <span class="o">=</span> <span class="n">inputAmountWithFee</span> <span class="o">*</span> <span class="n">outputReserve</span><span class="p">;</span>
-  <span class="kt">uint256</span> <span class="n">denominator</span> <span class="o">=</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="n">inputAmountWithFee</span><span class="p">;</span>
-
-  <span class="k">return</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">;</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Since Solidity doesn&rsquo;t support floating point division, we have to use a trick: both numerator and denominator are
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">getAmount</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">inputAmount</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">inputReserve</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">outputReserve</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">private</span> <span class="k">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">inputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">outputReserve</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid reserves&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">inputAmountWithFee</span> <span class="o">=</span> <span class="n">inputAmount</span> <span class="o">*</span> <span class="mi">99</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">numerator</span> <span class="o">=</span> <span class="n">inputAmountWithFee</span> <span class="o">*</span> <span class="n">outputReserve</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">denominator</span> <span class="o">=</span> <span class="p">(</span><span class="n">inputReserve</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="n">inputAmountWithFee</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Since Solidity doesn&rsquo;t support floating point division, we have to use a trick: both numerator and denominator are
 multiplied by a power of 10, and fee is subtracted from the multiplier in the numerator. Normally, we would calculate it
 like that:
 $$amountWithFee = amount * \frac{100 - fee}{100}$$</p>
@@ -240,20 +235,19 @@ $$amountWithFee = amount * \frac{100 - fee}{100}$$</p>
 <p>Finally, last function on our list: <code>removeLiquidity</code>.</p>
 <p>To remove liquidity we can again use LP-tokens: we don&rsquo;t need to remember amounts deposited by each liquidity provider
 and can calculate the amount of removed liquidity based on an LP-tokens share.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">removeLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">,</span> <span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nb">require</span><span class="p">(</span><span class="n">_amount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid amount&#34;</span><span class="p">);</span>
-
-  <span class="kt">uint256</span> <span class="n">ethAmount</span> <span class="o">=</span> <span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">*</span> <span class="n">_amount</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">();</span>
-  <span class="kt">uint256</span> <span class="n">tokenAmount</span> <span class="o">=</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">*</span> <span class="n">_amount</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">();</span>
-
-  <span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">_amount</span><span class="p">);</span>
-  <span class="kr">payable</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">ethAmount</span><span class="p">);</span>
-  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokenAmount</span><span class="p">);</span>
-
-  <span class="k">return</span> <span class="p">(</span><span class="n">ethAmount</span><span class="p">,</span> <span class="n">tokenAmount</span><span class="p">);</span>
-<span class="p">}</span>
-
-</code></pre></div><p>When liquidity is removed, it&rsquo;s returned in both ethers and tokens and their amounts are, of course, balanced. This is
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">removeLiquidity</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">,</span> <span class="kt">uint256</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">require</span><span class="p">(</span><span class="n">_amount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#34;invalid amount&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">ethAmount</span> <span class="o">=</span> <span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span> <span class="o">*</span> <span class="n">_amount</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">tokenAmount</span> <span class="o">=</span> <span class="p">(</span><span class="n">getReserve</span><span class="p">()</span> <span class="o">*</span> <span class="n">_amount</span><span class="p">)</span> <span class="o">/</span> <span class="n">totalSupply</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">_burn</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">_amount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="k">payable</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="n">ethAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="n">IERC20</span><span class="p">(</span><span class="n">tokenAddress</span><span class="p">).</span><span class="nb">transfer</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">tokenAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="p">(</span><span class="n">ethAmount</span><span class="p">,</span> <span class="n">tokenAmount</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>When liquidity is removed, it&rsquo;s returned in both ethers and tokens and their amounts are, of course, balanced. This is
 the moment that causes <a href="https://pintail.medium.com/uniswap-a-good-deal-for-liquidity-providers-104c0b6816f2">impermanent loss</a>:
 the ratio of reserves changes over time following changes in their prices in USD. When liquidity is removed the balance
 can be different from what it was when liquidity was deposited. This means that you would get different amounts of
@@ -268,17 +262,17 @@ liquidity:</p>
 <li>
 <p>First, liquidity provider deposits 100 ethers and 200 tokens. This makes 1 token being equal to 0.5 ethers and 1
 ether being equal to 2 tokens.</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="p">});</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">exchange</span><span class="p">.</span><span class="nx">addLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="p">});</span>
+</span></span></code></pre></div></li>
 <li>
 <p>A user swaps 10 ethers and expects to get at least 18 tokens. In fact, they got 18.0164 tokens. It includes slippage
 (traded amounts are relatively big) and the 1% fee.</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">exchange</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">user</span><span class="p">).</span><span class="nx">ethToTokenSwap</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">18</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="p">});</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">exchange</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">user</span><span class="p">).</span><span class="nx">ethToTokenSwap</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">18</span><span class="p">),</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">toWei</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="p">});</span>
+</span></span></code></pre></div></li>
 <li>
 <p>Liquidity provider then removes their liquidity:</p>
-<div class="highlight"><pre class="chroma"><code class="language-js" data-lang="js"><span class="nx">exchange</span><span class="p">.</span><span class="nx">removeLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">exchange</span><span class="p">.</span><span class="nx">removeLiquidity</span><span class="p">(</span><span class="nx">toWei</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+</span></span></code></pre></div></li>
 <li>
 <p>Liquidity provider got 109.9 ethers (transaction fees included) and 181.9836 tokens.
 As you can see, these numbers are different from those that were deposited: we got the 10 ethers traded in by the

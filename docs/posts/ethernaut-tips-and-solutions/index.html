@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -238,8 +238,8 @@ the minimal structure of the contract and notice that you&rsquo;ll need the depl
 <li>Use <a href="https://github.com/crytic/solc-select">solc-select</a> to install and switch between different versions of Solidity
 compiler.</li>
 <li>I used this to compile my contract:
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ solc --strict-assembly --optimize contracts/MagicNumber.yul
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ solc --strict-assembly --optimize contracts/MagicNumber.yul
+</span></span></code></pre></div></li>
 <li>Use <a href="https://web3js.readthedocs.io/en/v1.4.0/web3-eth.html#sendtransaction">sendTransaction</a> to deploy bytecode.</li>
 </ol>
 <p><strong>My solution:</strong> <a href="https://github.com/Jeiwan/ethernaut-solutions/blob/main/contracts/MagicNumber.yul">smart contract</a>,

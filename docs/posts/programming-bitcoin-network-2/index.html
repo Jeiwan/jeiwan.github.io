@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +38,7 @@
   <article class="post">
     <header class="post-header">
       <h1 class="post-title">Programming Bitcoin Network, part 2</h1>
-      <time class="post-date" datetime="2019-11-17 15:29:48 &#43;07">17 Nov 2019</time>
+      <time class="post-date" datetime="2019-11-17 15:29:48 &#43;0700">17 Nov 2019</time>
     </header>
 
     <p>Previous part: <a href="https://jeiwan.net/posts/programming-bitcoin-network/">here</a></p>
@@ -64,32 +64,32 @@ However, deserialization will be slightly different because bytes are sent over 
 <p>Let&rsquo;s begin!</p>
 <h2 id="improving-messages-serialization">Improving Messages Serialization</h2>
 <p>This is how we&rsquo;re serializing messages at this stage:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="nx">Message</span><span class="p">)</span> <span class="nf">Serialize</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
-
-	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Magic</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Command</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">Length</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Checksum</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Payload</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>I.e. we&rsquo;re implementing serialization per each message.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="nx">Message</span><span class="p">)</span> <span class="nf">Serialize</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Magic</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Command</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">Length</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Checksum</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Payload</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>I.e. we&rsquo;re implementing serialization per each message.
 But the key point is that serialization is type-based, not message-based.
 It&rsquo;s types that has unique (identical for most of them though) serialization methods, not structures.</p>
 <p>Eventually, we&rsquo;ll have more messages than types, and since messages consist of types, it makes no sense implementing message-base serialization.
@@ -110,118 +110,118 @@ I&rsquo;m sure you&rsquo;re already familiar with them.</li>
 <p>For deserialization, we&rsquo;ll implement the streaming approach because the node will be reading serialized messages from a TCP connection, which is a stream.</p>
 <h3 id="binarymarshal">binary.Marshal</h3>
 <p>Create <code>binary</code> subfolder and <code>marshaler.go</code> in it:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// binary/marshaler.go
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Marshal</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
-</code></pre></div><ol>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// binary/marshaler.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">Marshal</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
+</span></span></code></pre></div><ol>
 <li>We&rsquo;re using the same function signature as in <code>json.Marshal</code>.</li>
 <li><code>buf</code> will contain encoded data.</li>
 </ol>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">switch</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">case</span> <span class="kt">uint8</span><span class="p">,</span> <span class="kt">int32</span><span class="p">,</span> <span class="kt">uint32</span><span class="p">,</span> <span class="kt">int64</span><span class="p">,</span> <span class="kt">uint64</span><span class="p">,</span> <span class="kt">bool</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-</code></pre></div><p>Basically, the only thing the function does is checking the type of <code>v</code> and choosing appropriate encoding algorithm.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">switch</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="kt">uint8</span><span class="p">,</span> <span class="kt">int32</span><span class="p">,</span> <span class="kt">uint32</span><span class="p">,</span> <span class="kt">int64</span><span class="p">,</span> <span class="kt">uint64</span><span class="p">,</span> <span class="kt">bool</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><p>Basically, the only thing the function does is checking the type of <code>v</code> and choosing appropriate encoding algorithm.
 Here, we&rsquo;re using <code>binary.Write</code> (from the standard <code>encoding/binary</code> package) to encoding integers and boolean types.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">case</span> <span class="kt">uint16</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">BigEndian</span><span class="p">,</span> <span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-</code></pre></div><p>Next, we&rsquo;re encoding port number.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">case</span> <span class="kt">uint16</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">BigEndian</span><span class="p">,</span> <span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><p>Next, we&rsquo;re encoding port number.
 Port number is always stored as <code>uint16</code> type and is always encoded using big-endian bytes order (unlike the integers above).</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="c1">// const (
-</span><span class="c1"></span>	<span class="c1">//      commandLength          = 12
-</span><span class="c1"></span>	<span class="c1">//      magicAndChecksumLength = 4
-</span><span class="c1"></span>	<span class="c1">// )
-</span><span class="c1"></span>	<span class="k">case</span> <span class="p">[</span><span class="nx">magicAndChecksumLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">val</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-
-	<span class="k">case</span> <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">val</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-
-	<span class="k">case</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-</code></pre></div><p>Next, we&rsquo;re encoding magic bytes, checksum, command, and bytes slice.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="c1">// const (
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//      commandLength          = 12
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">//      magicAndChecksumLength = 4
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// )
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">case</span> <span class="p">[</span><span class="nx">magicAndChecksumLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">val</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">val</span><span class="p">[:]);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><p>Next, we&rsquo;re encoding magic bytes, checksum, command, and bytes slice.
 All arrays and byte slices are serialized identically: bytes are written to the buffer directly, there&rsquo;s no need to encode them additionally.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">case</span> <span class="kt">string</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">val</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-        <span class="p">}</span>
-</code></pre></div><p>Strings are converted to bytes slices and are written to the buffer directly.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">case</span> <span class="nx">Marshaler</span><span class="p">:</span>
-		<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">val</span><span class="p">.</span><span class="nf">MarshalBinary</span><span class="p">()</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-        <span class="p">}</span>
-</code></pre></div><p>Here&rsquo;s an interesting part: if the type implements <code>Marshaler</code> interface, call <code>MarshalBinary</code> method to serialize it.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">case</span> <span class="kt">string</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">val</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span></code></pre></div><p>Strings are converted to bytes slices and are written to the buffer directly.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">case</span> <span class="nx">Marshaler</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">val</span><span class="p">.</span><span class="nf">MarshalBinary</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span></code></pre></div><p>Here&rsquo;s an interesting part: if the type implements <code>Marshaler</code> interface, call <code>MarshalBinary</code> method to serialize it.
 We discussed this earlier: we need custom serialization algorithms for some types.
 And <code>Marshaler</code> interface is as simple as:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Marshaler</span> <span class="kd">interface</span> <span class="p">{</span>
-	<span class="nf">MarshalBinary</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>Final part of <code>Marshal</code> function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">default</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Kind</span><span class="p">()</span> <span class="o">==</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Struct</span> <span class="p">{</span>
-			<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">marshalStruct</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-			<span class="p">}</span>
-
-			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-			<span class="p">}</span>
-
-			<span class="k">break</span>
-		<span class="p">}</span>
-
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unsupported type %s&#34;</span><span class="p">,</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">TypeOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">String</span><span class="p">())</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>Since <code>struct</code> is not a type, we need to use a more advanced way to checks if <code>v</code> is a structure.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Marshaler</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nf">MarshalBinary</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Final part of <code>Marshal</code> function:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Kind</span><span class="p">()</span> <span class="o">==</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">marshalStruct</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="k">break</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unsupported type %s&#34;</span><span class="p">,</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">TypeOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">String</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Since <code>struct</code> is not a type, we need to use a more advanced way to checks if <code>v</code> is a structure.
 Standard <code>reflect</code> package really helps here.</p>
 <p>Ho do we serialize structs?
 Well, structures are collections of fields, so we need to iterate over all fields, serialize each of them separately, and concatenates the result.
 This can be done in a nice and small function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">marshalStruct</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
-	<span class="nx">vv</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
-
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">vv</span><span class="p">.</span><span class="nf">NumField</span><span class="p">();</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">s</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">Marshal</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nf">Indirect</span><span class="p">(</span><span class="nx">vv</span><span class="p">.</span><span class="nf">Field</span><span class="p">(</span><span class="nx">i</span><span class="p">)).</span><span class="nf">Interface</span><span class="p">())</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">f</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">TypeOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Field</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nx">Name</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to marshal field %s: %v&#34;</span><span class="p">,</span> <span class="nx">f</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span>
-
-		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">s</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>Again, we&rsquo;re using <code>reflect</code> package to get the number of fields in a struct and get each field separately.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">marshalStruct</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">buf</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">vv</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">vv</span><span class="p">.</span><span class="nf">NumField</span><span class="p">();</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">s</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">Marshal</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nf">Indirect</span><span class="p">(</span><span class="nx">vv</span><span class="p">.</span><span class="nf">Field</span><span class="p">(</span><span class="nx">i</span><span class="p">)).</span><span class="nf">Interface</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">f</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">TypeOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Field</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nx">Name</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to marshal field %s: %v&#34;</span><span class="p">,</span> <span class="nx">f</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">s</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">buf</span><span class="p">.</span><span class="nf">Bytes</span><span class="p">(),</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Again, we&rsquo;re using <code>reflect</code> package to get the number of fields in a struct and get each field separately.
 Passing a struct to <code>reflect.ValueOf</code> will return the struct itself but as a <code>reflect.Value</code> type, which we can reflect on. 😉</p>
 <p>That&rsquo;s it for serialization! Now, we don&rsquo;t need <code>Serialize</code> methods anymore on <code>Message</code> and <code>MsgVersion</code> types.
 They can be removed.
 Also, <code>ToIPv6</code> method of <code>IPv4</code> struct now should be changed to <code>MarshalBinary() ([]byte, error)</code> – this is now a custom implementation of <code>binary.Marshaler</code>.</p>
 <p>Now, we can use <code>binary.Marshal</code> to serialize messages:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewMessage</span><span class="p">(</span><span class="s">&#34;version&#34;</span><span class="p">,</span> <span class="nx">network</span><span class="p">,</span> <span class="nx">version</span><span class="p">)</span>
-<span class="nx">msgSerialized</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Marshal</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
-</code></pre></div><h2 id="implementing-deserialization">Implementing Deserialization</h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewMessage</span><span class="p">(</span><span class="s">&#34;version&#34;</span><span class="p">,</span> <span class="nx">network</span><span class="p">,</span> <span class="nx">version</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">msgSerialized</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Marshal</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+</span></span></code></pre></div><h2 id="implementing-deserialization">Implementing Deserialization</h2>
 <p>Currently, our node can receive messages from other nodes but it cannot decode them.
 It just prints out raw bytes.
 But a real node has to know what messages it receives, validate them, and handle them.
@@ -239,14 +239,14 @@ If a node sends us multiple messages at the same time, we&rsquo;ll receive them 
 But we need to get something complete and discrete before starting deserialization.</p>
 <p>This is where proper network protocol design comes into play.</p>
 <p>Let&rsquo;s take a look at <code>Message</code> struct:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Magic</span>    <span class="p">[</span><span class="nx">magicLength</span><span class="p">]</span><span class="kt">byte</span>
-	<span class="nx">Command</span>  <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
-	<span class="nx">Length</span>   <span class="kt">uint32</span>
-	<span class="nx">Checksum</span> <span class="p">[</span><span class="nx">checksumLength</span><span class="p">]</span><span class="kt">byte</span>
-	<span class="nx">Payload</span>  <span class="p">[]</span><span class="kt">byte</span>
-<span class="p">}</span>
-</code></pre></div><p>As you already know, this structure is used to wrap any message.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Magic</span>    <span class="p">[</span><span class="nx">magicLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Command</span>  <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Length</span>   <span class="kt">uint32</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Checksum</span> <span class="p">[</span><span class="nx">checksumLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Payload</span>  <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>As you already know, this structure is used to wrap any message.
 So, basically, this structure is a message header that contains meta information about the message.</p>
 <blockquote>
 <p>Pretty much similar to &lt;head&gt; and &lt;body&gt; HTML tags.</p>
@@ -265,10 +265,10 @@ And since message header has fixed size, we can read exactly <code>MsgHeaderLeng
 <p>Let&rsquo;s implement this!</p>
 <h3 id="binarydecoder">binary.Decoder</h3>
 <p>First, let&rsquo;s define <code>Decoder</code>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Decoder</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">r</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span>
-<span class="p">}</span>
-</code></pre></div><p><code>Decoder</code> does only one thing: it reads and decodes data from a stream (<code>io.Reader</code>).
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Decoder</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">r</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p><code>Decoder</code> does only one thing: it reads and decodes data from a stream (<code>io.Reader</code>).
 It implements only one method: <code>Decode</code>, which is basically a function that:</p>
 <ol>
 <li>Takes a pointer to a value of any supported type.</li>
@@ -278,23 +278,23 @@ It implements only one method: <code>Decode</code>, which is basically a functio
 <li>Saves the decoded value at the passed pointer.</li>
 </ol>
 <p>Here&rsquo;s what it looks like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">Decode</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="k">switch</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">case</span> <span class="o">*</span><span class="kt">bool</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeBool</span><span class="p">(</span><span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-</code></pre></div><p>And <code>decodeBool</code> is:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">decodeBool</span><span class="p">(</span><span class="nx">out</span> <span class="o">*</span><span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">lr</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">lr</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">out</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>I use <code>io.LimitReader</code> here to read just a fixed amount of bytes from the connection.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">Decode</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">switch</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="o">*</span><span class="kt">bool</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeBool</span><span class="p">(</span><span class="nx">val</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><p>And <code>decodeBool</code> is:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">decodeBool</span><span class="p">(</span><span class="nx">out</span> <span class="o">*</span><span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">lr</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">lr</span><span class="p">,</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span> <span class="nx">out</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>I use <code>io.LimitReader</code> here to read just a fixed amount of bytes from the connection.
 In this particular case, only one byte is read, because <code>bool</code> type occupies only one byte.
 Then, <code>binary.Read</code> (from the standard <code>encoding/binary</code> package) is used to read a byte, deserialize it, and put at the pointer passed as the function argument.</p>
 <p>The same approach is applied to all other integer types.
@@ -304,26 +304,26 @@ There are only two differences:</p>
 <li>Order of bytes (big-endian of all integers except <code>uint16</code>, which uses little-endian order).</li>
 </ol>
 <p>Now, let&rsquo;s move to byte arrays:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">case</span> <span class="o">*</span><span class="p">[</span><span class="nx">magicAndChecksumLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
-		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeArray</span><span class="p">(</span><span class="nx">magicAndChecksumLength</span><span class="p">,</span> <span class="nx">val</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-
-	<span class="k">case</span> <span class="o">*</span><span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
-		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeArray</span><span class="p">(</span><span class="nx">commandLength</span><span class="p">,</span> <span class="nx">val</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-</code></pre></div><p>And:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">decodeArray</span><span class="p">(</span><span class="nx">len</span> <span class="kt">int64</span><span class="p">,</span> <span class="nx">out</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="nx">len</span><span class="p">).</span><span class="nf">Read</span><span class="p">(</span><span class="nx">out</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>Decoding byte arrays is simple: we just need to read a bytes sequence of specific length and put it at the pointer.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">case</span> <span class="o">*</span><span class="p">[</span><span class="nx">magicAndChecksumLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeArray</span><span class="p">(</span><span class="nx">magicAndChecksumLength</span><span class="p">,</span> <span class="nx">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="o">*</span><span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeArray</span><span class="p">(</span><span class="nx">commandLength</span><span class="p">,</span> <span class="nx">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><p>And:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">decodeArray</span><span class="p">(</span><span class="nx">len</span> <span class="kt">int64</span><span class="p">,</span> <span class="nx">out</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="nx">len</span><span class="p">).</span><span class="nf">Read</span><span class="p">(</span><span class="nx">out</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Decoding byte arrays is simple: we just need to read a bytes sequence of specific length and put it at the pointer.
 No need to decode them.</p>
 <p>Notice that we can deserialize arrays, but we cannot have a general way of deserialization of slices.
 There&rsquo;s no way to know the length of slice before getting the value of slice.
@@ -331,68 +331,68 @@ The same goes for strings.</p>
 <p>But, as you remember, we&rsquo;re using a string to store user agent.
 Thus, we need a way to have custom deserialization algorithms.
 This can be done easily by use of <code>Unmarshaler</code> interface:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Unmarshaler</span> <span class="kd">interface</span> <span class="p">{</span>
-	<span class="nf">UnmarshalBinary</span><span class="p">(</span><span class="nx">r</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">)</span> <span class="kt">error</span>
-<span class="p">}</span>
-</code></pre></div><p>Similarly to <code>Marshaler</code>, it describes only one method, which does only one thing: deserializes a custom data type.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Unmarshaler</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nf">UnmarshalBinary</span><span class="p">(</span><span class="nx">r</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">)</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Similarly to <code>Marshaler</code>, it describes only one method, which does only one thing: deserializes a custom data type.
 Unlike <code>MarshalBinary()</code>, this method takes a stream as its only argument.</p>
 <p>Now we can decode <code>Unmarshaler</code>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">case</span> <span class="nx">Unmarshaler</span><span class="p">:</span>
-		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">val</span><span class="p">.</span><span class="nf">UnmarshalBinary</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">r</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-</code></pre></div><p>Now, the final part: structs.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="k">default</span><span class="p">:</span>
-		<span class="k">if</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Kind</span><span class="p">()</span> <span class="o">==</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Ptr</span> <span class="o">&amp;&amp;</span>
-			<span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Elem</span><span class="p">().</span><span class="nf">Kind</span><span class="p">()</span> <span class="o">==</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Struct</span> <span class="p">{</span>
-			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeStruct</span><span class="p">(</span><span class="nx">v</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="k">return</span> <span class="nx">err</span>
-			<span class="p">}</span>
-			<span class="k">break</span>
-		<span class="p">}</span>
-
-		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unsupported type %s&#34;</span><span class="p">,</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">TypeOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">String</span><span class="p">())</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>Pretty similar to what we did in serialization.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">case</span> <span class="nx">Unmarshaler</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">val</span><span class="p">.</span><span class="nf">UnmarshalBinary</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">r</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><p>Now, the final part: structs.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Kind</span><span class="p">()</span> <span class="o">==</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Ptr</span> <span class="o">&amp;&amp;</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">Elem</span><span class="p">().</span><span class="nf">Kind</span><span class="p">()</span> <span class="o">==</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">decodeStruct</span><span class="p">(</span><span class="nx">v</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">break</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unsupported type %s&#34;</span><span class="p">,</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">TypeOf</span><span class="p">(</span><span class="nx">v</span><span class="p">).</span><span class="nf">String</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Pretty similar to what we did in serialization.
 But here we&rsquo;re checking if this is a pointer to a struct, not simply a struct.
 This is because <code>Decode</code> method must always receive a pointer as its only argument.</p>
 <p><code>decodeStruct</code> also looks familiar:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">decodeStruct</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">val</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">Indirect</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">))</span>
-
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">val</span><span class="p">.</span><span class="nf">NumField</span><span class="p">();</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Decode</span><span class="p">(</span><span class="nx">val</span><span class="p">.</span><span class="nf">Field</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nf">Addr</span><span class="p">().</span><span class="nf">Interface</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>First, we need to get the value of the struct by its pointer.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="nx">Decoder</span><span class="p">)</span> <span class="nf">decodeStruct</span><span class="p">(</span><span class="nx">v</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">val</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nf">Indirect</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nf">ValueOf</span><span class="p">(</span><span class="nx">v</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">val</span><span class="p">.</span><span class="nf">NumField</span><span class="p">();</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Decode</span><span class="p">(</span><span class="nx">val</span><span class="p">.</span><span class="nf">Field</span><span class="p">(</span><span class="nx">i</span><span class="p">).</span><span class="nf">Addr</span><span class="p">().</span><span class="nf">Interface</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First, we need to get the value of the struct by its pointer.
 <code>ValueOf(v)</code> returns a pointer to the struct, and <code>reflect.Indirect()</code> returns the value that the pointer points to, which is the actual struct.
 Then, we iterate over struct&rsquo;s fields and decode each of them separately.
 And this time we&rsquo;re calling <code>Addr()</code> on the field to get a pointer to it.</p>
 <h3 id="handling-version-message">Handling &lsquo;version&rsquo; message</h3>
 <p>Alright, we have everything we need to start deserializing and handling messages.
 Let&rsquo;s review how our node processes messages:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">tmp</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="p">{</span>
-	<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">tmp</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
-			<span class="nx">logrus</span><span class="p">.</span><span class="nf">Fatalln</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">logrus</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;received: %x&#34;</span><span class="p">,</span> <span class="nx">tmp</span><span class="p">[:</span><span class="nx">n</span><span class="p">])</span>
-<span class="p">}</span>
-</code></pre></div><p>We use a buffer with the length of 256 bytes to read all incoming data to.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">tmp</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">tmp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">logrus</span><span class="p">.</span><span class="nf">Fatalln</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">logrus</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;received: %x&#34;</span><span class="p">,</span> <span class="nx">tmp</span><span class="p">[:</span><span class="nx">n</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>We use a buffer with the length of 256 bytes to read all incoming data to.
 The length is arbitrary, I chose the number so that &lsquo;version&rsquo; message fits.
 If we want to correctly receive, deserialize, and handle message, we have to use a different size since Bitcoin messages have dynamic length.
 Our node also must be able to correctly decode messages of any length.</p>
@@ -400,129 +400,129 @@ Our node also must be able to correctly decode messages of any length.</p>
 <p>First, the buffer length. As we already discussed, every message has a header of fixed size.
 If we want to read a message, we have to read its header first.
 This means, that the buffer size should be equal to the size of the message header!</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// MsgHeaderLength = magicLength + commandLength + checksumLength + 4
-</span><span class="c1">// 4 - payload length value
-</span><span class="c1"></span><span class="nx">tmp</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MsgHeaderLength</span><span class="p">)</span>
-</code></pre></div><p>Now, after receiving a message header, we can try to deserialize it.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// MsgHeaderLength = magicLength + commandLength + checksumLength + 4
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 4 - payload length value
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">tmp</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MsgHeaderLength</span><span class="p">)</span>
+</span></span></code></pre></div><p>Now, after receiving a message header, we can try to deserialize it.
 Before doing this though, we have to split <code>Message</code> structure into two structures:</p>
 <ol>
 <li><code>MessageHeader</code>, which will include all the fields of <code>Message</code> except <code>Payload</code>.</li>
 <li><code>Message</code>, which will embed <code>MessageHeader</code> and include <code>Payload</code> field.</li>
 </ol>
 <p>Like so:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">MessageHeader</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Magic</span>    <span class="p">[</span><span class="nx">magicLength</span><span class="p">]</span><span class="kt">byte</span>
-	<span class="nx">Command</span>  <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
-	<span class="nx">Length</span>   <span class="kt">uint32</span>
-	<span class="nx">Checksum</span> <span class="p">[</span><span class="nx">checksumLength</span><span class="p">]</span><span class="kt">byte</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">MessageHeader</span>
-	<span class="nx">Payload</span> <span class="p">[]</span><span class="kt">byte</span>
-<span class="p">}</span>
-</code></pre></div><p>Now, we can try to deserialize the header:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">msgHeader</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MessageHeader</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">tmp</span><span class="p">[:</span><span class="nx">n</span><span class="p">])).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">msgHeader</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="nx">logrus</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;invalid header: %+v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="k">continue</span>
-<span class="p">}</span>
-</code></pre></div><p>If header decoding fails, the node will just continue reading from the connection.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">MessageHeader</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Magic</span>    <span class="p">[</span><span class="nx">magicLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Command</span>  <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Length</span>   <span class="kt">uint32</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Checksum</span> <span class="p">[</span><span class="nx">checksumLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">MessageHeader</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Payload</span> <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Now, we can try to deserialize the header:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">msgHeader</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MessageHeader</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">tmp</span><span class="p">[:</span><span class="nx">n</span><span class="p">])).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">msgHeader</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">logrus</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;invalid header: %+v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">continue</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>If header decoding fails, the node will just continue reading from the connection.</p>
 <p>After the header was decoded, we must validate it.
 As of now, we&rsquo;ll just validate magic and command:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">mh</span> <span class="nx">MessageHeader</span><span class="p">)</span> <span class="nf">Validate</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="p">!</span><span class="nx">mh</span><span class="p">.</span><span class="nf">HasValidMagic</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;invalid magic: %x&#34;</span><span class="p">,</span> <span class="nx">mh</span><span class="p">.</span><span class="nx">Magic</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="p">!</span><span class="nx">mh</span><span class="p">.</span><span class="nf">HasValidCommand</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;invalid command: %+v&#34;</span><span class="p">,</span> <span class="nx">mh</span><span class="p">.</span><span class="nf">CommandString</span><span class="p">())</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">mh</span> <span class="nx">MessageHeader</span><span class="p">)</span> <span class="nf">HasValidCommand</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-	<span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">commands</span><span class="p">[</span><span class="nx">mh</span><span class="p">.</span><span class="nf">CommandString</span><span class="p">()]</span>
-	<span class="k">return</span> <span class="nx">ok</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">mh</span> <span class="nx">MessageHeader</span><span class="p">)</span> <span class="nf">HasValidMagic</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-	<span class="k">switch</span> <span class="nx">mh</span><span class="p">.</span><span class="nx">Magic</span> <span class="p">{</span>
-	<span class="k">case</span> <span class="nx">MagicMainnet</span><span class="p">,</span> <span class="nx">MagicSimnet</span><span class="p">:</span>
-		<span class="k">return</span> <span class="kc">true</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">false</span>
-<span class="p">}</span>
-</code></pre></div><p>If the header is correct, we can start handling the command:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">switch</span> <span class="nx">msgHeader</span><span class="p">.</span><span class="nf">CommandString</span><span class="p">()</span> <span class="p">{</span>
-<span class="k">case</span> <span class="s">&#34;version&#34;</span><span class="p">:</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">handleVersion</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">msgHeader</span><span class="p">,</span> <span class="nx">conn</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">logrus</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to handle &#39;version&#39;: %+v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">continue</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>Different handlers will use different message structures to decode messages, that&rsquo;s why, at this stage, we&rsquo;re only decoding the header.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">mh</span> <span class="nx">MessageHeader</span><span class="p">)</span> <span class="nf">Validate</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">!</span><span class="nx">mh</span><span class="p">.</span><span class="nf">HasValidMagic</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;invalid magic: %x&#34;</span><span class="p">,</span> <span class="nx">mh</span><span class="p">.</span><span class="nx">Magic</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">!</span><span class="nx">mh</span><span class="p">.</span><span class="nf">HasValidCommand</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;invalid command: %+v&#34;</span><span class="p">,</span> <span class="nx">mh</span><span class="p">.</span><span class="nf">CommandString</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">mh</span> <span class="nx">MessageHeader</span><span class="p">)</span> <span class="nf">HasValidCommand</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">commands</span><span class="p">[</span><span class="nx">mh</span><span class="p">.</span><span class="nf">CommandString</span><span class="p">()]</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">ok</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">mh</span> <span class="nx">MessageHeader</span><span class="p">)</span> <span class="nf">HasValidMagic</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">switch</span> <span class="nx">mh</span><span class="p">.</span><span class="nx">Magic</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="nx">MagicMainnet</span><span class="p">,</span> <span class="nx">MagicSimnet</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>If the header is correct, we can start handling the command:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">switch</span> <span class="nx">msgHeader</span><span class="p">.</span><span class="nf">CommandString</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="k">case</span> <span class="s">&#34;version&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">handleVersion</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">msgHeader</span><span class="p">,</span> <span class="nx">conn</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">logrus</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to handle &#39;version&#39;: %+v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Different handlers will use different message structures to decode messages, that&rsquo;s why, at this stage, we&rsquo;re only decoding the header.</p>
 <p>As you remember, this whole procedure of versions exchanging is called &ldquo;version handshake&rdquo;.
 Its purpose is to let nodes know about each other and about their software and its version.
 After nodes have exchanged versions, they save each other to theirs peers lists.
 But as of now, we&rsquo;re not going to do this.
 Instead, we&rsquo;ll just send a &lsquo;verack` message, which confirms that our node has received &lsquo;version&rsquo; messages from the other node.</p>
 <p>First, our node has to decode message payload:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleVersion</span><span class="p">(</span><span class="nx">header</span> <span class="o">*</span><span class="nx">protocol</span><span class="p">.</span><span class="nx">MessageHeader</span><span class="p">,</span> <span class="nx">conn</span> <span class="nx">io</span><span class="p">.</span><span class="nx">ReadWriter</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">version</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MsgVersion</span>
-
-	<span class="nx">lr</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">conn</span><span class="p">,</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">header</span><span class="p">.</span><span class="nx">Length</span><span class="p">))</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">lr</span><span class="p">).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">version</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span>
-</code></pre></div><p>Here we&rsquo;re decoding payload, which has type <code>[]byte</code>, as you remember.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleVersion</span><span class="p">(</span><span class="nx">header</span> <span class="o">*</span><span class="nx">protocol</span><span class="p">.</span><span class="nx">MessageHeader</span><span class="p">,</span> <span class="nx">conn</span> <span class="nx">io</span><span class="p">.</span><span class="nx">ReadWriter</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">version</span> <span class="nx">protocol</span><span class="p">.</span><span class="nx">MsgVersion</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">lr</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">LimitReader</span><span class="p">(</span><span class="nx">conn</span><span class="p">,</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">header</span><span class="p">.</span><span class="nx">Length</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">lr</span><span class="p">).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">version</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span></code></pre></div><p>Here we&rsquo;re decoding payload, which has type <code>[]byte</code>, as you remember.
 And we do can decode it because the header has <code>Length</code> field, which specifies the amount of bytes we need to read.</p>
 <blockquote>
 <p>Here, we would also need to validate the payload and, if its correct, save the other node to our list of peers.
 But we won&rsquo;t do this for now (this blog post is already long enough 😉).</p>
 </blockquote>
 <p>Next, we&rsquo;ll send a &lsquo;verack&rsquo; message in reply:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">verack</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewVerackMsg</span><span class="p">(</span><span class="s">&#34;simnet&#34;</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Marshal</span><span class="p">(</span><span class="nx">verack</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>&lsquo;verack&rsquo; is just a message with empty payload:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewVerackMsg</span><span class="p">(</span><span class="nx">network</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Message</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">magic</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">Networks</span><span class="p">[</span><span class="nx">network</span><span class="p">]</span>
-	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unsupported network &#39;%s&#39;&#34;</span><span class="p">,</span> <span class="nx">network</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">head</span> <span class="o">:=</span> <span class="nx">MessageHeader</span><span class="p">{</span>
-		<span class="nx">Magic</span><span class="p">:</span>    <span class="nx">magic</span><span class="p">,</span>
-		<span class="nx">Command</span><span class="p">:</span>  <span class="nf">newCommand</span><span class="p">(</span><span class="s">&#34;verack&#34;</span><span class="p">),</span>
-		<span class="nx">Length</span><span class="p">:</span>   <span class="mi">0</span><span class="p">,</span>
-		<span class="nx">Checksum</span><span class="p">:</span> <span class="nf">checksum</span><span class="p">([]</span><span class="kt">byte</span><span class="p">{}),</span>
-	<span class="p">}</span>
-
-	<span class="nx">msg</span> <span class="o">:=</span> <span class="nx">Message</span><span class="p">{</span>
-		<span class="nx">MessageHeader</span><span class="p">:</span> <span class="nx">head</span><span class="p">,</span>
-		<span class="nx">Payload</span><span class="p">:</span>       <span class="p">[]</span><span class="kt">byte</span><span class="p">{},</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">msg</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>Let&rsquo;s see what&rsquo;s in the logs of the other node:</p>
-<pre><code>[DBG] PEER: Received verack from 127.0.0.1:63449 (inbound)
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="nx">verack</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">protocol</span><span class="p">.</span><span class="nf">NewVerackMsg</span><span class="p">(</span><span class="s">&#34;simnet&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binary</span><span class="p">.</span><span class="nf">Marshal</span><span class="p">(</span><span class="nx">verack</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>&lsquo;verack&rsquo; is just a message with empty payload:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewVerackMsg</span><span class="p">(</span><span class="nx">network</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Message</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">magic</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">Networks</span><span class="p">[</span><span class="nx">network</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unsupported network &#39;%s&#39;&#34;</span><span class="p">,</span> <span class="nx">network</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">head</span> <span class="o">:=</span> <span class="nx">MessageHeader</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Magic</span><span class="p">:</span>    <span class="nx">magic</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Command</span><span class="p">:</span>  <span class="nf">newCommand</span><span class="p">(</span><span class="s">&#34;verack&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Length</span><span class="p">:</span>   <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Checksum</span><span class="p">:</span> <span class="nf">checksum</span><span class="p">([]</span><span class="kt">byte</span><span class="p">{}),</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">msg</span> <span class="o">:=</span> <span class="nx">Message</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">MessageHeader</span><span class="p">:</span> <span class="nx">head</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Payload</span><span class="p">:</span>       <span class="p">[]</span><span class="kt">byte</span><span class="p">{},</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">msg</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Let&rsquo;s see what&rsquo;s in the logs of the other node:</p>
+<pre tabindex="0"><code>[DBG] PEER: Received verack from 127.0.0.1:63449 (inbound)
 [DBG] SRVR: New peer 127.0.0.1:63449 (inbound)
 </code></pre><p>Good!
 It has received our &lsquo;verack&rsquo; message and added as to its peers list!</p>

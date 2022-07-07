@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,54 +66,53 @@ Uniswap pairs. This is also useful in terms of pairs discovery: one can query th
 addresses. Also, the history of contract&rsquo;s events can be scanned to find all deployed pairs. Of course, nothing stops us
 from deploying our pair manually and not registering it with the factory contract.</p>
 <p>Let&rsquo;s get to the code.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2Factory</span> <span class="p">{</span>
-    <span class="n">error</span> <span class="n">IdenticalAddresses</span><span class="p">();</span>
-    <span class="n">error</span> <span class="n">PairExists</span><span class="p">();</span>
-    <span class="n">error</span> <span class="n">ZeroAddress</span><span class="p">();</span>
-
-    <span class="kd">event</span> <span class="n">PairCreated</span><span class="p">(</span>
-        <span class="kt">address</span> <span class="kr">indexed</span> <span class="n">token0</span><span class="p">,</span>
-        <span class="kt">address</span> <span class="kr">indexed</span> <span class="n">token1</span><span class="p">,</span>
-        <span class="kt">address</span> <span class="n">pair</span><span class="p">,</span>
-        <span class="kt">uint256</span>
-    <span class="p">);</span>
-
-    <span class="kd">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kd">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kt">address</span><span class="p">))</span> <span class="kr">public</span> <span class="n">pairs</span><span class="p">;</span>
-    <span class="kt">address</span><span class="p">[]</span> <span class="kr">public</span> <span class="n">allPairs</span><span class="p">;</span>
-<span class="p">...</span>
-</code></pre></div><p>The factory contract is minimal and plain: it only emits <code>PairCreated</code> event when a pair is created and it stores a list
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">ZuniswapV2Factory</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">IdenticalAddresses</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">PairExists</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">event</span> <span class="nc">PairCreated</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span> <span class="k">indexed</span> <span class="n">token0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span> <span class="k">indexed</span> <span class="n">token1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span> <span class="n">pair</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span>
+</span></span><span class="line"><span class="cl">    <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kd">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kt">address</span><span class="p">))</span> <span class="k">public</span> <span class="n">pairs</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">[]</span> <span class="k">public</span> <span class="n">allPairs</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span></code></pre></div><p>The factory contract is minimal and plain: it only emits <code>PairCreated</code> event when a pair is created and it stores a list
 and a mapping of all created pairs.</p>
 <p>Creating pairs is tricky though:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">createPair</span><span class="p">(</span><span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span> <span class="kt">address</span> <span class="n">tokenB</span><span class="p">)</span>
-  <span class="kr">public</span>
-  <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span> <span class="n">pair</span><span class="p">)</span>
-<span class="p">{</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">tokenA</span> <span class="o">==</span> <span class="n">tokenB</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">IdenticalAddresses</span><span class="p">();</span>
-
-  <span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1</span><span class="p">)</span> <span class="o">=</span> <span class="n">tokenA</span> <span class="o">&lt;</span> <span class="n">tokenB</span>
-    <span class="o">?</span> <span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">)</span>
-    <span class="o">:</span> <span class="p">(</span><span class="n">tokenB</span><span class="p">,</span> <span class="n">tokenA</span><span class="p">);</span>
-
-  <span class="k">if</span> <span class="p">(</span><span class="n">token0</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
-
-  <span class="k">if</span> <span class="p">(</span><span class="n">pairs</span><span class="p">[</span><span class="n">token0</span><span class="p">][</span><span class="n">token1</span><span class="p">]</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">PairExists</span><span class="p">();</span>
-
-  <span class="kt">bytes</span> <span class="kr">memory</span> <span class="n">bytecode</span> <span class="o">=</span> <span class="n">type</span><span class="p">(</span><span class="n">ZuniswapV2Pair</span><span class="p">).</span><span class="n">creationCode</span><span class="p">;</span>
-  <span class="kt">bytes32</span> <span class="n">salt</span> <span class="o">=</span> <span class="nf">keccak256</span><span class="p">(</span><span class="n">abi</span><span class="p">.</span><span class="n">encodePacked</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">));</span>
-  <span class="k">assembly</span> <span class="p">{</span>
-    <span class="n">pair</span> <span class="o">:=</span> <span class="n">create2</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nf">add</span><span class="p">(</span><span class="n">bytecode</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="nf">mload</span><span class="p">(</span><span class="n">bytecode</span><span class="p">),</span> <span class="n">salt</span><span class="p">)</span>
-  <span class="p">}</span>
-
-  <span class="n">IZuniswapV2Pair</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span><span class="err">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">)</span><span class="err">;</span>
-
-  <span class="n">pairs</span><span class="err">[</span><span class="n">token0</span><span class="err">][</span><span class="n">token1</span><span class="err">]</span> <span class="err">=</span> <span class="n">pair</span><span class="err">;</span>
-  <span class="n">pairs</span><span class="err">[</span><span class="n">token1</span><span class="err">][</span><span class="n">token0</span><span class="err">]</span> <span class="err">=</span> <span class="n">pair</span><span class="err">;</span>
-  <span class="n">allPairs</span><span class="err">.</span><span class="n">push</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span><span class="err">;</span>
-
-  <span class="n">emit</span> <span class="n">PairCreated</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">,</span> <span class="n">pair</span><span class="p">,</span> <span class="n">allPairs</span><span class="err">.</span><span class="n">length</span><span class="p">)</span><span class="err">;</span>
-<span class="p">}</span>
-
-</code></pre></div><p>First, we don&rsquo;t allow pairs with identical tokens. Notice that we don&rsquo;t check if the token contracts actually exist–we
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">createPair</span><span class="p">(</span><span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span> <span class="kt">address</span> <span class="n">tokenB</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="k">public</span>
+</span></span><span class="line"><span class="cl">  <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span> <span class="n">pair</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">tokenA</span> <span class="o">==</span> <span class="n">tokenB</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">IdenticalAddresses</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1</span><span class="p">)</span> <span class="o">=</span> <span class="n">tokenA</span> <span class="o">&lt;</span> <span class="n">tokenB</span>
+</span></span><span class="line"><span class="cl">    <span class="o">?</span> <span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="o">:</span> <span class="p">(</span><span class="n">tokenB</span><span class="p">,</span> <span class="n">tokenA</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">token0</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">ZeroAddress</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">pairs</span><span class="p">[</span><span class="n">token0</span><span class="p">][</span><span class="n">token1</span><span class="p">]</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="nb">revert</span> <span class="n">PairExists</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">bytecode</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="nc">ZuniswapV2Pair</span><span class="p">).</span><span class="nb">creationCode</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">bytes32</span> <span class="n">salt</span> <span class="o">=</span> <span class="nb">keccak256</span><span class="p">(</span><span class="nb">abi</span><span class="p">.</span><span class="nb">encodePacked</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">  <span class="k">assembly</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">pair</span> <span class="o">:=</span> <span class="n">create2</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nf">add</span><span class="p">(</span><span class="n">bytecode</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="nf">mload</span><span class="p">(</span><span class="n">bytecode</span><span class="p">),</span> <span class="n">salt</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">IZuniswapV2Pair</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span><span class="err">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">)</span><span class="err">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">pairs</span><span class="err">[</span><span class="n">token0</span><span class="err">][</span><span class="n">token1</span><span class="err">]</span> <span class="err">=</span> <span class="n">pair</span><span class="err">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">pairs</span><span class="err">[</span><span class="n">token1</span><span class="err">][</span><span class="n">token0</span><span class="err">]</span> <span class="err">=</span> <span class="n">pair</span><span class="err">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">allPairs</span><span class="err">.</span><span class="n">push</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span><span class="err">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">emit</span> <span class="n">PairCreated</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">,</span> <span class="n">pair</span><span class="p">,</span> <span class="n">allPairs</span><span class="err">.</span><span class="n">length</span><span class="p">)</span><span class="err">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First, we don&rsquo;t allow pairs with identical tokens. Notice that we don&rsquo;t check if the token contracts actually exist–we
 don&rsquo;t care because it&rsquo;s up to user to provide valid ERC20 token addresses.</p>
 <p>Next, we sort token addresses–this is important to avoid duplicates (the pair contract allows swaps in both directions).
 Also, pair token addresses are used to generate pair address–we&rsquo;ll talk about this next.</p>
@@ -127,7 +126,7 @@ compile and deploy a contract from you computer, you can do this via an existing
 <li><a href="https://www.evm.codes/#f0">CREATE</a>, which was in EVM from the very beginning. This opcode creates a new account
 (Ethereum address) and deploys contract code at this address. The new address is calculated based on the deployer
 contract&rsquo;s nonce–this is identically to how contract address is determined when you deploy contract manually. Nonce
-is the counter of address' successful transactions: when you send a transaction, you increase your nonce. This
+is the counter of address&rsquo; successful transactions: when you send a transaction, you increase your nonce. This
 dependence on nonce when generating new account address makes <code>CREATE</code> non-deterministic: the address depends on
 on the nonce of the deployer contract, which you cannot control. You do can know it, but by the time you
 deploy your contract, the nonce can be different.</li>
@@ -138,14 +137,14 @@ the address is generated. You don&rsquo;t need to know <code>nonce</code>, you o
 static) and salt (which is a sequence of bytes chosen by you).</li>
 </ol>
 <p>Let&rsquo;s return to the code:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="kt">bytes</span> <span class="kr">memory</span> <span class="n">bytecode</span> <span class="o">=</span> <span class="n">type</span><span class="p">(</span><span class="n">ZuniswapV2Pair</span><span class="p">).</span><span class="n">creationCode</span><span class="p">;</span>
-<span class="kt">bytes32</span> <span class="n">salt</span> <span class="o">=</span> <span class="nf">keccak256</span><span class="p">(</span><span class="n">abi</span><span class="p">.</span><span class="n">encodePacked</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">));</span>
-<span class="k">assembly</span> <span class="p">{</span>
-    <span class="n">pair</span> <span class="o">:=</span> <span class="n">create2</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nf">add</span><span class="p">(</span><span class="n">bytecode</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="nf">mload</span><span class="p">(</span><span class="n">bytecode</span><span class="p">),</span> <span class="n">salt</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="err">...</span>
-</code></pre></div><p>In the first line, we get the creation bytecode of <code>ZuniswapV2Pair</code> contract. Creation bytecode is actual smart contract
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="kt">bytes</span> <span class="k">memory</span> <span class="n">bytecode</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="nc">ZuniswapV2Pair</span><span class="p">).</span><span class="nb">creationCode</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">bytes32</span> <span class="n">salt</span> <span class="o">=</span> <span class="nb">keccak256</span><span class="p">(</span><span class="nb">abi</span><span class="p">.</span><span class="nb">encodePacked</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl"><span class="k">assembly</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">pair</span> <span class="o">:=</span> <span class="n">create2</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nf">add</span><span class="p">(</span><span class="n">bytecode</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="nf">mload</span><span class="p">(</span><span class="n">bytecode</span><span class="p">),</span> <span class="n">salt</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="err">...</span>
+</span></span></code></pre></div><p>In the first line, we get the creation bytecode of <code>ZuniswapV2Pair</code> contract. Creation bytecode is actual smart contract
 bytecode. It includes:</p>
 <ol>
 <li>Constructor logic. This part is responsible for smart contract initialization and deployment. It&rsquo;s
@@ -170,16 +169,15 @@ a unique salt, and every pair will have unique salt and address.</p>
 <ol>
 <li>
 <p>After a pair is deployed, we need to initialize it, which simply means to set its tokens:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="c1">// ZuniswapV2Pair.sol
-</span><span class="c1"></span><span class="kd">function</span> <span class="n">initialize</span><span class="p">(</span><span class="kt">address</span> <span class="n">token0_</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1_</span><span class="p">)</span> <span class="kr">public</span> <span class="p">{</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">token0</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">||</span> <span class="n">token1</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-    <span class="nb">revert</span> <span class="n">AlreadyInitialized</span><span class="p">();</span>
-
-  <span class="n">token0</span> <span class="o">=</span> <span class="n">token0_</span><span class="p">;</span>
-  <span class="n">token1</span> <span class="o">=</span> <span class="n">token1_</span><span class="p">;</span>
-<span class="p">}</span>
-
-</code></pre></div></li>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="c1">// ZuniswapV2Pair.sol
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">function</span> <span class="nf">initialize</span><span class="p">(</span><span class="kt">address</span> <span class="n">token0_</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1_</span><span class="p">)</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">token0</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">||</span> <span class="n">token1</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">revert</span> <span class="n">AlreadyInitialized</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="n">token0</span> <span class="o">=</span> <span class="n">token0_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">  <span class="n">token1</span> <span class="o">=</span> <span class="n">token1_</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div></li>
 <li>
 <p>Then, the new pair is stored in the <code>pairs</code> mapping and <code>allPairs</code> array.</p>
 </li>
@@ -199,36 +197,36 @@ actual swaps. <code>Router</code> works with all pairs deployed via the Factory 
 <p>In parallel to <code>Router</code>, we&rsquo;ll be programming the <code>Library</code> contract, which implements all basic and core functions,
 most of which are swap amounts calculations.</p>
 <p>Let&rsquo;s look at Router&rsquo;s constructor: router can deploy pairs thus it needs to know the address of the Factory contract.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">contract</span> <span class="n">ZuniswapV2Router</span> <span class="p">{</span>
-    <span class="n">error</span> <span class="n">InsufficientAAmount</span><span class="p">();</span>
-    <span class="n">error</span> <span class="n">InsufficientBAmount</span><span class="p">();</span>
-    <span class="n">error</span> <span class="n">SafeTransferFailed</span><span class="p">();</span>
-
-    <span class="n">IZuniswapV2Factory</span> <span class="n">factory</span><span class="p">;</span>
-
-    <span class="n">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">factoryAddress</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">factory</span> <span class="o">=</span> <span class="n">IZuniswapV2Factory</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">);</span>
-    <span class="p">}</span>
-    <span class="p">...</span>
-</code></pre></div><p>Today, we&rsquo;ll implement only liquidity management, and next time we&rsquo;ll finish the contract.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">contract</span> <span class="nc">ZuniswapV2Router</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">InsufficientAAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">InsufficientBAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">SafeTransferFailed</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">IZuniswapV2Factory</span> <span class="n">factory</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">factoryAddress</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">factory</span> <span class="o">=</span> <span class="n">IZuniswapV2Factory</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>Today, we&rsquo;ll implement only liquidity management, and next time we&rsquo;ll finish the contract.</p>
 <p>Let&rsquo;s start with <code>addLiquidity</code>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">addLiquidity</span><span class="p">(</span>
-    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
-    <span class="kt">address</span> <span class="n">tokenB</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountADesired</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountBDesired</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountAMin</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountBMin</span><span class="p">,</span>
-    <span class="kt">address</span> <span class="n">to</span>
-<span class="p">)</span>
-    <span class="kr">public</span>
-    <span class="k">returns</span> <span class="p">(</span>
-        <span class="kt">uint256</span> <span class="n">amountA</span><span class="p">,</span>
-        <span class="kt">uint256</span> <span class="n">amountB</span><span class="p">,</span>
-        <span class="kt">uint256</span> <span class="n">liquidity</span>
-    <span class="p">)</span>
-    <span class="p">...</span>
-</code></pre></div><p>When compared to the <code>mint</code> function from the pair contract, this function has quite many parameters!</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">addLiquidity</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">tokenB</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountADesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountBDesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountAMin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountBMin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">to</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">public</span>
+</span></span><span class="line"><span class="cl">    <span class="k">returns</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span> <span class="n">amountA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span> <span class="n">amountB</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span> <span class="n">liquidity</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>When compared to the <code>mint</code> function from the pair contract, this function has quite many parameters!</p>
 <ol>
 <li><code>tokenA</code> and <code>tokenB</code> are used to find (or create) the pair we want to add liquidity to.</li>
 <li><code>amountADesired</code> and <code>amountBDesired</code> are the amounts we want to deposit into the pair. These are upper bounds.</li>
@@ -237,55 +235,55 @@ issues smaller amount of LP tokens when we deposit unbalanced liquidity? (We dis
 So, the <code>min</code> parameters allow us to control how much liquidity we&rsquo;re ready to lose.</li>
 <li><code>to</code> address is the address that receives LP-tokens.</li>
 </ol>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">factory</span><span class="p">.</span><span class="n">pairs</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">)</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
-    <span class="n">factory</span><span class="p">.</span><span class="n">createPair</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">);</span>
-<span class="p">}</span>
-<span class="p">...</span>
-</code></pre></div><p>Here&rsquo;s where you start seeing the high abstraction nature of the <code>Router</code> contract: if there&rsquo;s no pair contract for
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">factory</span><span class="p">.</span><span class="n">pairs</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">)</span> <span class="o">==</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">factory</span><span class="p">.</span><span class="n">createPair</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span></code></pre></div><p>Here&rsquo;s where you start seeing the high abstraction nature of the <code>Router</code> contract: if there&rsquo;s no pair contract for
 the specified ERC20 tokens, it&rsquo;ll be created by the <code>Router</code> contract. <code>factory.pairs</code> method is the <code>pairs</code> mapping:
 Solidity made the helper method with two parameters since the mapping is nested.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="n">_calculateLiquidity</span><span class="p">(</span>
-    <span class="n">tokenA</span><span class="p">,</span>
-    <span class="n">tokenB</span><span class="p">,</span>
-    <span class="n">amountADesired</span><span class="p">,</span>
-    <span class="n">amountBDesired</span><span class="p">,</span>
-    <span class="n">amountAMin</span><span class="p">,</span>
-    <span class="n">amountBMin</span>
-<span class="p">);</span>
-<span class="p">...</span>
-</code></pre></div><p>In the next step, we&rsquo;re calculating the amounts that will be deposited. We&rsquo;ll return to this function a little bit later.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="kt">address</span> <span class="n">pairAddress</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span>
-    <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
-    <span class="n">tokenA</span><span class="p">,</span>
-    <span class="n">tokenB</span>
-<span class="p">);</span>
-<span class="n">_safeTransferFrom</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">pairAddress</span><span class="p">,</span> <span class="n">amountA</span><span class="p">);</span>
-<span class="n">_safeTransferFrom</span><span class="p">(</span><span class="n">tokenB</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">pairAddress</span><span class="p">,</span> <span class="n">amountB</span><span class="p">);</span>
-<span class="n">liquidity</span> <span class="o">=</span> <span class="n">IZuniswapV2Pair</span><span class="p">(</span><span class="n">pairAddress</span><span class="p">).</span><span class="n">mint</span><span class="p">(</span><span class="n">to</span><span class="p">);</span>
-<span class="p">...</span>
-</code></pre></div><p>After we&rsquo;ve calculated liquidity amounts, we can finally transfer tokens from the user and mint LP-tokens in exchange.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="n">_calculateLiquidity</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenB</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">amountADesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">amountBDesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">amountAMin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">amountBMin</span>
+</span></span><span class="line"><span class="cl"><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span></code></pre></div><p>In the next step, we&rsquo;re calculating the amounts that will be deposited. We&rsquo;ll return to this function a little bit later.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="kt">address</span> <span class="n">pairAddress</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">pairFor</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tokenB</span>
+</span></span><span class="line"><span class="cl"><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">_safeTransferFrom</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">pairAddress</span><span class="p">,</span> <span class="n">amountA</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">_safeTransferFrom</span><span class="p">(</span><span class="n">tokenB</span><span class="p">,</span> <span class="nb">msg</span><span class="p">.</span><span class="nb">sender</span><span class="p">,</span> <span class="n">pairAddress</span><span class="p">,</span> <span class="n">amountB</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">liquidity</span> <span class="o">=</span> <span class="n">IZuniswapV2Pair</span><span class="p">(</span><span class="n">pairAddress</span><span class="p">).</span><span class="n">mint</span><span class="p">(</span><span class="n">to</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span></code></pre></div><p>After we&rsquo;ve calculated liquidity amounts, we can finally transfer tokens from the user and mint LP-tokens in exchange.
 Most of these lines should be already familiar to you, except the <code>pairFor</code> function–we&rsquo;ll implement it right after
 implementing <code>_calculateLiquidity</code>. Also, notice that this contract doesn&rsquo;t expect user to transfer tokens manually–it
 transfers them from user&rsquo;s balance using the ERC20 <code>transferFrom</code> function.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">_calculateLiquidity</span><span class="p">(</span>
-    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
-    <span class="kt">address</span> <span class="n">tokenB</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountADesired</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountBDesired</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountAMin</span><span class="p">,</span>
-    <span class="kt">uint256</span> <span class="n">amountBMin</span>
-<span class="p">)</span> <span class="kr">internal</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">amountA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amountB</span><span class="p">)</span> <span class="p">{</span>
-    <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserveA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserveB</span><span class="p">)</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">getReserves</span><span class="p">(</span>
-        <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
-        <span class="n">tokenA</span><span class="p">,</span>
-        <span class="n">tokenB</span>
-    <span class="p">);</span>
-
-    <span class="p">...</span>
-</code></pre></div><p>In this function, we want to find the liquidity amounts that will satisfy our desired and minimal amounts. Since there&rsquo;s
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">_calculateLiquidity</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">tokenB</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountADesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountBDesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountAMin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountBMin</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">internal</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">amountA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amountB</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserveA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserveB</span><span class="p">)</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">getReserves</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span><span class="p">(</span><span class="n">factory</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tokenB</span>
+</span></span><span class="line"><span class="cl">    <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>In this function, we want to find the liquidity amounts that will satisfy our desired and minimal amounts. Since there&rsquo;s
 a delay between when we choose liquidity amounts in UI and when our transaction gets processed, actual reserves ratio
 might change, which will result in us losing some LP-tokens (as a punishment for depositing unbalanced liquidity). By
 selecting desired and minimal amounts, we can minimize this loss.</p>
@@ -295,24 +293,24 @@ affects issued LP-tokens.</p>
 </blockquote>
 <p>First step in the function is to get pool reserves by using the library contract–we&rsquo;ll implement this soon. Knowing
 pair reserves, we can calculate optimal liquidity amounts</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">reserveA</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">reserveB</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">amountADesired</span><span class="p">,</span> <span class="n">amountBDesired</span><span class="p">);</span>
-<span class="p">...</span>
-</code></pre></div><p>If reserves are empty then this is a new pair, which means our liquidity will define the reserves ratio, which means
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">(</span><span class="n">reserveA</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">reserveB</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">amountADesired</span><span class="p">,</span> <span class="n">amountBDesired</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span></code></pre></div><p>If reserves are empty then this is a new pair, which means our liquidity will define the reserves ratio, which means
 we won&rsquo;t get punished by providing unbalanced liquidity. Thus, we&rsquo;re allowed to deposit full desired amounts.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="kt">uint256</span> <span class="n">amountBOptimal</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span>
-        <span class="n">amountADesired</span><span class="p">,</span>
-        <span class="n">reserveA</span><span class="p">,</span>
-        <span class="n">reserveB</span>
-    <span class="p">);</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">amountBOptimal</span> <span class="o">&lt;=</span> <span class="n">amountBDesired</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">amountBOptimal</span> <span class="o">&lt;=</span> <span class="n">amountBMin</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientBAmount</span><span class="p">();</span>
-        <span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">amountADesired</span><span class="p">,</span> <span class="n">amountBOptimal</span><span class="p">);</span>
-<span class="p">...</span>
-</code></pre></div><p>Otherwise, we need to find optimal amounts, and we begin with finding optimal <code>tokenB</code> amount. <code>quote</code> is another
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountBOptimal</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">amountADesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">reserveA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">reserveB</span>
+</span></span><span class="line"><span class="cl">    <span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">amountBOptimal</span> <span class="o">&lt;=</span> <span class="n">amountBDesired</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">amountBOptimal</span> <span class="o">&lt;=</span> <span class="n">amountBMin</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientBAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">amountADesired</span><span class="p">,</span> <span class="n">amountBOptimal</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">...</span>
+</span></span></code></pre></div><p>Otherwise, we need to find optimal amounts, and we begin with finding optimal <code>tokenB</code> amount. <code>quote</code> is another
 function from the library contract: by taking input amount and pair reserves, it calculates output amount, which is
 <code>tokenA</code> price nominated in <code>tokenB</code> multiplied by input amount.</p>
 <blockquote>
@@ -321,19 +319,19 @@ function from the library contract: by taking input amount and pair reserves, it
 <p>If <code>amountBOptimal</code> is less or equal to our desired amount AND if it&rsquo;s higher than our minimal amount, then it&rsquo;s used.
 This difference between desired and minimal amounts is what protects us from slippage.</p>
 <p>However, if <code>amountBOptimal</code> is greater than our desired amount, it cannot be used and we need to find a different, optimal, amount A.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">...</span>
-<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="kt">uint256</span> <span class="n">amountAOptimal</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span>
-        <span class="n">amountBDesired</span><span class="p">,</span>
-        <span class="n">reserveB</span><span class="p">,</span>
-        <span class="n">reserveA</span>
-    <span class="p">);</span>
-    <span class="nb">assert</span><span class="p">(</span><span class="n">amountAOptimal</span> <span class="o">&lt;=</span> <span class="n">amountADesired</span><span class="p">);</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="n">amountAOptimal</span> <span class="o">&lt;=</span> <span class="n">amountAMin</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAAmount</span><span class="p">();</span>
-    <span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">amountAOptimal</span><span class="p">,</span> <span class="n">amountBDesired</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div><p>Using identical logic we&rsquo;re finding <code>amountAOptimal</code>: it also must be within our minimal-desired range.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountAOptimal</span> <span class="o">=</span> <span class="n">ZuniswapV2Library</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">amountBDesired</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">reserveB</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">reserveA</span>
+</span></span><span class="line"><span class="cl">    <span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">assert</span><span class="p">(</span><span class="n">amountAOptimal</span> <span class="o">&lt;=</span> <span class="n">amountADesired</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">amountAOptimal</span> <span class="o">&lt;=</span> <span class="n">amountAMin</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">(</span><span class="n">amountA</span><span class="p">,</span> <span class="n">amountB</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">amountAOptimal</span><span class="p">,</span> <span class="n">amountBDesired</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Using identical logic we&rsquo;re finding <code>amountAOptimal</code>: it also must be within our minimal-desired range.</p>
 <blockquote>
 <p>If this logic is not clear for you, feel free experimenting with tests! Luckily, Foundry and Forge make writing Solidity tests so much easier!</p>
 </blockquote>
@@ -346,25 +344,25 @@ But, like contracts, libraries must be deployed to be used. Luckily, Forge makes
 automatic libraries linking</a> (we don&rsquo;t need to deploy libraries in our
 tests).</p>
 <p>Let&rsquo;s implement the library!</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">library</span> <span class="n">ZuniswapV2Library</span> <span class="p">{</span>
-    <span class="n">error</span> <span class="n">InsufficientAmount</span><span class="p">();</span>
-    <span class="n">error</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
-
-    <span class="kd">function</span> <span class="n">getReserves</span><span class="p">(</span>
-        <span class="kt">address</span> <span class="n">factoryAddress</span><span class="p">,</span>
-        <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
-        <span class="kt">address</span> <span class="n">tokenB</span>
-    <span class="p">)</span> <span class="kr">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserveA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserveB</span><span class="p">)</span> <span class="p">{</span>
-        <span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1</span><span class="p">)</span> <span class="o">=</span> <span class="n">_sortTokens</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">);</span>
-        <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserve0</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserve1</span><span class="p">,</span> <span class="p">)</span> <span class="o">=</span> <span class="n">IZuniswapV2Pair</span><span class="p">(</span>
-            <span class="n">pairFor</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">,</span> <span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">)</span>
-        <span class="p">).</span><span class="n">getReserves</span><span class="p">();</span>
-        <span class="p">(</span><span class="n">reserveA</span><span class="p">,</span> <span class="n">reserveB</span><span class="p">)</span> <span class="o">=</span> <span class="n">tokenA</span> <span class="o">==</span> <span class="n">token0</span>
-            <span class="o">?</span> <span class="p">(</span><span class="n">reserve0</span><span class="p">,</span> <span class="n">reserve1</span><span class="p">)</span>
-            <span class="o">:</span> <span class="p">(</span><span class="n">reserve1</span><span class="p">,</span> <span class="n">reserve0</span><span class="p">);</span>
-    <span class="p">}</span>
-    <span class="p">...</span>
-</code></pre></div><p>This is a high-level function, it can get reserves of any pair (don&rsquo;t confuse it with the one from the pair contract–that
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">library</span> <span class="n">ZuniswapV2Library</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">InsufficientAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">error</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kd">function</span> <span class="nf">getReserves</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span> <span class="n">factoryAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">address</span> <span class="n">tokenB</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span> <span class="k">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserveA</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserveB</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1</span><span class="p">)</span> <span class="o">=</span> <span class="n">_sortTokens</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">(</span><span class="kt">uint256</span> <span class="n">reserve0</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">reserve1</span><span class="p">,</span> <span class="p">)</span> <span class="o">=</span> <span class="n">IZuniswapV2Pair</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="n">pairFor</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">,</span> <span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">).</span><span class="n">getReserves</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="p">(</span><span class="n">reserveA</span><span class="p">,</span> <span class="n">reserveB</span><span class="p">)</span> <span class="o">=</span> <span class="n">tokenA</span> <span class="o">==</span> <span class="n">token0</span>
+</span></span><span class="line"><span class="cl">            <span class="o">?</span> <span class="p">(</span><span class="n">reserve0</span><span class="p">,</span> <span class="n">reserve1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="o">:</span> <span class="p">(</span><span class="n">reserve1</span><span class="p">,</span> <span class="n">reserve0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">...</span>
+</span></span></code></pre></div><p>This is a high-level function, it can get reserves of any pair (don&rsquo;t confuse it with the one from the pair contract–that
 one returns reserves of the specific pair).</p>
 <p>First step in the function is token addresses sorting–we always want to do this when we want to find pair address by
 token addresses. And this is what we do in the next step: having factory address and sorted token addresses, we&rsquo;re able
@@ -372,33 +370,33 @@ to obtain the pair address–we&rsquo;ll look at the <code>pairFor</code> functi
 <p>Notice that the reserves are sorted back before being returned: we want to return them in the same order as token
 addresses were specified!</p>
 <p>Now, let&rsquo;s look at the <code>pairFor</code> function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">pairFor</span><span class="p">(</span>
-    <span class="kt">address</span> <span class="n">factoryAddress</span><span class="p">,</span>
-    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
-    <span class="kt">address</span> <span class="n">tokenB</span>
-<span class="p">)</span> <span class="kr">internal</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span> <span class="n">pairAddress</span><span class="p">)</span> <span class="p">{</span>
-</code></pre></div><p>The function is used to find pair address by factory and token addresses. The straightforward way of doing that is by
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">pairFor</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">factoryAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">tokenA</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">address</span> <span class="n">tokenB</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">internal</span> <span class="k">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">address</span> <span class="n">pairAddress</span><span class="p">)</span> <span class="p">{</span>
+</span></span></code></pre></div><p>The function is used to find pair address by factory and token addresses. The straightforward way of doing that is by
 fetching pair address from the factory contract, like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="n">ZuniswapV2Factory</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">).</span><span class="n">pairs</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span> <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">))</span>
-</code></pre></div><p>But this would make an external call, which makes the function a little more expensive.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="n">ZuniswapV2Factory</span><span class="p">(</span><span class="n">factoryAddress</span><span class="p">).</span><span class="n">pairs</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">token0</span><span class="p">),</span> <span class="kt">address</span><span class="p">(</span><span class="n">token1</span><span class="p">))</span>
+</span></span></code></pre></div><p>But this would make an external call, which makes the function a little more expensive.</p>
 <p>Uniswap uses are more advanced approach, and this is where we get a benefit from the deterministic address generation
 of <code>CREATE2</code> opcode.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1</span><span class="p">)</span> <span class="o">=</span> <span class="n">sortTokens</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">);</span>
-<span class="n">pairAddress</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span>
-    <span class="kt">uint160</span><span class="p">(</span>
-        <span class="kt">uint256</span><span class="p">(</span>
-            <span class="nf">keccak256</span><span class="p">(</span>
-                <span class="n">abi</span><span class="p">.</span><span class="n">encodePacked</span><span class="p">(</span>
-                    <span class="s">hex&#34;ff&#34;</span><span class="p">,</span>
-                    <span class="n">factoryAddress</span><span class="p">,</span>
-                    <span class="nf">keccak256</span><span class="p">(</span><span class="n">abi</span><span class="p">.</span><span class="n">encodePacked</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">)),</span>
-                    <span class="s">hex&#34;049f60b9e01e08c8f30809369bea021451544d751aa028da0bc80c726d334c6c&#34;</span>
-                <span class="p">)</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
-    <span class="p">)</span>
-<span class="p">);</span>
-</code></pre></div><p>This piece of code generates an address in the same way <code>CREATE2</code> does.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="p">(</span><span class="kt">address</span> <span class="n">token0</span><span class="p">,</span> <span class="kt">address</span> <span class="n">token1</span><span class="p">)</span> <span class="o">=</span> <span class="n">sortTokens</span><span class="p">(</span><span class="n">tokenA</span><span class="p">,</span> <span class="n">tokenB</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="n">pairAddress</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint160</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">uint256</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="nb">keccak256</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                <span class="nb">abi</span><span class="p">.</span><span class="nb">encodePacked</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                    <span class="s">hex&#34;ff&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="n">factoryAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="nb">keccak256</span><span class="p">(</span><span class="nb">abi</span><span class="p">.</span><span class="nb">encodePacked</span><span class="p">(</span><span class="n">token0</span><span class="p">,</span> <span class="n">token1</span><span class="p">)),</span>
+</span></span><span class="line"><span class="cl">                    <span class="nb">keccak256</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="nc">ZuniswapV2Pair</span><span class="p">).</span><span class="nb">creationCode</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">);</span>
+</span></span></code></pre></div><p>This piece of code generates an address in the same way <code>CREATE2</code> does.</p>
 <ol>
 <li>First step is to sort token addresses. Remember the <code>createPair</code> function? We used sorted token addresses as salt.</li>
 <li>Next, we build a sequence of bytes that includes:
@@ -406,7 +404,7 @@ of <code>CREATE2</code> opcode.</p>
 <li><code>0xff</code> – this first byte helps to avoid collisions with <code>CREATE</code> opcode. (More details are in <a href="https://eips.ethereum.org/EIPS/eip-1014">EIP-1014</a>.)</li>
 <li><code>factoryAddress</code> – factory that was used to deploy the pair.</li>
 <li>salt – token addressees sorted and hashed.</li>
-<li>hash of pair contract bytecode – in the <code>createPair</code> function, we used <code>creationCode</code> to get this bytecode.</li>
+<li>hash of pair contract bytecode – we hash <code>creationCode</code> to get this value.</li>
 </ol>
 </li>
 <li>Then, this sequence of bytes gets hashed (<code>keccak256</code>) and converted to <code>address</code>
@@ -414,31 +412,18 @@ of <code>CREATE2</code> opcode.</p>
 </ol>
 <p>This whole process is defined in <a href="https://eips.ethereum.org/EIPS/eip-1014">EIP-1014</a> and implemented in the <code>CREATE2</code>
 opcode. What we&rsquo;re doing here is reimplementing address generation in Solidity!</p>
-<p>Now, how do we get contract bytecode and its hash?</p>
-<p>Getting contract bytecode is not a problem–we simply need to compile the pair contract. And we have already done that
-during development: Forge compiles contracts automatically and stores them in <code>out</code> folder. Specifically, compiled pair
-contract is saved at <code>out/ZuniswapV2Pair.sol/ZuniswapV2Pair.json</code>–there&rsquo;s a bunch of things in this file and we need only
-the bytecode. We can extract it from the file, but, luckily, Forge makes this simpler:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ forge inspect ZuniswapV2Pair bytecode
-</code></pre></div><p>Next, we need to hash the output of this command. Foundry is not only Forge but also Cast, a CLI tool with a bunch of
-useful Ethereum and EVM related functions. Specifically, we&rsquo;re interested in <code>keccak</code> subcommand, which hashes input
-with Keccak-256.</p>
-<p>This is what the final command looks like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ forge inspect ZuniswapV2Pair bytecode<span class="p">|</span> xargs cast keccak
-0x049f60b9e01e08c8f30809369bea021451544d751aa028da0bc80c726d334c6c
-</code></pre></div><p>Finally, we&rsquo;ve reached the <code>quote</code> function.</p>
-<div class="highlight"><pre class="chroma"><code class="language-solidity" data-lang="solidity"><span class="kd">function</span> <span class="n">quote</span><span class="p">(</span>
-  <span class="kt">uint256</span> <span class="n">amountIn</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="n">reserveIn</span><span class="p">,</span>
-  <span class="kt">uint256</span> <span class="n">reserveOut</span>
-<span class="p">)</span> <span class="kr">public</span> <span class="kr">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">amountOut</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">amountIn</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAmount</span><span class="p">();</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">reserveIn</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">reserveOut</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
-
-  <span class="k">return</span> <span class="p">(</span><span class="n">amountIn</span> <span class="o">*</span> <span class="n">reserveOut</span><span class="p">)</span> <span class="o">/</span> <span class="n">reserveIn</span><span class="p">;</span>
-<span class="p">}</span>
-
-</code></pre></div><p>As we discussed earlier, this function calculates output amount based on input amount and pair reserves. This allows to
+<p>Finally, we&rsquo;ve reached the <code>quote</code> function.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">quote</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">amountIn</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">reserveIn</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="kt">uint256</span> <span class="n">reserveOut</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="k">public</span> <span class="k">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">amountOut</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">amountIn</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientAmount</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="p">(</span><span class="n">reserveIn</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">reserveOut</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">InsufficientLiquidity</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="p">(</span><span class="n">amountIn</span> <span class="o">*</span> <span class="n">reserveOut</span><span class="p">)</span> <span class="o">/</span> <span class="n">reserveIn</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>As we discussed earlier, this function calculates output amount based on input amount and pair reserves. This allows to
 find how much of token B we would get in exchange for a specific amount of token A. This function is only used in
 liquidity calculation. In swapping, a formula based on the constant product formula is used.</p>
 <p>That&rsquo;s it for today!</p>

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Hugo 0.83.1" />
+  <meta name="generator" content="Hugo 0.97.3" />
 
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +38,7 @@
   <article class="post">
     <header class="post-header">
       <h1 class="post-title">Building Blockchain in Go. Part 7: Network</h1>
-      <time class="post-date" datetime="2017-10-06 12:31:19 &#43;07">06 Oct 2017</time>
+      <time class="post-date" datetime="2017-10-06 12:31:19 &#43;0700">06 Oct 2017</time>
     </header>
 
     <blockquote>
@@ -100,216 +100,216 @@ SPV stands for Simplified Payment Verification. These nodes don&rsquo;t store a 
 <p>This is what it looks like in Bitcoin. Even though we&rsquo;re not going to build a real P2P network, we&rsquo;re going to implement a real, and the main and most important, use case of Bitcoin.</p>
 <h3 id="version">version</h3>
 <p>Nodes communicate by the means of messages. When a new node is run, it gets several nodes from a DNS seed, and sends them <code>version</code> message, which in our implementation will look like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">version</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">Version</span>    <span class="kt">int</span>
-    <span class="nx">BestHeight</span> <span class="kt">int</span>
-    <span class="nx">AddrFrom</span>   <span class="kt">string</span>
-<span class="p">}</span>
-</code></pre></div><p>We have only one blockchain version, so the <code>Version</code> field won&rsquo;t keep any important information. <code>BestHeight</code> stores the length of the node&rsquo;s blockchain. <code>AddFrom</code> stores the address of the sender.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">version</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Version</span>    <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">BestHeight</span> <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">AddrFrom</span>   <span class="kt">string</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>We have only one blockchain version, so the <code>Version</code> field won&rsquo;t keep any important information. <code>BestHeight</code> stores the length of the node&rsquo;s blockchain. <code>AddFrom</code> stores the address of the sender.</p>
 <p>What should a node that receives a <code>version</code> message do? It&rsquo;ll respond with its own <code>version</code> message. This is a kind of a handshake: no other interaction is possible without prior greeting of each other. But it&rsquo;s not just politeness: <code>version</code> is used to find a longer blockchain. When a node receives a <code>version</code> message it checks if the node&rsquo;s blockchain is longer than the value of <code>BestHeight</code>. If it&rsquo;s not, the node will request and download missing blocks.</p>
 <p>In order to receive message, we need a server:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">nodeAddress</span> <span class="kt">string</span>
-<span class="kd">var</span> <span class="nx">knownNodes</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;localhost:3000&#34;</span><span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">StartServer</span><span class="p">(</span><span class="nx">nodeID</span><span class="p">,</span> <span class="nx">minerAddress</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">nodeAddress</span> <span class="p">=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;localhost:%s&#34;</span><span class="p">,</span> <span class="nx">nodeID</span><span class="p">)</span>
-    <span class="nx">miningAddress</span> <span class="p">=</span> <span class="nx">minerAddress</span>
-    <span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="nx">protocol</span><span class="p">,</span> <span class="nx">nodeAddress</span><span class="p">)</span>
-    <span class="k">defer</span> <span class="nx">ln</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-
-    <span class="nx">bc</span> <span class="o">:=</span> <span class="nf">NewBlockchain</span><span class="p">(</span><span class="nx">nodeID</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">!=</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
-        <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">bc</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="k">for</span> <span class="p">{</span>
-        <span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ln</span><span class="p">.</span><span class="nf">Accept</span><span class="p">()</span>
-        <span class="k">go</span> <span class="nf">handleConnection</span><span class="p">(</span><span class="nx">conn</span><span class="p">,</span> <span class="nx">bc</span><span class="p">)</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>First, we hardcode the address of the central node: every node must know where to connect to initially. <code>minerAddress</code> argument specifies the address to receive mining rewards to. This piece:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">!=</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
-    <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">bc</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>Means that if current node is not the central one, it must send <code>version</code> message to the central node to find out if its blockchain is outdated.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">addr</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">bestHeight</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBestHeight</span><span class="p">()</span>
-    <span class="nx">payload</span> <span class="o">:=</span> <span class="nf">gobEncode</span><span class="p">(</span><span class="nx">version</span><span class="p">{</span><span class="nx">nodeVersion</span><span class="p">,</span> <span class="nx">bestHeight</span><span class="p">,</span> <span class="nx">nodeAddress</span><span class="p">})</span>
-
-    <span class="nx">request</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">(</span><span class="nf">commandToBytes</span><span class="p">(</span><span class="s">&#34;version&#34;</span><span class="p">),</span> <span class="nx">payload</span><span class="o">...</span><span class="p">)</span>
-
-    <span class="nf">sendData</span><span class="p">(</span><span class="nx">addr</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>Our messages, on the lower level, are sequences of bytes. First 12 bytes specify command name (&ldquo;version&rdquo; in this case), and the latter bytes will contain <code>gob</code>-encoded message structure. <code>commandToBytes</code> looks like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">commandToBytes</span><span class="p">(</span><span class="nx">command</span> <span class="kt">string</span><span class="p">)</span> <span class="p">[]</span><span class="kt">byte</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">bytes</span> <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
-
-    <span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">c</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">command</span> <span class="p">{</span>
-        <span class="nx">bytes</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nb">byte</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="k">return</span> <span class="nx">bytes</span><span class="p">[:]</span>
-<span class="p">}</span>
-</code></pre></div><p>It creates a 12-byte buffer and fills it with the command name, leaving rest bytes empty. There&rsquo;s an opposite function:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">bytesToCommand</span><span class="p">(</span><span class="nx">bytes</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">command</span> <span class="p">[]</span><span class="kt">byte</span>
-
-    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">b</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">bytes</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nx">b</span> <span class="o">!=</span> <span class="mh">0x0</span> <span class="p">{</span>
-            <span class="nx">command</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">command</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-
-    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%s&#34;</span><span class="p">,</span> <span class="nx">command</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>When a node receives a command, it runs <code>bytesToCommand</code> to extract command name and processes command body with correct handler:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleConnection</span><span class="p">(</span><span class="nx">conn</span> <span class="nx">net</span><span class="p">.</span><span class="nx">Conn</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">request</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">conn</span><span class="p">)</span>
-    <span class="nx">command</span> <span class="o">:=</span> <span class="nf">bytesToCommand</span><span class="p">(</span><span class="nx">request</span><span class="p">[:</span><span class="nx">commandLength</span><span class="p">])</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Received %s command\n&#34;</span><span class="p">,</span> <span class="nx">command</span><span class="p">)</span>
-
-    <span class="k">switch</span> <span class="nx">command</span> <span class="p">{</span>
-    <span class="o">...</span>
-    <span class="k">case</span> <span class="s">&#34;version&#34;</span><span class="p">:</span>
-        <span class="nf">handleVersion</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">bc</span><span class="p">)</span>
-    <span class="k">default</span><span class="p">:</span>
-        <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Unknown command!&#34;</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="nx">conn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-<span class="p">}</span>
-</code></pre></div><p>Ok, this is what the <code>version</code> command handler looks like:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleVersion</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">buff</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
-    <span class="kd">var</span> <span class="nx">payload</span> <span class="nx">verzion</span>
-
-    <span class="nx">buff</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">request</span><span class="p">[</span><span class="nx">commandLength</span><span class="p">:])</span>
-    <span class="nx">dec</span> <span class="o">:=</span> <span class="nx">gob</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buff</span><span class="p">)</span>
-    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">dec</span><span class="p">.</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">payload</span><span class="p">)</span>
-
-    <span class="nx">myBestHeight</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBestHeight</span><span class="p">()</span>
-    <span class="nx">foreignerBestHeight</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">BestHeight</span>
-
-    <span class="k">if</span> <span class="nx">myBestHeight</span> <span class="p">&lt;</span> <span class="nx">foreignerBestHeight</span> <span class="p">{</span>
-        <span class="nf">sendGetBlocks</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">)</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">myBestHeight</span> <span class="p">&gt;</span> <span class="nx">foreignerBestHeight</span> <span class="p">{</span>
-        <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="nx">bc</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="k">if</span> <span class="p">!</span><span class="nf">nodeIsKnown</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">knownNodes</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">knownNodes</span><span class="p">,</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">)</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>First, we need to decode the request and extract the payload. This is similar to all the handlers, so I&rsquo;ll omit this piece in the future code snippets.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">nodeAddress</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">knownNodes</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;localhost:3000&#34;</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">StartServer</span><span class="p">(</span><span class="nx">nodeID</span><span class="p">,</span> <span class="nx">minerAddress</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">nodeAddress</span> <span class="p">=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;localhost:%s&#34;</span><span class="p">,</span> <span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">miningAddress</span> <span class="p">=</span> <span class="nx">minerAddress</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="nx">protocol</span><span class="p">,</span> <span class="nx">nodeAddress</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">defer</span> <span class="nx">ln</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">bc</span> <span class="o">:=</span> <span class="nf">NewBlockchain</span><span class="p">(</span><span class="nx">nodeID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">!=</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">bc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ln</span><span class="p">.</span><span class="nf">Accept</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">go</span> <span class="nf">handleConnection</span><span class="p">(</span><span class="nx">conn</span><span class="p">,</span> <span class="nx">bc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First, we hardcode the address of the central node: every node must know where to connect to initially. <code>minerAddress</code> argument specifies the address to receive mining rewards to. This piece:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">!=</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">bc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Means that if current node is not the central one, it must send <code>version</code> message to the central node to find out if its blockchain is outdated.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">addr</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">bestHeight</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBestHeight</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">payload</span> <span class="o">:=</span> <span class="nf">gobEncode</span><span class="p">(</span><span class="nx">version</span><span class="p">{</span><span class="nx">nodeVersion</span><span class="p">,</span> <span class="nx">bestHeight</span><span class="p">,</span> <span class="nx">nodeAddress</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">request</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">(</span><span class="nf">commandToBytes</span><span class="p">(</span><span class="s">&#34;version&#34;</span><span class="p">),</span> <span class="nx">payload</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nf">sendData</span><span class="p">(</span><span class="nx">addr</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Our messages, on the lower level, are sequences of bytes. First 12 bytes specify command name (&ldquo;version&rdquo; in this case), and the latter bytes will contain <code>gob</code>-encoded message structure. <code>commandToBytes</code> looks like this:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">commandToBytes</span><span class="p">(</span><span class="nx">command</span> <span class="kt">string</span><span class="p">)</span> <span class="p">[]</span><span class="kt">byte</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">bytes</span> <span class="p">[</span><span class="nx">commandLength</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">c</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">command</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">bytes</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nb">byte</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">bytes</span><span class="p">[:]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>It creates a 12-byte buffer and fills it with the command name, leaving rest bytes empty. There&rsquo;s an opposite function:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">bytesToCommand</span><span class="p">(</span><span class="nx">bytes</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">command</span> <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">b</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">bytes</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">b</span> <span class="o">!=</span> <span class="mh">0x0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">command</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">command</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%s&#34;</span><span class="p">,</span> <span class="nx">command</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>When a node receives a command, it runs <code>bytesToCommand</code> to extract command name and processes command body with correct handler:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleConnection</span><span class="p">(</span><span class="nx">conn</span> <span class="nx">net</span><span class="p">.</span><span class="nx">Conn</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">request</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">conn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">command</span> <span class="o">:=</span> <span class="nf">bytesToCommand</span><span class="p">(</span><span class="nx">request</span><span class="p">[:</span><span class="nx">commandLength</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Received %s command\n&#34;</span><span class="p">,</span> <span class="nx">command</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">switch</span> <span class="nx">command</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="s">&#34;version&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">handleVersion</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">bc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Unknown command!&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">conn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Ok, this is what the <code>version</code> command handler looks like:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleVersion</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">buff</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
+</span></span><span class="line"><span class="cl">    <span class="kd">var</span> <span class="nx">payload</span> <span class="nx">verzion</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">buff</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">request</span><span class="p">[</span><span class="nx">commandLength</span><span class="p">:])</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">dec</span> <span class="o">:=</span> <span class="nx">gob</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">buff</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">err</span> <span class="o">:=</span> <span class="nx">dec</span><span class="p">.</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">payload</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">myBestHeight</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBestHeight</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">foreignerBestHeight</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">BestHeight</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">myBestHeight</span> <span class="p">&lt;</span> <span class="nx">foreignerBestHeight</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">sendGetBlocks</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">myBestHeight</span> <span class="p">&gt;</span> <span class="nx">foreignerBestHeight</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">sendVersion</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="nx">bc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">!</span><span class="nf">nodeIsKnown</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">knownNodes</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">knownNodes</span><span class="p">,</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First, we need to decode the request and extract the payload. This is similar to all the handlers, so I&rsquo;ll omit this piece in the future code snippets.</p>
 <p>Then a node compares its <code>BestHeight</code> with the one from the message. If the node&rsquo;s blockchain is longer, it&rsquo;ll reply with <code>version</code> message; otherwise, it&rsquo;ll send <code>getblocks</code> message.</p>
 <h3 id="getblocks">getblocks</h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">getblocks</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">AddrFrom</span> <span class="kt">string</span>
-<span class="p">}</span>
-</code></pre></div><p><code>getblocks</code> means &ldquo;show me what blocks you have&rdquo; (in Bitcoin, it&rsquo;s more complex). Pay attention, it doesn&rsquo;t say &ldquo;give me all your blocks&rdquo;, instead it requests a list of block hashes. This is done to reduce network load, because blocks can be downloaded from different nodes, and we don&rsquo;t want to download dozens of gigabytes from one node.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">getblocks</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">AddrFrom</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p><code>getblocks</code> means &ldquo;show me what blocks you have&rdquo; (in Bitcoin, it&rsquo;s more complex). Pay attention, it doesn&rsquo;t say &ldquo;give me all your blocks&rdquo;, instead it requests a list of block hashes. This is done to reduce network load, because blocks can be downloaded from different nodes, and we don&rsquo;t want to download dozens of gigabytes from one node.</p>
 <p>Handling the command as easy as:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleGetBlocks</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">...</span>
-    <span class="nx">blocks</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBlockHashes</span><span class="p">()</span>
-    <span class="nf">sendInv</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="nx">blocks</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>In our simplified implementation, it&rsquo;ll return <strong>all block hashes</strong>.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleGetBlocks</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">blocks</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBlockHashes</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">sendInv</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="nx">blocks</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>In our simplified implementation, it&rsquo;ll return <strong>all block hashes</strong>.</p>
 <h3 id="inv">inv</h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">inv</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">AddrFrom</span> <span class="kt">string</span>
-    <span class="nx">Type</span>     <span class="kt">string</span>
-    <span class="nx">Items</span>    <span class="p">[][]</span><span class="kt">byte</span>
-<span class="p">}</span>
-</code></pre></div><p>Bitcoin uses <code>inv</code> to show other nodes what blocks or transactions current node has. Again, it doesn&rsquo;t contain whole blocks and transactions, just their hashes. The <code>Type</code> field says whether these are blocks or transactions.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">inv</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">AddrFrom</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Type</span>     <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Items</span>    <span class="p">[][]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Bitcoin uses <code>inv</code> to show other nodes what blocks or transactions current node has. Again, it doesn&rsquo;t contain whole blocks and transactions, just their hashes. The <code>Type</code> field says whether these are blocks or transactions.</p>
 <p>Handling <code>inv</code> is more difficult:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleInv</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">...</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Recevied inventory with %d %s\n&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span><span class="p">),</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;block&#34;</span> <span class="p">{</span>
-        <span class="nx">blocksInTransit</span> <span class="p">=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span>
-
-        <span class="nx">blockHash</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="nf">sendGetData</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="nx">blockHash</span><span class="p">)</span>
-
-        <span class="nx">newInTransit</span> <span class="o">:=</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{}</span>
-        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">b</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">blocksInTransit</span> <span class="p">{</span>
-            <span class="k">if</span> <span class="nx">bytes</span><span class="p">.</span><span class="nf">Compare</span><span class="p">(</span><span class="nx">b</span><span class="p">,</span> <span class="nx">blockHash</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
-                <span class="nx">newInTransit</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">newInTransit</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-        <span class="nx">blocksInTransit</span> <span class="p">=</span> <span class="nx">newInTransit</span>
-    <span class="p">}</span>
-
-    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;tx&#34;</span> <span class="p">{</span>
-        <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">txID</span><span class="p">)].</span><span class="nx">ID</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-            <span class="nf">sendGetData</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;tx&#34;</span><span class="p">,</span> <span class="nx">txID</span><span class="p">)</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>If blocks hashes are transferred, we want to save them in <code>blocksInTransit</code> variable to track downloaded blocks. This allows us to download blocks from different nodes.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleInv</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Recevied inventory with %d %s\n&#34;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span><span class="p">),</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;block&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">blocksInTransit</span> <span class="p">=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="nx">blockHash</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">sendGetData</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="nx">blockHash</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="nx">newInTransit</span> <span class="o">:=</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">b</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">blocksInTransit</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">bytes</span><span class="p">.</span><span class="nf">Compare</span><span class="p">(</span><span class="nx">b</span><span class="p">,</span> <span class="nx">blockHash</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">newInTransit</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">newInTransit</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">blocksInTransit</span> <span class="p">=</span> <span class="nx">newInTransit</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;tx&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">txID</span><span class="p">)].</span><span class="nx">ID</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nf">sendGetData</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;tx&#34;</span><span class="p">,</span> <span class="nx">txID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>If blocks hashes are transferred, we want to save them in <code>blocksInTransit</code> variable to track downloaded blocks. This allows us to download blocks from different nodes.
 Right after putting blocks into the transit state, we send <code>getdata</code> command to the sender of the <code>inv</code> message and update <code>blocksInTransit</code>. In a real P2P network, we would want to transfer blocks from different nodes.</p>
 <p>In our implementation, we&rsquo;ll never send <code>inv</code> with multiple hashes. That&rsquo;s why when <code>payload.Type == &quot;tx&quot;</code> only the first hash is taken. Then we check if we already have the hash in our mempool, and if not, <code>getdata</code> message is sent.</p>
 <h3 id="getdata">getdata</h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">getdata</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">AddrFrom</span> <span class="kt">string</span>
-    <span class="nx">Type</span>     <span class="kt">string</span>
-    <span class="nx">ID</span>       <span class="p">[]</span><span class="kt">byte</span>
-<span class="p">}</span>
-</code></pre></div><p><code>getdata</code> is a request for certain block or transaction, and it can contain only one block/transaction ID.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleGetData</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">...</span>
-    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;block&#34;</span> <span class="p">{</span>
-        <span class="nx">block</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBlock</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
-
-        <span class="nf">sendBlock</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">block</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;tx&#34;</span> <span class="p">{</span>
-        <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
-        <span class="nx">tx</span> <span class="o">:=</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">txID</span><span class="p">]</span>
-
-        <span class="nf">sendTx</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>The handler is straightforward: if they request a block, return the block; if they request a transaction, return the transaction. Notice, that we don&rsquo;t check if we actually have this block or transaction. This is a flaw :)</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">getdata</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">AddrFrom</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Type</span>     <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">ID</span>       <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p><code>getdata</code> is a request for certain block or transaction, and it can contain only one block/transaction ID.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleGetData</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;block&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">block</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">GetBlock</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="nf">sendBlock</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">block</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Type</span> <span class="o">==</span> <span class="s">&#34;tx&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">tx</span> <span class="o">:=</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">txID</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="nf">sendTx</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>The handler is straightforward: if they request a block, return the block; if they request a transaction, return the transaction. Notice, that we don&rsquo;t check if we actually have this block or transaction. This is a flaw :)</p>
 <h3 id="block-and-tx">block and tx</h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">block</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">AddrFrom</span> <span class="kt">string</span>
-    <span class="nx">Block</span>    <span class="p">[]</span><span class="kt">byte</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">tx</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">AddFrom</span>     <span class="kt">string</span>
-    <span class="nx">Transaction</span> <span class="p">[]</span><span class="kt">byte</span>
-<span class="p">}</span>
-</code></pre></div><p>It&rsquo;s these messages that actually transfer the data.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">block</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">AddrFrom</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Block</span>    <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">tx</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">AddFrom</span>     <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">Transaction</span> <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>It&rsquo;s these messages that actually transfer the data.</p>
 <p>Handling the <code>block</code> message is easy:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleBlock</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">...</span>
-
-    <span class="nx">blockData</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Block</span>
-    <span class="nx">block</span> <span class="o">:=</span> <span class="nf">DeserializeBlock</span><span class="p">(</span><span class="nx">blockData</span><span class="p">)</span>
-
-    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Recevied a new block!&#34;</span><span class="p">)</span>
-    <span class="nx">bc</span><span class="p">.</span><span class="nf">AddBlock</span><span class="p">(</span><span class="nx">block</span><span class="p">)</span>
-
-    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Added block %x\n&#34;</span><span class="p">,</span> <span class="nx">block</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">blocksInTransit</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="nx">blockHash</span> <span class="o">:=</span> <span class="nx">blocksInTransit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="nf">sendGetData</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="nx">blockHash</span><span class="p">)</span>
-
-        <span class="nx">blocksInTransit</span> <span class="p">=</span> <span class="nx">blocksInTransit</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="nx">UTXOSet</span> <span class="o">:=</span> <span class="nx">UTXOSet</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
-        <span class="nx">UTXOSet</span><span class="p">.</span><span class="nf">Reindex</span><span class="p">()</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>When we received a new block, we put it into our blockchain. If there&rsquo;re more blocks to download, we request them from the same node we downloaded the previous block. When we finally downloaded all the blocks, the UTXO set is reindexed.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleBlock</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">blockData</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Block</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">block</span> <span class="o">:=</span> <span class="nf">DeserializeBlock</span><span class="p">(</span><span class="nx">blockData</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Recevied a new block!&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">bc</span><span class="p">.</span><span class="nf">AddBlock</span><span class="p">(</span><span class="nx">block</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Added block %x\n&#34;</span><span class="p">,</span> <span class="nx">block</span><span class="p">.</span><span class="nx">Hash</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">blocksInTransit</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">blockHash</span> <span class="o">:=</span> <span class="nx">blocksInTransit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">sendGetData</span><span class="p">(</span><span class="nx">payload</span><span class="p">.</span><span class="nx">AddrFrom</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="nx">blockHash</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="nx">blocksInTransit</span> <span class="p">=</span> <span class="nx">blocksInTransit</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">UTXOSet</span> <span class="o">:=</span> <span class="nx">UTXOSet</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">UTXOSet</span><span class="p">.</span><span class="nf">Reindex</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>When we received a new block, we put it into our blockchain. If there&rsquo;re more blocks to download, we request them from the same node we downloaded the previous block. When we finally downloaded all the blocks, the UTXO set is reindexed.</p>
 <blockquote>
 <p>TODO: Instead of trusting unconditionally, we should validate every incoming block before adding it to the blockchain.</p>
 </blockquote>
@@ -317,176 +317,176 @@ Right after putting blocks into the transit state, we send <code>getdata</code> 
 <p>TODO: Instead of running UTXOSet.Reindex(), UTXOSet.Update(block) should be used, because if blockchain is big, it&rsquo;ll take a lot of time to reindex the whole UTXO set.</p>
 </blockquote>
 <p>Handling <code>tx</code> messages is the most difficult part:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">handleTx</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">...</span>
-    <span class="nx">txData</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Transaction</span>
-    <span class="nx">tx</span> <span class="o">:=</span> <span class="nf">DeserializeTransaction</span><span class="p">(</span><span class="nx">txData</span><span class="p">)</span>
-    <span class="nx">mempool</span><span class="p">[</span><span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">)]</span> <span class="p">=</span> <span class="nx">tx</span>
-
-    <span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">==</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
-        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
-            <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="o">&amp;&amp;</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">AddFrom</span> <span class="p">{</span>
-                <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;tx&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">})</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">&amp;&amp;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="nx">MineTransactions</span><span class="p">:</span>
-            <span class="kd">var</span> <span class="nx">txs</span> <span class="p">[]</span><span class="o">*</span><span class="nx">Transaction</span>
-
-            <span class="k">for</span> <span class="nx">id</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">mempool</span> <span class="p">{</span>
-                <span class="nx">tx</span> <span class="o">:=</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span>
-                <span class="k">if</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">VerifyTransaction</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span> <span class="p">{</span>
-                    <span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span>
-                <span class="p">}</span>
-            <span class="p">}</span>
-
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-                <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;All transactions are invalid! Waiting for new ones...&#34;</span><span class="p">)</span>
-                <span class="k">return</span>
-            <span class="p">}</span>
-
-            <span class="nx">cbTx</span> <span class="o">:=</span> <span class="nf">NewCoinbaseTX</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-            <span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="nx">cbTx</span><span class="p">)</span>
-
-            <span class="nx">newBlock</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">MineBlock</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span>
-            <span class="nx">UTXOSet</span> <span class="o">:=</span> <span class="nx">UTXOSet</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
-            <span class="nx">UTXOSet</span><span class="p">.</span><span class="nf">Reindex</span><span class="p">()</span>
-
-            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;New block is mined!&#34;</span><span class="p">)</span>
-
-            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">txs</span> <span class="p">{</span>
-                <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
-                <span class="nb">delete</span><span class="p">(</span><span class="nx">mempool</span><span class="p">,</span> <span class="nx">txID</span><span class="p">)</span>
-            <span class="p">}</span>
-
-            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
-                <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="p">{</span>
-                    <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">})</span>
-                <span class="p">}</span>
-            <span class="p">}</span>
-
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
-                <span class="k">goto</span> <span class="nx">MineTransactions</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>First thing to do is to put new transaction in the mempool (again, transactions must be verified before being placed into the mempool). Next piece:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">==</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
-    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="o">&amp;&amp;</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">AddFrom</span> <span class="p">{</span>
-            <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;tx&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">})</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>Checks whether the current node is the central one. In our implementation, the central node won&rsquo;t mine blocks. Instead, it&rsquo;ll forward the new transactions to other nodes in the network.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">handleTx</span><span class="p">(</span><span class="nx">request</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bc</span> <span class="o">*</span><span class="nx">Blockchain</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">txData</span> <span class="o">:=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">Transaction</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">tx</span> <span class="o">:=</span> <span class="nf">DeserializeTransaction</span><span class="p">(</span><span class="nx">txData</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mempool</span><span class="p">[</span><span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">)]</span> <span class="p">=</span> <span class="nx">tx</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">==</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="o">&amp;&amp;</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">AddFrom</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;tx&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">&amp;&amp;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">MineTransactions</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="kd">var</span> <span class="nx">txs</span> <span class="p">[]</span><span class="o">*</span><span class="nx">Transaction</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">for</span> <span class="nx">id</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">mempool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">tx</span> <span class="o">:=</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">VerifyTransaction</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;All transactions are invalid! Waiting for new ones...&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="nx">cbTx</span> <span class="o">:=</span> <span class="nf">NewCoinbaseTX</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="nx">cbTx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="nx">newBlock</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">MineBlock</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">UTXOSet</span> <span class="o">:=</span> <span class="nx">UTXOSet</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">UTXOSet</span><span class="p">.</span><span class="nf">Reindex</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;New block is mined!&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">txs</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="nb">delete</span><span class="p">(</span><span class="nx">mempool</span><span class="p">,</span> <span class="nx">txID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">                <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="k">goto</span> <span class="nx">MineTransactions</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First thing to do is to put new transaction in the mempool (again, transactions must be verified before being placed into the mempool). Next piece:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">nodeAddress</span> <span class="o">==</span> <span class="nx">knownNodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="o">&amp;&amp;</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">payload</span><span class="p">.</span><span class="nx">AddFrom</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;tx&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Checks whether the current node is the central one. In our implementation, the central node won&rsquo;t mine blocks. Instead, it&rsquo;ll forward the new transactions to other nodes in the network.</p>
 <p>The next big piece is only for miner nodes. Let&rsquo;s split it into smaller pieces:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">&amp;&amp;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
-</code></pre></div><p><code>miningAddress</code> is only set on miner nodes. When there are 2 or more transactions in the mempool of the current (miner) node, mining begins.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">for</span> <span class="nx">id</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">mempool</span> <span class="p">{</span>
-    <span class="nx">tx</span> <span class="o">:=</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span>
-    <span class="k">if</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">VerifyTransaction</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;All transactions are invalid! Waiting for new ones...&#34;</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-</code></pre></div><p>First, all transactions in the mempool are verified. Invalid transactions are ignored, and if there are no valid transactions, mining is interrupted.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">cbTx</span> <span class="o">:=</span> <span class="nf">NewCoinbaseTX</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
-<span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="nx">cbTx</span><span class="p">)</span>
-
-<span class="nx">newBlock</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">MineBlock</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span>
-<span class="nx">UTXOSet</span> <span class="o">:=</span> <span class="nx">UTXOSet</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
-<span class="nx">UTXOSet</span><span class="p">.</span><span class="nf">Reindex</span><span class="p">()</span>
-
-<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;New block is mined!&#34;</span><span class="p">)</span>
-</code></pre></div><p>Verified transactions are being put into a block, as well as a coinbase transaction with the reward. After mining the block, the UTXO set is reindexed.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">&amp;&amp;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span></code></pre></div><p><code>miningAddress</code> is only set on miner nodes. When there are 2 or more transactions in the mempool of the current (miner) node, mining begins.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">for</span> <span class="nx">id</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">mempool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">tx</span> <span class="o">:=</span> <span class="nx">mempool</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">VerifyTransaction</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">tx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;All transactions are invalid! Waiting for new ones...&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>First, all transactions in the mempool are verified. Invalid transactions are ignored, and if there are no valid transactions, mining is interrupted.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">cbTx</span> <span class="o">:=</span> <span class="nf">NewCoinbaseTX</span><span class="p">(</span><span class="nx">miningAddress</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">txs</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">txs</span><span class="p">,</span> <span class="nx">cbTx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">newBlock</span> <span class="o">:=</span> <span class="nx">bc</span><span class="p">.</span><span class="nf">MineBlock</span><span class="p">(</span><span class="nx">txs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">UTXOSet</span> <span class="o">:=</span> <span class="nx">UTXOSet</span><span class="p">{</span><span class="nx">bc</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nx">UTXOSet</span><span class="p">.</span><span class="nf">Reindex</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;New block is mined!&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><p>Verified transactions are being put into a block, as well as a coinbase transaction with the reward. After mining the block, the UTXO set is reindexed.</p>
 <blockquote>
 <p>TODO: Again, UTXOSet.Update should be used instead of UTXOSet.Reindex</p>
 </blockquote>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">txs</span> <span class="p">{</span>
-    <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
-    <span class="nb">delete</span><span class="p">(</span><span class="nx">mempool</span><span class="p">,</span> <span class="nx">txID</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="p">{</span>
-        <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">})</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
-    <span class="k">goto</span> <span class="nx">MineTransactions</span>
-<span class="p">}</span>
-</code></pre></div><p>After a transaction is mined, it&rsquo;s removed from the mempool. Every other nodes the current node is aware of, receive <code>inv</code> message with the new block&rsquo;s hash. They can request the block after handling the message.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">txs</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">txID</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">EncodeToString</span><span class="p">(</span><span class="nx">tx</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">delete</span><span class="p">(</span><span class="nx">mempool</span><span class="p">,</span> <span class="nx">txID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">node</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownNodes</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="nx">node</span> <span class="o">!=</span> <span class="nx">nodeAddress</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">sendInv</span><span class="p">(</span><span class="nx">node</span><span class="p">,</span> <span class="s">&#34;block&#34;</span><span class="p">,</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">{</span><span class="nx">newBlock</span><span class="p">.</span><span class="nx">Hash</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">mempool</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">goto</span> <span class="nx">MineTransactions</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>After a transaction is mined, it&rsquo;s removed from the mempool. Every other nodes the current node is aware of, receive <code>inv</code> message with the new block&rsquo;s hash. They can request the block after handling the message.</p>
 <h2 id="result">Result</h2>
 <p>Let&rsquo;s play the scenario we defined earlier.</p>
 <p>First, set <code>NODE_ID</code> to 3000 (<code>export NODE_ID=3000</code>) in the first terminal window. I&rsquo;ll use badges like <code>NODE 3000</code> or <code>NODE 3001</code> before next paragraphs, for you to know what node to perform actions on.</p>
 <p><code>NODE 3000</code><br>
 Create a wallet and a new blockchain:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go createblockchain -address CENTREAL_NODE
-</code></pre></div><p>(I&rsquo;ll use fake addresses for clarity and brevity)</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go createblockchain -address CENTREAL_NODE
+</span></span></code></pre></div><p>(I&rsquo;ll use fake addresses for clarity and brevity)</p>
 <p>After that, the blockchain will contain single genesis block. We need to save the block and use it in other nodes. Genesis blocks serve as identifiers of blockchains (in Bitcoin Core, the genesis block is hardcoded).</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ cp blockchain_3000.db blockchain_genesis.db 
-</code></pre></div><p><code>NODE 3001</code><br>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ cp blockchain_3000.db blockchain_genesis.db 
+</span></span></code></pre></div><p><code>NODE 3001</code><br>
 Next, open a new terminal window and set node ID to 3001. This will be a wallet node. Generate some addresses with <code>blockchain_go createwallet</code>, we&rsquo;ll call these addresses <code>WALLET_1</code>, <code>WALLET_2</code>, <code>WALLET_3</code>.</p>
 <p><code>NODE 3000</code><br>
 Send some coins to the wallet addresses:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go send -from CENTREAL_NODE -to WALLET_1 -amount <span class="m">10</span> -mine
-$ blockchain_go send -from CENTREAL_NODE -to WALLET_2 -amount <span class="m">10</span> -mine
-</code></pre></div><p><code>-mine</code> flag means that the block will be immediately mined by the same node. We have to have this flag because initially there are no miner nodes in the network.<br>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go send -from CENTREAL_NODE -to WALLET_1 -amount <span class="m">10</span> -mine
+</span></span><span class="line"><span class="cl">$ blockchain_go send -from CENTREAL_NODE -to WALLET_2 -amount <span class="m">10</span> -mine
+</span></span></code></pre></div><p><code>-mine</code> flag means that the block will be immediately mined by the same node. We have to have this flag because initially there are no miner nodes in the network.<br>
 Start the node:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go startnode
-</code></pre></div><p>The node must be running until the end of the scenario.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go startnode
+</span></span></code></pre></div><p>The node must be running until the end of the scenario.</p>
 <p><code>NODE 3001</code><br>
 Start the node&rsquo;s blockchain with the genesis block saved above:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ cp blockchain_genesis.db blockchain_3001.db
-</code></pre></div><p>Run the node:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go startnode
-</code></pre></div><p>It&rsquo;ll download all the blocks from the central node. To check that everything&rsquo;s ok, stop the node and check the balances:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go getbalance -address WALLET_1
-Balance of <span class="s1">&#39;WALLET_1&#39;</span>: <span class="m">10</span>
-
-$ blockchain_go getbalance -address WALLET_2
-Balance of <span class="s1">&#39;WALLET_2&#39;</span>: <span class="m">10</span>
-</code></pre></div><p>Also, you can check the balance of the <code>CENTRAL_NODE</code> address, because the node 3001 now has its blockchain:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go getbalance -address CENTRAL_NODE
-Balance of <span class="s1">&#39;CENTRAL_NODE&#39;</span>: <span class="m">10</span>
-</code></pre></div><p><code>NODE 3002</code><br>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ cp blockchain_genesis.db blockchain_3001.db
+</span></span></code></pre></div><p>Run the node:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go startnode
+</span></span></code></pre></div><p>It&rsquo;ll download all the blocks from the central node. To check that everything&rsquo;s ok, stop the node and check the balances:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go getbalance -address WALLET_1
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;WALLET_1&#39;</span>: <span class="m">10</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ blockchain_go getbalance -address WALLET_2
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;WALLET_2&#39;</span>: <span class="m">10</span>
+</span></span></code></pre></div><p>Also, you can check the balance of the <code>CENTRAL_NODE</code> address, because the node 3001 now has its blockchain:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go getbalance -address CENTRAL_NODE
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;CENTRAL_NODE&#39;</span>: <span class="m">10</span>
+</span></span></code></pre></div><p><code>NODE 3002</code><br>
 Open a new terminal window and set its ID to 3002, and generate a wallet. This will be a miner node. Initialize the blockchain:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ cp blockchain_genesis.db blockchain_3002.db
-</code></pre></div><p>And start the node:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go startnode -miner MINER_WALLET
-</code></pre></div><p><code>NODE 3001</code><br>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ cp blockchain_genesis.db blockchain_3002.db
+</span></span></code></pre></div><p>And start the node:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go startnode -miner MINER_WALLET
+</span></span></code></pre></div><p><code>NODE 3001</code><br>
 Send some coins:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go send -from WALLET_1 -to WALLET_3 -amount <span class="m">1</span>
-$ blockchain_go send -from WALLET_2 -to WALLET_4 -amount <span class="m">1</span>
-</code></pre></div><p><code>NODE 3002</code><br>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go send -from WALLET_1 -to WALLET_3 -amount <span class="m">1</span>
+</span></span><span class="line"><span class="cl">$ blockchain_go send -from WALLET_2 -to WALLET_4 -amount <span class="m">1</span>
+</span></span></code></pre></div><p><code>NODE 3002</code><br>
 Quickly! Switch to the miner node and see it mining a new block! Also, check the output of the central node.</p>
 <p><code>NODE 3001</code><br>
 Switch to the wallet node and start it:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go startnode
-</code></pre></div><p>It&rsquo;ll download the newly mined block!</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go startnode
+</span></span></code></pre></div><p>It&rsquo;ll download the newly mined block!</p>
 <p>Stop it and check balances:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ blockchain_go getbalance -address WALLET_1
-Balance of <span class="s1">&#39;WALLET_1&#39;</span>: <span class="m">9</span>
-
-$ blockchain_go getbalance -address WALLET_2
-Balance of <span class="s1">&#39;WALLET_2&#39;</span>: <span class="m">9</span>
-
-$ blockchain_go getbalance -address WALLET_3
-Balance of <span class="s1">&#39;WALLET_3&#39;</span>: <span class="m">1</span>
-
-$ blockchain_go getbalance -address WALLET_4
-Balance of <span class="s1">&#39;WALLET_4&#39;</span>: <span class="m">1</span>
-
-$ blockchain_go getbalance -address MINER_WALLET
-Balance of <span class="s1">&#39;MINER_WALLET&#39;</span>: <span class="m">10</span>
-</code></pre></div><p>That&rsquo;s it!</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ blockchain_go getbalance -address WALLET_1
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;WALLET_1&#39;</span>: <span class="m">9</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ blockchain_go getbalance -address WALLET_2
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;WALLET_2&#39;</span>: <span class="m">9</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ blockchain_go getbalance -address WALLET_3
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;WALLET_3&#39;</span>: <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ blockchain_go getbalance -address WALLET_4
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;WALLET_4&#39;</span>: <span class="m">1</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ blockchain_go getbalance -address MINER_WALLET
+</span></span><span class="line"><span class="cl">Balance of <span class="s1">&#39;MINER_WALLET&#39;</span>: <span class="m">10</span>
+</span></span></code></pre></div><p>That&rsquo;s it!</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>This was the final part of the series. I could&rsquo;ve publish some more posts implementing a real prototype of a P2P network, but I just don&rsquo;t have time for this. I hope this article answers some of your questions about the Bitcoin technology and raises new ones, for which you can find answers yourself. There are more interesting things hidden in the Bitcoin technology! Good luck!</p>
 <p>P.S. You can start improving the network with implementing the <code>addr</code> message, as described in the Bitcoin network protocol (link is below). This is a very important message, because it allows nodes to discover each other. I started implementing it, but haven&rsquo;t finished!</p>
