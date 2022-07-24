@@ -194,9 +194,10 @@ if (totalSupply == 0) {
 ```
 
 In the first branch, we're subtracting `MINIMUM_LIQUIDITY` (which is a constant 1000, or 1e-15) when initial liquidity is
-provided. This protect against one liquidity pool token share (1e-18) becoming too expensive, which would turn
-away small liquidity providers. Simply subtracting 1000 from initial liquidity makes the price of one liquidity share
-1000 times cheaper.
+provided. This protects from someone making one pool token share (1e-18, 1 wei) too expensive, which would turn away
+small liquidity providers. 1000 wei of LP-tokens is a negligible amount for most of pools, but if someone tries to
+make the cost of one pool token share too expensive (say, $100), they'd have to burn 1000 times of such cost (that is,
+$100,000).
 
 To solidify our understanding of minting, let's write tests.
 
