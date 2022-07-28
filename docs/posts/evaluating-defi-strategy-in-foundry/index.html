@@ -328,6 +328,12 @@ mainnet</strong>. Of course, it doesn&rsquo;t execute transactions in the mainne
 local test network.</p>
 <p>The fork mode is a great emulation environment that allows to interact with the Ethereum mainnet without
 paying for gas.</p>
+<blockquote>
+<p>It&rsquo;s worth noting that blockchain state changes each block, so it&rsquo;s very likely that, at the moment when you&rsquo;re reading
+this post, the above command will fail. To debug the failure run it with high verbosity level:
+<code>forge test --fork-url=$NODE_URL -vvvv</code>
+You&rsquo;ll likely to see different numbers in the test assertions and you would need to update them.</p>
+</blockquote>
 <p>That&rsquo;s it! I hope you learned something new. Next time I&rsquo;ll show how to run such strategy without writing and
 deploying a strategy contract. Stay tuned!</p>
 
