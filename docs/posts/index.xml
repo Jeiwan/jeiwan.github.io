@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Going the distance</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 24 Apr 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 22 Aug 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>My Paradigm CTF 2022 Solutions</title>
+      <link>https://jeiwan.net/posts/my-paradigm-ctf-solutions/</link>
+      <pubDate>Mon, 22 Aug 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/my-paradigm-ctf-solutions/</guid>
+      <description>Paradigm CTF is an online competition for smart contract hackers organized by Paradigm, an investment fund that supports Web3 and crypto companies. The competition consists of multiple challenges created by brightest minds of the field. The goal in each challenge is to hack a smart contract or to find another, absolutely non- obvious, way of solving it.
+This year, the CTF had 23 challenges. I solved 7 of them, got 1,379 points, and ended up 38th out of ~100.</description>
+    </item>
+    
     <item>
       <title>Programming DeFi: Uniswap V2. Part 4</title>
       <link>https://jeiwan.net/posts/programming-defi-uniswapv2-4/</link>

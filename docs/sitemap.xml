@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://jeiwan.net/</loc>
+    <lastmod>2022-08-22T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/posts/my-paradigm-ctf-solutions/</loc>
+    <lastmod>2022-08-22T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://jeiwan.net/posts/</loc>
+    <lastmod>2022-08-22T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>https://jeiwan.net/tags/blockchain/</loc>
     <lastmod>2022-04-24T00:00:00+00:00</lastmod>
   </url><url>
@@ -9,12 +18,6 @@
     <lastmod>2022-04-24T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://jeiwan.net/tags/ethereum/</loc>
-    <lastmod>2022-04-24T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://jeiwan.net/</loc>
-    <lastmod>2022-04-24T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://jeiwan.net/posts/</loc>
     <lastmod>2022-04-24T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://jeiwan.net/posts/programming-defi-uniswapv2-4/</loc>
