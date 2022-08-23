@@ -501,48 +501,7 @@ So the input data to the SHA-256 precompiled contract must start with:
 Where XX is the size of the byte array.
 
 To solve the challenge, I wrote a simple Golang program that brute forces SHA-256:
-```go
-start := time.Now()
-cnt := 0
-
-prefix, _ := hex.DecodeString("1626ba7e")
-hash, _ := hex.DecodeString("19bb34e293bba96bf0caeea54cdd3d2dad7fdf44cbea855173fa84534fcfb528")
-
-sigsize := 64
-
-data := make([]byte, 4+32+32+32+sigsize)
-copy(data[0:], prefix)
-copy(data[4:], hash)
-
-x := uint256.NewInt(64)
-copy(data[36:], x.PaddedBytes(32))
-x = uint256.NewInt(uint64(sigsize))
-copy(data[68:], x.PaddedBytes(32))
-
-result := make([]byte, 32)
-r := make([]byte, sigsize)
-
-for {
-  _, _ = rand.Read(r)
-  copy(data[100:], r)
-
-  sha := sha256.New()
-  sha.Write(data)
-  result = sha.Sum(nil) // I guess allocation can be avoided here
-
-  if bytes.HasPrefix(result, prefix) {
-    fmt.Printf("%x\n", data)
-    fmt.Printf("%x\n", result)
-    break
-  }
-
-  cnt++
-
-  if cnt%10_000_000 == 0 {
-    fmt.Printf("%s %d\n", time.Since(start), cnt)
-  }
-}
-```
+[vanitycruncher-go](https://github.com/Jeiwan/vanitycruncher-go).
 
 It took it about an hour to find a correct hash. (And it took me 3 attempts to fix all the bugs in the code 🤦‍♂️ and figure
 out it's SHA-256, not Keccak 🤦‍♂️)
