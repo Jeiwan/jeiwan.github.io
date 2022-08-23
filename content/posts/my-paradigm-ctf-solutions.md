@@ -12,7 +12,7 @@ obvious, way of solving it.
 
 This year, the CTF had 23 challenges. I solved 7 of them, got 1,379 points, and ended up 38th out of ~100.
 
-Solved challengees:
+Solved challenges:
 - Random
 - Riddle-of-the-Sphinx
 - Otter-world
