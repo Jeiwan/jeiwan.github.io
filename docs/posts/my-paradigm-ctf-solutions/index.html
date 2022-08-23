@@ -445,48 +445,9 @@ we have to meet:</p>
 0000000000000000000000000000000000000000000000000000000000000040
 00000000000000000000000000000000000000000000000000000000000000XX
 </code></pre><p>Where XX is the size of the byte array.</p>
-<p>To solve the challenge, I wrote a simple Golang program that brute forces SHA-256:</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">start</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl"><span class="nx">cnt</span> <span class="o">:=</span> <span class="mi">0</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="nx">prefix</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">DecodeString</span><span class="p">(</span><span class="s">&#34;1626ba7e&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="nx">hash</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">hex</span><span class="p">.</span><span class="nf">DecodeString</span><span class="p">(</span><span class="s">&#34;19bb34e293bba96bf0caeea54cdd3d2dad7fdf44cbea855173fa84534fcfb528&#34;</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="nx">sigsize</span> <span class="o">:=</span> <span class="mi">64</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="nx">data</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">4</span><span class="o">+</span><span class="mi">32</span><span class="o">+</span><span class="mi">32</span><span class="o">+</span><span class="mi">32</span><span class="o">+</span><span class="nx">sigsize</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="nb">copy</span><span class="p">(</span><span class="nx">data</span><span class="p">[</span><span class="mi">0</span><span class="p">:],</span> <span class="nx">prefix</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="nb">copy</span><span class="p">(</span><span class="nx">data</span><span class="p">[</span><span class="mi">4</span><span class="p">:],</span> <span class="nx">hash</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="nx">x</span> <span class="o">:=</span> <span class="nx">uint256</span><span class="p">.</span><span class="nf">NewInt</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="nb">copy</span><span class="p">(</span><span class="nx">data</span><span class="p">[</span><span class="mi">36</span><span class="p">:],</span> <span class="nx">x</span><span class="p">.</span><span class="nf">PaddedBytes</span><span class="p">(</span><span class="mi">32</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl"><span class="nx">x</span> <span class="p">=</span> <span class="nx">uint256</span><span class="p">.</span><span class="nf">NewInt</span><span class="p">(</span><span class="nb">uint64</span><span class="p">(</span><span class="nx">sigsize</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl"><span class="nb">copy</span><span class="p">(</span><span class="nx">data</span><span class="p">[</span><span class="mi">68</span><span class="p">:],</span> <span class="nx">x</span><span class="p">.</span><span class="nf">PaddedBytes</span><span class="p">(</span><span class="mi">32</span><span class="p">))</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="nx">result</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl"><span class="nx">r</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">sigsize</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl"><span class="k">for</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">  <span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">rand</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="nb">copy</span><span class="p">(</span><span class="nx">data</span><span class="p">[</span><span class="mi">100</span><span class="p">:],</span> <span class="nx">r</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="nx">sha</span> <span class="o">:=</span> <span class="nx">sha256</span><span class="p">.</span><span class="nf">New</span><span class="p">()</span>
-</span></span><span class="line"><span class="cl">  <span class="nx">sha</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="nx">result</span> <span class="p">=</span> <span class="nx">sha</span><span class="p">.</span><span class="nf">Sum</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span> <span class="c1">// I guess allocation can be avoided here
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="nx">bytes</span><span class="p">.</span><span class="nf">HasPrefix</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">prefix</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%x\n&#34;</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%x\n&#34;</span><span class="p">,</span> <span class="nx">result</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">    <span class="k">break</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="nx">cnt</span><span class="o">++</span>
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">  <span class="k">if</span> <span class="nx">cnt</span><span class="o">%</span><span class="mi">10_000_000</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s %d\n&#34;</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Since</span><span class="p">(</span><span class="nx">start</span><span class="p">),</span> <span class="nx">cnt</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">  <span class="p">}</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></div><p>It took it about an hour to find a correct hash. (And it took me 3 attempts to fix all the bugs in the code 🤦‍♂️ and figure
+<p>To solve the challenge, I wrote a simple Golang program that brute forces SHA-256:
+<a href="https://github.com/Jeiwan/vanitycruncher-go">vanitycruncher-go</a>.</p>
+<p>It took it about an hour to find a correct hash. (And it took me 3 attempts to fix all the bugs in the code 🤦‍♂️ and figure
 out it&rsquo;s SHA-256, not Keccak 🤦‍♂️)</p>
 <blockquote>
 <p>I wouldn&rsquo;t have solved this challenge without <a href="https://twitter.com/save_as_jay">@save_as_jay</a> He reached out to me and
