@@ -12,7 +12,7 @@ on [Unsplash](https://unsplash.com/?utm_source=unsplash&utm_medium=referral&utm_
 
 ## Introduction
 
-Uniswap is a decenralized exchange running on the Ethereum blockchain. It's fully automated, not managed, and decentralized.
+Uniswap is a decentralized exchange running on the Ethereum blockchain. It's fully automated, not managed, and decentralized.
 It has come through multiple iterations of development: first version was launched in November 2018; second version–in May 2020;
 and final, third, version was launched in March 2021.
 
