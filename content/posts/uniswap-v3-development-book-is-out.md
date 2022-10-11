@@ -23,7 +23,7 @@ The book is split into multiple milestones:
 1. in [Milestone 0](https://uniswapv3book.com/docs/introduction/introduction-to-markets/), you'll learn about market
 makers, markets, and how decentralized exchanges (DEX) work in general;
 1. in [Milestone 1](https://uniswapv3book.com/docs/milestone_1/introduction/), you'll make a simple DEX that's capable of
-swapping tokens in one direction with pre-defined prices and amounts;
+swapping tokens in one direction with predefined prices and amounts;
 1. in [Milestone 2](https://uniswapv3book.com/docs/milestone_2/introduction/), we'll evolve our DEX implementation to
 support swaps in both directions (selling and buying) and we'll start implementing mathematical calculations in Solidity;
 1. [Milestone 3](https://uniswapv3book.com/docs/milestone_3/introduction/) will, probably, be the hardest part of the book:
@@ -59,7 +59,7 @@ Uniswap is a unique project. It's one of the first DeFi (Decentralized Finance) 
 1. its developers managed to find a simple and elegant solution (basically, the `x * y = k` equation);
 1. it kicked off, gained traction, and became a reference DEX implementation that gave birth to endless clones.
 
-While many smart contract developers are fond of Uniswap V2 due to its simplicity and elegancy, Uniswap V3 is seemed like
+While many smart contract developers are fond of Uniswap V2 due to its simplicity and elegance, Uniswap V3 is seemed like
 a bloated project with complex functionality. This is not true! And you'll see this 😁
 
 Uniswap V3 is definitely the next step of smart contracts development. While its business logic is entirely based on Uniswap
