@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.97.3" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/uniswap-v3-development-book-is-out/">
+
+  <title>Uniswap V3 Development Book is Out! - Going the distance</title>
+  <meta property="og:title" content="Uniswap V3 Development Book is Out! - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockchains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Uniswap V3 Development Book is Out!</h1>
+      <time class="post-date" datetime="2022-10-11 00:00:00 &#43;0000">11 Oct 2022</time>
+    </header>
+
+    <p align="center">
+<img src="https://uniswapv3book.com/images/book.jpg" alt="Uniswap V3 Development Book cover" width="480"/>
+</p>
+<p>Today I&rsquo;d like to announce the project I&rsquo;d been working on for several months: <a href="https://uniswapv3book.com/">Uniswap V3 Development Book</a> 🥳</p>
+<p>This book is a continuation of my series on <a href="https://jeiwan.net/posts/programming-defi-uniswap-1/">Uniswap V1</a> and <a href="https://jeiwan.net/posts/programming-defi-uniswapv2-1/">Uniswap V2</a>.
+Let me tell you more about the book and why it is a great resource for learning advanced Solidity development.</p>
+<h2 id="whats-inside">What&rsquo;s Inside</h2>
+<p>The book will guide you through building of a Uniswap V3 clone from scratch. We&rsquo;ll start with an empty <a href="https://github.com/foundry-rs/foundry">Foundry</a>
+project and will build a fully functioning Uniswap V3 clone in discrete steps. Uniswap V3 is a big project packed with
+many bigger and smaller mechanics and algorithms. So, to make our journey lighter, we&rsquo;ll follow the Minimum Viable Product
+principle: at each step, we&rsquo;ll focus only on one part of the Uniswap V3 implementation.</p>
+<p>The book is split into multiple milestones:</p>
+<ol>
+<li>in <a href="https://uniswapv3book.com/docs/introduction/introduction-to-markets/">Milestone 0</a>, you&rsquo;ll learn about market
+makers, markets, and how decentralized exchanges (DEX) work in general;</li>
+<li>in <a href="https://uniswapv3book.com/docs/milestone_1/introduction/">Milestone 1</a>, you&rsquo;ll make a simple DEX that&rsquo;s capable of
+swapping tokens in one direction with pre-defined prices and amounts;</li>
+<li>in <a href="https://uniswapv3book.com/docs/milestone_2/introduction/">Milestone 2</a>, we&rsquo;ll evolve our DEX implementation to
+support swaps in both directions (selling and buying) and we&rsquo;ll start implementing mathematical calculations in Solidity;</li>
+<li><a href="https://uniswapv3book.com/docs/milestone_3/introduction/">Milestone 3</a> will, probably, be the hardest part of the book:
+in this milestone, we&rsquo;ll implement liquidity management and swaps over multiple liquidity positions–the most innovational
+part of the Uniswap V3 design;</li>
+<li>in <a href="https://uniswapv3book.com/docs/milestone_4/introduction/">Milestone 4</a>, we&rsquo;ll go beyond one Uniswap pool and implement
+chained swaps, i.e. swaps between two tokens that don&rsquo;t have a common pool;</li>
+<li>in <a href="https://uniswapv3book.com/docs/milestone_5/introduction/">Milestone 5</a>, we&rsquo;ll finish the implementation of our
+Uniswap V3 clone by introducing swap fees and a price oracle;</li>
+<li>in <a href="https://uniswapv3book.com/docs/milestone_6/introduction/">Milestone 6</a>, we&rsquo;ll see how Uniswap V3 can be extended
+with third-party contracts to turn liquidity positions into NFT tokens.</li>
+</ol>
+<p>But that&rsquo;s not all! Along the way, we&rsquo;ll build a front-end application in <a href="https://reactjs.org/">React</a> that will imitate
+<a href="https://app.uniswap.org/">that of Uniswap</a> and will allow to perform swaps and provide/remove liquidity. While this front-end
+application won&rsquo;t be our primary focus in the book (I&rsquo;m a bad front-end developer 🙈), it&rsquo;ll show you how to build such
+an app and how to integrate it with smart contracts that you built.</p>
+<p><img src="https://github.com/Jeiwan/uniswapv3-book/raw/main/screenshot.png" alt="Uniswap V3 Clone UI"></p>
+<p>But that&rsquo;s also not all!</p>
+<p><strong>Math!!</strong> There will be a lot of math! <a href="https://uniswapv3book.com/docs/introduction/constant-function-market-maker/">Some</a>
+<a href="https://uniswapv3book.com/docs/introduction/uniswap-v3/">chapters</a> <a href="https://uniswapv3book.com/docs/milestone_1/calculating-liquidity/">are packed</a>
+with mathematical formulas, but don&rsquo;t be scared–as soon as you get the core mathematical concepts of constant-function
+market makers, the math of Uniswap V2 and V3 will make absolute sense. In case math is not something you feel confident
+with, <a href="https://www.khanacademy.org/math/algebra">Algebra 1</a> and <a href="https://www.khanacademy.org/math/algebra2">Algebra 2</a>
+courses on Khan Academy are more than enough to understand the math of Uniswap.</p>
+<h2 id="why-uniswap">Why Uniswap?</h2>
+<p>Uniswap is a unique project. It&rsquo;s one of the first DeFi (Decentralized Finance) projects that went from <a href="https://www.quora.com/What-does-the-term-zero-to-one-actually-mean">zero to one</a>:</p>
+<ol>
+<li>it was one of the first decentralized exchanges;</li>
+<li>its developers managed to find a simple and elegant solution (basically, the <code>x * y = k</code> equation);</li>
+<li>it kicked off, gained traction, and became a reference DEX implementation that gave birth to endless clones.</li>
+</ol>
+<p>While many smart contract developers are fond of Uniswap V2 due to its simplicity and elegancy, Uniswap V3 is seemed like
+a bloated project with complex functionality. This is not true! And you&rsquo;ll see this 😁</p>
+<p>Uniswap V3 is definitely the next step of smart contracts development. While its business logic is entirely based on Uniswap
+V2 (which is just an implementation of the <code>x * y = k</code> formula), it pushes DEX development forward by using derived math
+formulas and adding a <em>thick</em> layer of engineering on top of them. It&rsquo;s this extra layer of engineering that&rsquo;s seemed
+complex by many developers. But you, a reader of this book, will see that this is not true and Uniswap V3 is not so
+hard.</p>
+<p>Finally, why I personally think Uniswap V3 is a great educational resource is that you do want to learn from complex
+projects. As smart contract development evolves and projects are getting more advanced, you don&rsquo;t want to stick with simpler
+projects and should <em>embrace the complexity</em>–this will pay off and you&rsquo;ll become a better developer. Uniswap V3 is a great
+example of a complex project that&rsquo;s based on more-or-less simple ideas and that&rsquo;s been running in production for several
+years and that has become <a href="https://defillama.com/">one of the biggest DeFi projects</a>–this is the kind of projects you want to
+strive to build as a smart contracts developer.</p>
+<h2 id="who-is-this-book-for">Who is This Book For?</h2>
+<p>This book is not for beginners. I won&rsquo;t teach you Solidity. In fact, after reading a half of this book, you&rsquo;ll see that
+Solidity is not a hard language and that the hardest part of smart contracts development is not Solidity but business logic
+and state management. So, this book is for those who knows Solidity or who can pick it up while reading the book.</p>
+<p>If decentralized exchanges and constant-function market makers is something new to you, reading <a href="https://jeiwan.net/posts/programming-defi-uniswapv2-1/">my series on Uniswap V2 development</a>
+will help you a lot. As I mentioned above, Uniswap V3 is entirely based on V2. This is why understanding Uniswap V2 will
+make you journey through the book much easier, and it will also make your understanding of the V3 mechanics much deeper.</p>
+<p><a href="https://uniswapv3book.com/"><strong>Enjoy Your Journey!</strong></a></p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+<style>
+.support {
+  border: 4px solid #f47edd;
+  border-radius: 10px;
+  padding: 1.6em;
+  text-align: center;
+}
+
+.support p {
+  margin-bottom: 1em;
+}
+
+.support button {
+  cursor: pointer;
+  background: #f47edd;
+  border: 1px solid #f47edd;
+  border-radius: 4px;
+  color: #fff;
+  font-family: "Arvo", serif;
+  font-size: 1em;
+  text-transform: uppercase;
+  padding: 0.3em 0.6em;
+}
+</style>
+
+<div class="support">
+  <p>
+    If you found this post useful, consider supporting the author.
+  </p>
+  <div>
+    <button id="eth-button">Send ETH</button>
+  </div>
+  <small>You can send any amount to <a href="https://etherscan.io/address/0xaf8dde65b84ae5d77e4f9a18cdc854e324a41b04" target="_blank">jeiwan.eth</a></small>
+</div>
+
+<script>
+  var tipButton = document.querySelector('#eth-button');
+  var address = '0xAF8Dde65b84ae5d77E4F9A18cDC854E324A41B04';
+
+  tipButton.addEventListener('click', function () {
+    if (typeof window.ethereum === 'undefined') {
+      return alert('Metamask is not installed! You can support by sending ETH to ' + address + '. Thank you!');
+    }
+
+    window.ethereum.request({ method: 'eth_requestAccounts' }).then(function (accs) {
+      var acc = accs[0];
+      var params = {
+        from: acc,
+        to: address,
+        value: '0x11c37937e08000' 
+      };
+      window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [params]
+      });
+    });
+  })
+</script>
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+
+          Author:
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          Get in touch:
+
+          <a itemprop="sameAs" href="mailto:me@jeiwan.ru" target="_blank">E-mail</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">Telegram</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">Twitter</a>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GitHub</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+
