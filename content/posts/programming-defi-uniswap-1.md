@@ -454,7 +454,7 @@ drawLineChart("hyperbola-chart", [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 1.7, 2, 
 Hyperbola never crosses \\(x\\) or \\(y\\), thus neither of the reserves is ever 0. **This makes reserves infinite!**
 
 And there's another interesting implication: the price function causes price slippage.
-The bigger the amount of tokens traded in relative to reserves, the lower the price would be.
+The bigger the amount of tokens traded in relative to reserves, the higher the price would be.
 
 This is what we saw in the tests: we got slightly less than we expected.
 This might be seemed as a drawback of constant product market makers (since every trade has a slippage), however this is the same mechanism that protects pools from being drained.
