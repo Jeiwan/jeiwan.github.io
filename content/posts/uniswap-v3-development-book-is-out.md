@@ -86,3 +86,11 @@ will help you a lot. As I mentioned above, Uniswap V3 is entirely based on V2. T
 make you journey through the book much easier, and it will also make your understanding of the V3 mechanics much deeper.
 
 [**Enjoy Your Journey!**](https://uniswapv3book.com/)
+
+## Uniswap Grants Program
+
+![Uniswap Foundation logo](https://uniswapv3book.com/images/uf_logo_big.png)
+
+To write this book, I received a grant from [Uniswap Foundation](https://uniswapfoundation.mirror.xyz/). Without the grant,
+I wouldn't probably have had enough motivation and patience to dig Uniswap into its deepest depths and to finish the book.
+The grant is also the main reason why the book is open-source and free for anyone. You can [learn more about Uniswap Grants Program](https://www.unigrants.org/) (and maybe apply!).
