@@ -99,7 +99,7 @@ IZuniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity);
 In the end, we're checking that amounts returned are within the tolerated slippage chosen by user.
 ```solidity
 if (amountA < amountAMin) revert InsufficientAAmount();
-if (amountA < amountBMin) revert InsufficientBAmount();
+if (amountB < amountBMin) revert InsufficientBAmount();
 ```
 
 And, that's it! Simple and elegant.
