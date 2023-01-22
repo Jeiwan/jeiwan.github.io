@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Hugo 0.97.3" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Ivan Kuznetsov">
+  <meta property="og:url" content="https://jeiwan.net/posts/public-bug-report-uniswap-swaprouter/">
+
+  <title>Public Bug Report: Uniswap&#39;s SwapRouter doesn&#39;t refund unspent ETH in partial swaps - Going the distance</title>
+  <meta property="og:title" content="Public Bug Report: Uniswap&#39;s SwapRouter doesn&#39;t refund unspent ETH in partial swaps - Going the distance">
+  <meta property="og:type" content="article">
+  <meta name="description" content="A blog about blockchains and smart contracts development">
+  <meta name="keywords" content="bitcoin, ethereum, evm, smart contract, blockchain, programming, development, solidity, vyper">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Arvo:400,700">
+  <link rel="stylesheet" href="/css/prism.css">
+  <link rel="stylesheet" href="/css/journal.css">
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Going the distance">
+
+  
+
+  
+
+</head>
+
+<body>
+  <div class="container">
+
+    <nav class="site-nav">
+      <a href="https://jeiwan.net">Index</a>
+    </nav>
+
+
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">Public Bug Report: Uniswap&#39;s SwapRouter doesn&#39;t refund unspent ETH in partial swaps</h1>
+      <time class="post-date" datetime="2023-01-21 00:00:00 &#43;0000">21 Jan 2023</time>
+    </header>
+
+    <p>In December 2022, I found a bug in Uniswap&rsquo;s <code>SwapRouter</code> contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&rsquo;ve run in production for several years. So I didn&rsquo;t really had high expectations and I was sure I wouldn&rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</p>
+<p>I submitted a bug report and after more than a month I received their response: they said the bug wasn&rsquo;t an issue, and everything worked as expected. I cannot agree with this 🙂 Thus I decided to disclose it publicly for some of you to learn something new and for more experienced security researches to decide whether the bug is real or not.</p>
+<blockquote>
+<p>tl;dr Here&rsquo;s the PoC: <a href="https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc">https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc</a></p>
+</blockquote>
+<h2 id="context">Context</h2>
+<p>If you&rsquo;ve ever used Uniswap, you know that the process is straightforward: you type in the amount of tokens you want to sell, click a button, sign a transaction, and it&rsquo;s done. I bet that, when you used Uniswap, you always sold an entire amount of tokens, but Uniswap also supports partial swaps: you can specify a limit price, which when reached, will interrupt the swap. As a result, only <strong>a portion of the input token amount you specified will be consumed</strong>. This is how it works:</p>
+<ol>
+<li>The limit price is set via the <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L605">sqrtPriceLimitX96</a> parameter of the <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L605">swap</a> function.</li>
+<li>Uniswap break a swap into multiple steps: on each step, it <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L666-L674">swaps a portion of the input amount</a> and <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L676-L682">re-calculates the input amount</a>.</li>
+<li>When the limit price is reached, it <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L644">stops swapping</a>.</li>
+<li>After a swap is done, Uniswap <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L768-L770">uses the calculated input and output amounts</a>. What&rsquo;s important here is that it recalculates the input amount: if the swap was interrupted after reaching the limit price, <strong>the input amount will be smaller that the one specified by the user</strong>.</li>
+</ol>
+<blockquote>
+<p>To sum it up: when setting a limit price there&rsquo;s a chance that the input amount you specified during the <code>swap</code> call will be reduced, and you will eventually spend less tokens than you wanted initially.</p>
+</blockquote>
+<p>Now, let&rsquo;s look at the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol">SwapRouter</a>, which is the central contract of Uniswap–almost all interaction go through <code>SwapRouter</code>.</p>
+<p><code>SwapRouter</code> makes it easier for users to sell ETH: <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58-L61">the contract will wrap it for you</a>, you only need to send ETH along the call. For example, buying USDC for ETH via <code>SwapRouter</code> looks like this:</p>
+<ol>
+<li>You call the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L115">exactInputSingle</a> or the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L132">exactInput</a> function, fill the parameters, and send some ETH long.</li>
+<li><code>SwapRouter</code> will <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58-L61">detect</a> that you&rsquo;re selling ETH, will wrap it, and will send WETH to the pool.</li>
+</ol>
+<blockquote>
+<p>To sum it up: you&rsquo;re sending ETH, which is then wrapped to WETH by <code>SwapRouter</code>, and sold for USDC.</p>
+</blockquote>
+<p>The final piece in the puzzle is how <code>SwapRouter</code> takes ERC20 tokens from users: it <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L66-L67">pulls them</a> after the pool has re-calculated input and output amounts:</p>
+<ol>
+<li>a pool calculates amounts and calls the <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L773-L785">uniswapV3SwapCallback</a>;</li>
+<li>in <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L57-L84">the callback</a>, the router pulls funds from the caller and sends them to the pool.</li>
+</ol>
+<p>I.e. tokens are pulled from the user only <strong>after a pool has re-calculated amounts</strong>. But this works differently with ETH: ETH is sent with the call, <strong>before</strong> amounts are re-calculated–EVM doesn&rsquo;t allow to pull ETH from the caller.</p>
+<p>I guess you already see the bug.</p>
+<h2 id="bug-and-vulnerability">Bug and Vulnerability</h2>
+<p>The bug is that <code>SwapRouter</code> doesn&rsquo;t refund unspent ETH. If you sell ETH and set a limit price and it&rsquo;s reached during the swap, then <strong>the input amount will be reduced</strong>, but you have already sent a bigger amount. The remaining amount will be left in the router.</p>
+<p>The caller cannot know how much ETH will be spent by a swap: the Quoter contract, that&rsquo;s used to calculate swaps before executing them, <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/lens/QuoterV2.sol#L127">returns only the output amount, not the input one</a>. Even if it had returned the input amount computed by a pool, the calculated input amount could have changed at the transaction execution time due to a price change, i.e. a slippage check would&rsquo;ve been required on the input amount.</p>
+<p>There&rsquo;s another subtle detail: when checking that the caller has sent enough ETH, <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58">the contract uses the &gt;= operation</a>, which means it&rsquo;s ok if the caller sends more ETH than needed for a swap. I guess this breaks one of the invariants, e.g. &ldquo;SwapRouter must never take more user funds than required for a swap&rdquo;. If the contract had used <code>=</code> instead, then all partial swaps would&rsquo;ve failed. Which means refunding unspent ETH is the only solution to the problem.</p>
+<p>Besides not refunding unspent ETH, <code>SwapRouter</code> allows anyone to <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L44-L46">withdraw ETH from the contract</a>: anyone can withdraw the ETH <code>SwapRouter</code> hasn&rsquo;t returned to you after the swap–it may be a MEV bot or simply anyone who calls <code>refundETH</code> after your transaction.</p>
+<h2 id="exploit-scenario-and-a-proof-of-concept">Exploit Scenario and a Proof of Concept</h2>
+<ol>
+<li>Alice wants to sell 1 ETH and buy some UNI. However, Alice wants her trade to be executed before the price X is reached.</li>
+<li>Alice calls the <code>exactInputSingle</code> function of <code>SwapRouter</code>, sets the <code>sqrtPriceLimitX96</code> argument to the price X, and sends 1 ETH along with the transaction.</li>
+<li>The router executes the swap via the ETH-UNI pool. The swap gets interrupted when the price X is reached.</li>
+<li>Before reaching the price X, only 0.7 ETH of Alice were consumed to convert them to 100 UNI.</li>
+<li>Alice receives 100 UNI while spending 1 ETH, the router contract keeps holding the remaining 0.3 ETH.</li>
+<li>A MEV bot withdraws the 0.3 ETH by calling the <code>refundETH</code> function.</li>
+</ol>
+<p>Here&rsquo;s a PoC (<a href="https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc">repo with full code</a>):</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-solidity" data-lang="solidity"><span class="line"><span class="cl"><span class="kd">function</span> <span class="nf">testExploit</span><span class="p">()</span> <span class="k">public</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">forkId</span> <span class="o">=</span> <span class="n">vm</span><span class="p">.</span><span class="n">createFork</span><span class="p">(</span><span class="n">vm</span><span class="p">.</span><span class="n">envString</span><span class="p">(</span><span class="s">&#34;ETH_RPC_URL&#34;</span><span class="p">),</span> <span class="mi">16454867</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vm</span><span class="p">.</span><span class="n">selectFork</span><span class="p">(</span><span class="n">forkId</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">uint256</span> <span class="n">amountIn</span> <span class="o">=</span> <span class="mi">100</span> <span class="kc">ether</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">vm</span><span class="p">.</span><span class="n">label</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="s">&#34;user&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vm</span><span class="p">.</span><span class="n">deal</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">amountIn</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// Users sells 100 ETH to buy USDC. They have a limit price set.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">ExactInputSingleParams</span> <span class="k">memory</span> <span class="n">params</span> <span class="o">=</span> <span class="n">ExactInputSingleParams</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tokenIn</span><span class="o">:</span> <span class="n">weth</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tokenOut</span><span class="o">:</span> <span class="n">usdc</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">fee</span><span class="o">:</span> <span class="mi">500</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">recipient</span><span class="o">:</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">        <span class="n">deadline</span><span class="o">:</span> <span class="nb">block</span><span class="p">.</span><span class="nb">timestamp</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">amountIn</span><span class="o">:</span> <span class="n">amountIn</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">amountOutMinimum</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">sqrtPriceLimitX96</span><span class="o">:</span> <span class="mi">1956260967287247098961477920037032</span> <span class="c1">// (sqrtPrice before + sqrtPrice after) / 2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="p">});</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// Full input amount is sent along the call.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">router</span><span class="p">.</span><span class="n">exactInputSingle</span><span class="p">{</span><span class="nb">value</span><span class="o">:</span> <span class="n">amountIn</span><span class="p">}(</span><span class="n">params</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// User has bought some USDC. However, the full input ETH amount wasn&#39;t used...
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">assertEq</span><span class="p">(</span><span class="n">IERC20</span><span class="p">(</span><span class="n">usdc</span><span class="p">).</span><span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">)),</span> <span class="mi">81979</span><span class="p">.</span><span class="mi">308775</span><span class="n">e6</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// ... the remaining ETH is still in the Router contract.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="n">assertEq</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">router</span><span class="p">).</span><span class="nb">balance</span><span class="p">,</span> <span class="mi">50</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// A MEV bot steals the remaining ETH by calling the public refundETH function.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">address</span> <span class="n">mev</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="mh">0x31337</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">vm</span><span class="p">.</span><span class="n">label</span><span class="p">(</span><span class="n">mev</span><span class="p">,</span> <span class="s">&#34;mev&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">vm</span><span class="p">.</span><span class="n">prank</span><span class="p">(</span><span class="n">mev</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">router</span><span class="p">.</span><span class="n">refundETH</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="n">assertEq</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">mev</span><span class="p">).</span><span class="nb">balance</span><span class="p">,</span> <span class="mi">50</span> <span class="kc">ether</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><h2 id="judging">Judging</h2>
+<h3 id="uniswaps-view">Uniswap&rsquo;s View</h3>
+<p>Uniswap says it works as expected. To not leave funds in <code>SwapRouter</code>, users should use the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/base/Multicall.sol">MultiCall</a> functionality of the contract. <code>MultiCall</code> allows users to do multiple function calls in one transaction, thus Uniswap suggests that users should use <code>MultiCall</code> to swap tokens and call <code>refundETH</code> afterwards. They also said that the call to <code>refundETH</code> is made optional to reduce gas consumption for users.</p>
+<p>Uniswap&rsquo;s JavaScript SDK also has <a href="https://github.com/Uniswap/universal-router-sdk/blob/106e53f232834f1cc8456963399f8295112ac405/src/entities/protocols/uniswap.ts#L98">a check</a> that calls <code>refundETH</code> when there&rsquo;s a risk of leaving unspent funds in <code>SwapRouter</code>.</p>
+<h3 id="my-view">My View</h3>
+<p>Despite the <code>MultiCall</code> functionality and the check in the JS SDK, my PoC is still valid 🙂 My PoC interacts with <code>SwapRouter</code> directly in a way it was designed and implemented. It may even do the <code>exactInputSingle</code> call via the multicall function, and it&rsquo;ll still be valid. <code>MultiCall</code>, in my view, is a different way of interacting with the contract, and even when it&rsquo;s used, a call to <code>refundETH</code> is not mandatory. So it still allows a loss of funds. Moreover, <code>MultiCall</code> is never used when trading ERC20 tokens, and, since <code>SwapRouter</code> makes selling ETH identical to selling an ERC20 token, users will simply never be aware of the requirement to use <code>MultiCall</code> to refund ETH.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>When I reported the bug I expected that Uniswap will say that it&rsquo;s a valid bug, they&rsquo;re aware of it, and they have strong reasons to not fix it. Surprisingly, they said it&rsquo;s not a bug at all. But if Uniswap says that users should always use <code>MultiCall</code> to refund unspent ETH, why doesn&rsquo;t <code>SwapRouter</code> do that for them? After all, the contract returns bought tokens to users–why can&rsquo;t it return unspent ETH? I guess answering this questions means confirming the vulnerability 🙂</p>
+
+
+  </article>
+
+<hr>
+<br>
+
+
+
+<style>
+.support {
+  border: 4px solid #f47edd;
+  border-radius: 10px;
+  padding: 1.6em;
+  text-align: center;
+}
+
+.support p {
+  margin-bottom: 1em;
+}
+
+.support button {
+  cursor: pointer;
+  background: #f47edd;
+  border: 1px solid #f47edd;
+  border-radius: 4px;
+  color: #fff;
+  font-family: "Arvo", serif;
+  font-size: 1em;
+  text-transform: uppercase;
+  padding: 0.3em 0.6em;
+}
+</style>
+
+<div class="support">
+  <p>
+    If you found this post useful, consider supporting the author.
+  </p>
+  <div>
+    <button id="eth-button">Send ETH</button>
+  </div>
+  <small>You can send any amount to <a href="https://etherscan.io/address/0xaf8dde65b84ae5d77e4f9a18cdc854e324a41b04" target="_blank">jeiwan.eth</a></small>
+</div>
+
+<script>
+  var tipButton = document.querySelector('#eth-button');
+  var address = '0xAF8Dde65b84ae5d77E4F9A18cDC854E324A41B04';
+
+  tipButton.addEventListener('click', function () {
+    if (typeof window.ethereum === 'undefined') {
+      return alert('Metamask is not installed! You can support by sending ETH to ' + address + '. Thank you!');
+    }
+
+    window.ethereum.request({ method: 'eth_requestAccounts' }).then(function (accs) {
+      var acc = accs[0];
+      var params = {
+        from: acc,
+        to: address,
+        value: '0x11c37937e08000' 
+      };
+      window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [params]
+      });
+    });
+  })
+</script>
+
+
+      <footer class="site-footer">
+        <span itemscope itemtype="http://schema.org/Person">
+          <link itemprop="url" href="https://jeiwan.net">
+
+          Author:
+          <span itemprop="name">Ivan Kuznetsov</span>
+
+          <br>
+
+          Get in touch:
+
+          <a itemprop="sameAs" href="mailto:me@jeiwan.ru" target="_blank">E-mail</a>
+
+          <a itemprop="sameAs" href="https://t.me/jeiwan" title="Telegram" target="_blank">Telegram</a>
+
+          <a itemprop="sameAs" href="https://twitter.com/jeiwan7" title="Twitter" target="_blank">Twitter</a>
+
+          <a itemprop="sameAs" href="https://github.com/jeiwan" title="GitHub" target="_blank">GitHub</a>
+
+          
+        </span>
+
+        <br><br>
+
+        <div style="text-align:center">
+          <small>
+            <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />Content of this site is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+          </small>
+        </div>
+
+        
+      </footer>
+    </div>
+
+  
+
+    <script src="/js/prism.js"></script>
+
+  </body>
+</html>
+

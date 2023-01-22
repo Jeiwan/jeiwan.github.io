@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Bug Report on Going the distance</title>
+    <link>https://jeiwan.net/tags/bug-report/</link>
+    <description>Recent content in Bug Report on Going the distance</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 21 Jan 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://jeiwan.net/tags/bug-report/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Public Bug Report: Uniswap&#39;s SwapRouter doesn&#39;t refund unspent ETH in partial swaps</title>
+      <link>https://jeiwan.net/posts/public-bug-report-uniswap-swaprouter/</link>
+      <pubDate>Sat, 21 Jan 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeiwan.net/posts/public-bug-report-uniswap-swaprouter/</guid>
+      <description>In December 2022, I found a bug in Uniswap&amp;rsquo;s SwapRouter contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&amp;rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&amp;rsquo;ve run in production for several years. So I didn&amp;rsquo;t really had high expectations and I was sure I wouldn&amp;rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</description>
+    </item>
+    
+  </channel>
+</rss>
