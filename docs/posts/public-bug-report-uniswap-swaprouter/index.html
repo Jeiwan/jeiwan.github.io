@@ -35,13 +35,13 @@
     </nav>
 
 
-  <article class="post">
-    <header class="post-header">
-      <h1 class="post-title">Public Bug Report: Uniswap&#39;s SwapRouter doesn&#39;t refund unspent ETH in partial swaps</h1>
-      <time class="post-date" datetime="2023-01-21 00:00:00 &#43;0000">21 Jan 2023</time>
-    </header>
+<article class="post">
+  <header class="post-header">
+    <h1 class="post-title">Public Bug Report: Uniswap&#39;s SwapRouter doesn&#39;t refund unspent ETH in partial swaps</h1>
+    <time class="post-date" datetime=" 2023-01-21 00:00:00 &#43;0000">21 Jan 2023</time>
+  </header>
 
-    <p>In December 2022, I found a bug in Uniswap&rsquo;s <code>SwapRouter</code> contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&rsquo;ve run in production for several years. So I didn&rsquo;t really had high expectations and I was sure I wouldn&rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</p>
+  <p>In December 2022, I found a bug in Uniswap&rsquo;s <code>SwapRouter</code> contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&rsquo;ve run in production for several years. So I didn&rsquo;t really had high expectations and I was sure I wouldn&rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</p>
 <p>I submitted a bug report and after more than a month I received their response: they said the bug wasn&rsquo;t an issue, and everything worked as expected. I cannot agree with this 🙂 Thus I decided to disclose it publicly for some of you to learn something new and for more experienced security researches to decide whether the bug is real or not.</p>
 <blockquote>
 <p>tl;dr Here&rsquo;s the PoC: <a href="https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc">https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc</a></p>
@@ -136,71 +136,14 @@
 <p>When I reported the bug I expected that Uniswap will say that it&rsquo;s a valid bug, they&rsquo;re aware of it, and they have strong reasons to not fix it. Surprisingly, they said it&rsquo;s not a bug at all. But if Uniswap says that users should always use <code>MultiCall</code> to refund unspent ETH, why doesn&rsquo;t <code>SwapRouter</code> do that for them? After all, the contract returns bought tokens to users–why can&rsquo;t it return unspent ETH? I guess answering this questions means confirming the vulnerability 🙂</p>
 
 
-  </article>
+</article>
 
 <hr>
 <br>
 
 
 
-<style>
-.support {
-  border: 4px solid #f47edd;
-  border-radius: 10px;
-  padding: 1.6em;
-  text-align: center;
-}
 
-.support p {
-  margin-bottom: 1em;
-}
-
-.support button {
-  cursor: pointer;
-  background: #f47edd;
-  border: 1px solid #f47edd;
-  border-radius: 4px;
-  color: #fff;
-  font-family: "Arvo", serif;
-  font-size: 1em;
-  text-transform: uppercase;
-  padding: 0.3em 0.6em;
-}
-</style>
-
-<div class="support">
-  <p>
-    If you found this post useful, consider supporting the author.
-  </p>
-  <div>
-    <button id="eth-button">Send ETH</button>
-  </div>
-  <small>You can send any amount to <a href="https://etherscan.io/address/0xaf8dde65b84ae5d77e4f9a18cdc854e324a41b04" target="_blank">jeiwan.eth</a></small>
-</div>
-
-<script>
-  var tipButton = document.querySelector('#eth-button');
-  var address = '0xAF8Dde65b84ae5d77E4F9A18cDC854E324A41B04';
-
-  tipButton.addEventListener('click', function () {
-    if (typeof window.ethereum === 'undefined') {
-      return alert('Metamask is not installed! You can support by sending ETH to ' + address + '. Thank you!');
-    }
-
-    window.ethereum.request({ method: 'eth_requestAccounts' }).then(function (accs) {
-      var acc = accs[0];
-      var params = {
-        from: acc,
-        to: address,
-        value: '0x11c37937e08000' 
-      };
-      window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [params]
-      });
-    });
-  })
-</script>
 
 
       <footer class="site-footer">
@@ -243,4 +186,3 @@
 
   </body>
 </html>
-

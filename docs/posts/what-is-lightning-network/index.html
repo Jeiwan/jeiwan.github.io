@@ -35,13 +35,13 @@
     </nav>
 
 
-  <article class="post">
-    <header class="post-header">
-      <h1 class="post-title">What is Lightning Network and How to Try It Today</h1>
-      <time class="post-date" datetime="2018-03-02 16:58:56 &#43;07">02 Mar 2018</time>
-    </header>
+<article class="post">
+  <header class="post-header">
+    <h1 class="post-title">What is Lightning Network and How to Try It Today</h1>
+    <time class="post-date" datetime=" 2018-03-02 16:58:56 &#43;07">02 Mar 2018</time>
+  </header>
 
-    <p><img src="/images/ln-topology.png" alt="Lightning Network topology"></p>
+  <p><img src="/images/ln-topology.png" alt="Lightning Network topology"></p>
 <h2 id="introduction">Introduction</h2>
 <p>As soon as the Bitcoin network started processing more-or-less significant number of transactions, it became obvious that the network is not scalable: the size of blocks is limited to 1 Mb, and since the number of transactions is growing, one day the limit will be hit and the mempool will start growing resulting in delayed transactions. This scalability issue gave birth to many Bitcoin clones, which pursued the goal of building a really scalable blockchain. One of such clones was Bitcoin Cash, that addressed the scalability issue by increasing the size of blocks to 8 Mb (and there are plans to increase it further).</p>
 <p>The Bitcoin Core developers were aware of this problem and also kept looking for a solution. Increasing the block size is not an option because it&rsquo;ll make very difficult for individuals to run a node – only big companies will be able to afford that. Also, bigger blocks is a temporarily solution: in the future, when Bitcoin gets much broader adoption, the block size must be increased one more time. Thus, it&rsquo;ll lead to a more and more centralized network.</p>
@@ -182,71 +182,14 @@ It turns out, the node you connected to is connected to the node you sent paymen
 </ol>
 
 
-  </article>
+</article>
 
 <hr>
 <br>
 
 
 
-<style>
-.support {
-  border: 4px solid #f47edd;
-  border-radius: 10px;
-  padding: 1.6em;
-  text-align: center;
-}
 
-.support p {
-  margin-bottom: 1em;
-}
-
-.support button {
-  cursor: pointer;
-  background: #f47edd;
-  border: 1px solid #f47edd;
-  border-radius: 4px;
-  color: #fff;
-  font-family: "Arvo", serif;
-  font-size: 1em;
-  text-transform: uppercase;
-  padding: 0.3em 0.6em;
-}
-</style>
-
-<div class="support">
-  <p>
-    If you found this post useful, consider supporting the author.
-  </p>
-  <div>
-    <button id="eth-button">Send ETH</button>
-  </div>
-  <small>You can send any amount to <a href="https://etherscan.io/address/0xaf8dde65b84ae5d77e4f9a18cdc854e324a41b04" target="_blank">jeiwan.eth</a></small>
-</div>
-
-<script>
-  var tipButton = document.querySelector('#eth-button');
-  var address = '0xAF8Dde65b84ae5d77E4F9A18cDC854E324A41B04';
-
-  tipButton.addEventListener('click', function () {
-    if (typeof window.ethereum === 'undefined') {
-      return alert('Metamask is not installed! You can support by sending ETH to ' + address + '. Thank you!');
-    }
-
-    window.ethereum.request({ method: 'eth_requestAccounts' }).then(function (accs) {
-      var acc = accs[0];
-      var params = {
-        from: acc,
-        to: address,
-        value: '0x11c37937e08000' 
-      };
-      window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [params]
-      });
-    });
-  })
-</script>
 
 
       <footer class="site-footer">
@@ -289,4 +232,3 @@ It turns out, the node you connected to is connected to the node you sent paymen
 
   </body>
 </html>
-
