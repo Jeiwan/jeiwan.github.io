@@ -4,6 +4,11 @@ date: 2023-01-21T00:00:00+00:00
 tags: [Bug Report, Uniswap, Blockchain]
 ---
 
+![Hacking code](/images/florian-olivo-4hbJ-eymZ1o-unsplash.jpg)
+Photo by
+[Florian Olivo](https://unsplash.com/es/@florianolv?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+on [Unsplash](https://unsplash.com/photos/4hbJ-eymZ1o?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+
 In December 2022, I found a bug in Uniswap's `SwapRouter` contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don't really find critical and high severity bugs in projects like Uniswap, especially after they've run in production for several years. So I didn't really had high expectations and I was sure I wouldn't be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.
 
 I submitted a bug report and after more than a month I received their response: they said the bug wasn't an issue, and everything worked as expected. I cannot agree with this 🙂 Thus I decided to disclose it publicly for some of you to learn something new and for more experienced security researches to decide whether the bug is real or not.

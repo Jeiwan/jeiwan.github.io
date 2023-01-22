@@ -41,7 +41,11 @@
     <time class="post-date" datetime=" 2023-01-21 00:00:00 &#43;0000">21 Jan 2023</time>
   </header>
 
-  <p>In December 2022, I found a bug in Uniswap&rsquo;s <code>SwapRouter</code> contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&rsquo;ve run in production for several years. So I didn&rsquo;t really had high expectations and I was sure I wouldn&rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</p>
+  <p><img src="/images/florian-olivo-4hbJ-eymZ1o-unsplash.jpg" alt="Hacking code">
+Photo by
+<a href="https://unsplash.com/es/@florianolv?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Florian Olivo</a>
+on <a href="https://unsplash.com/photos/4hbJ-eymZ1o?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></p>
+<p>In December 2022, I found a bug in Uniswap&rsquo;s <code>SwapRouter</code> contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&rsquo;ve run in production for several years. So I didn&rsquo;t really had high expectations and I was sure I wouldn&rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</p>
 <p>I submitted a bug report and after more than a month I received their response: they said the bug wasn&rsquo;t an issue, and everything worked as expected. I cannot agree with this 🙂 Thus I decided to disclose it publicly for some of you to learn something new and for more experienced security researches to decide whether the bug is real or not.</p>
 <blockquote>
 <p>tl;dr Here&rsquo;s the PoC: <a href="https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc">https://github.com/Jeiwan/uniswapv3-unrefunded-eth-poc</a></p>

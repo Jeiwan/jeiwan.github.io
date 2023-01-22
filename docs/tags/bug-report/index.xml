@@ -13,7 +13,8 @@
       <pubDate>Sat, 21 Jan 2023 00:00:00 +0000</pubDate>
       
       <guid>https://jeiwan.net/posts/public-bug-report-uniswap-swaprouter/</guid>
-      <description>In December 2022, I found a bug in Uniswap&amp;rsquo;s SwapRouter contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&amp;rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&amp;rsquo;ve run in production for several years. So I didn&amp;rsquo;t really had high expectations and I was sure I wouldn&amp;rsquo;t be awarded for the report. The bug looks real to me, and I wanted to figure out why would a project with high security standards leave it unfixed.</description>
+      <description>Photo by Florian Olivo on Unsplash
+In December 2022, I found a bug in Uniswap&amp;rsquo;s SwapRouter contract. The bug allows users to lose funds, while interacting with the contract in the standard way. You don&amp;rsquo;t really find critical and high severity bugs in projects like Uniswap, especially after they&amp;rsquo;ve run in production for several years. So I didn&amp;rsquo;t really had high expectations and I was sure I wouldn&amp;rsquo;t be awarded for the report.</description>
     </item>
     
   </channel>
