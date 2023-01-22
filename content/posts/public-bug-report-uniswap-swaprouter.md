@@ -30,8 +30,6 @@ Now, let's look at the [SwapRouter](https://github.com/Uniswap/v3-periphery/blob
 1. You call the [exactInputSingle](https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L115) or the [exactInput](https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L132) function, fill the parameters, and send some ETH along.
 1. `SwapRouter` will [detect](https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58-L61) that you're selling ETH, will wrap it, and will send WETH to the pool.
 
-> To sum it up: you're sending ETH, which is then wrapped to WETH by `SwapRouter`, and sold for USDC.
-
 The final piece in the puzzle is how `SwapRouter` takes ERC20 tokens from users: it [pulls them](https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L66-L67) after the pool has re-calculated input and output amounts:
 1. a pool calculates amounts and calls the [uniswapV3SwapCallback](https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L773-L785);
 1. in [the callback](https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L57-L84), the router pulls funds from the caller and sends them to the pool.

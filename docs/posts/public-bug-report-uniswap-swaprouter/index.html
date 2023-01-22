@@ -67,9 +67,6 @@ on <a href="https://unsplash.com/photos/4hbJ-eymZ1o?utm_source=unsplash&amp;utm_
 <li>You call the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L115">exactInputSingle</a> or the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L132">exactInput</a> function, fill the parameters, and send some ETH along.</li>
 <li><code>SwapRouter</code> will <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58-L61">detect</a> that you&rsquo;re selling ETH, will wrap it, and will send WETH to the pool.</li>
 </ol>
-<blockquote>
-<p>To sum it up: you&rsquo;re sending ETH, which is then wrapped to WETH by <code>SwapRouter</code>, and sold for USDC.</p>
-</blockquote>
 <p>The final piece in the puzzle is how <code>SwapRouter</code> takes ERC20 tokens from users: it <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L66-L67">pulls them</a> after the pool has re-calculated input and output amounts:</p>
 <ol>
 <li>a pool calculates amounts and calls the <a href="https://github.com/Uniswap/v3-core/blob/05c10bf6d547d6121622ac51c457f93775e1df09/contracts/UniswapV3Pool.sol#L773-L785">uniswapV3SwapCallback</a>;</li>
