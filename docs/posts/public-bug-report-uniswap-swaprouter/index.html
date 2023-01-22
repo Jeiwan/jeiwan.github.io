@@ -64,7 +64,7 @@ on <a href="https://unsplash.com/photos/4hbJ-eymZ1o?utm_source=unsplash&amp;utm_
 <p>Now, let&rsquo;s look at the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol">SwapRouter</a>, which is the central contract of Uniswap–almost all interaction go through <code>SwapRouter</code>.</p>
 <p><code>SwapRouter</code> makes it easier for users to sell ETH: <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58-L61">the contract will wrap it for you</a>, you only need to send ETH along the call. For example, buying USDC for ETH via <code>SwapRouter</code> looks like this:</p>
 <ol>
-<li>You call the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L115">exactInputSingle</a> or the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L132">exactInput</a> function, fill the parameters, and send some ETH long.</li>
+<li>You call the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L115">exactInputSingle</a> or the <a href="https://github.com/Uniswap/v3-periphery/blob/6cce88e63e176af1ddb6cc56e029110289622317/contracts/SwapRouter.sol#L132">exactInput</a> function, fill the parameters, and send some ETH along.</li>
 <li><code>SwapRouter</code> will <a href="https://github.com/Uniswap/v3-periphery/blob/22bce38f7aca940212964bdfdf319b94ead9c3a8/contracts/base/PeripheryPayments.sol#L58-L61">detect</a> that you&rsquo;re selling ETH, will wrap it, and will send WETH to the pool.</li>
 </ol>
 <blockquote>
